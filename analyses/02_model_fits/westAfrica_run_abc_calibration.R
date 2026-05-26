@@ -75,15 +75,19 @@ MODEL_OVERRIDES <- list(
 # make_abc_output_dir() in section 6 creates a fresh timestamped
 # subdirectory of <ABC_OUTPUT_BASE>/abc_outputs/ tagged with
 # ABC_OUTPUT_LABEL, so successive phases / runs don't overwrite each other.
-# Routed to the repo-level outputs/ folder (two levels up from ANALYSIS_DIR).
-ABC_OUTPUT_BASE  <- normalizePath(
+ABC_OUTPUT_BASE  <- ANALYSIS_DIR
+ABC_OUTPUT_LABEL <- "final"
+
+# Repo-level outputs/ folder. The final-result RDS is copied here in addition
+# to being written under ABC_OUTPUT_DIR, so manuscript-ready artefacts live
+# in one canonical place.
+FINAL_OUTPUTS_DIR <- normalizePath(
   file.path(ANALYSIS_DIR, "..", "..", "outputs"),
   mustWork = FALSE
 )
-if (!dir.exists(ABC_OUTPUT_BASE)) {
-  dir.create(ABC_OUTPUT_BASE, recursive = TRUE, showWarnings = FALSE)
+if (!dir.exists(FINAL_OUTPUTS_DIR)) {
+  dir.create(FINAL_OUTPUTS_DIR, recursive = TRUE, showWarnings = FALSE)
 }
-ABC_OUTPUT_LABEL <- "final"
 
 # Symmetric base for both prob_hcw_cond_*_hospital probabilities. The fitted
 # hcw_risk_scalar multiplies this for both, capped at 1.0 — see
@@ -284,6 +288,7 @@ result_filename <- paste0(
   ".rds"
 )
 saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))
+saveRDS(result, file = file.path(FINAL_OUTPUTS_DIR, result_filename))
 
 
 # -----------------------------------------------------------------------------
