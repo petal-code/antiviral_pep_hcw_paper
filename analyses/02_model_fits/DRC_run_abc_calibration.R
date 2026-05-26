@@ -186,16 +186,16 @@ F_funeral_multiplier <- setup_solve$F_funeral_multiplier
 
 observed_summaries <- c(
   takeoff      = 1.0,
-  n_deaths     = NA_real_,   # TODO: total deaths (DRC)
-  n_hcw_deaths = NA_real_,   # TODO: HCW deaths (DRC)
-  duration     = NA_real_    # TODO: first death -> last outcome, in days (DRC)
+  n_deaths     = 2299,   
+  n_hcw_deaths = 79,     # https://afenet-journal.org/10-37432-jieph-d-25-00072/
+  duration     = 450     # August 1, 2018 – November 1st (ish), 2019 as the "main phase" of the epidemic
 )
 
 # Phase 4 priors. R0 and prop_funeral inherited unchanged from Phase 3;
 # hcw_risk_scalar widened/shifted to (0.50, 4.00) to reflect the new
 # symmetric HCW_BASE_PROB = 0.25 base.
 priors <- list(
-  c("unif", 1.35, 1.55),   # R0
+  c("unif", 1.25, 1.65),   # R0
   c("unif", 0.10, 0.40),   # prop_funeral
   c("unif", 0.50, 4.00)    # hcw_risk_scalar
 )
@@ -224,7 +224,7 @@ future::plan(future::cluster, workers = cl)
 
 set.seed(1)
 system.time(pp_par <- prior_predictive_check(
-  n_draws = 30, 
+  n_draws = 250, 
   prior_list = priors,
   base = base_args, 
   tv = tv_args_model,
@@ -244,6 +244,8 @@ gc()
 
 summary(pp_par)
 print(pp_par)
+
+
 
 
 # -----------------------------------------------------------------------------
