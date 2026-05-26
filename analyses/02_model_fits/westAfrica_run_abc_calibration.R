@@ -75,7 +75,14 @@ MODEL_OVERRIDES <- list(
 # make_abc_output_dir() in section 6 creates a fresh timestamped
 # subdirectory of <ABC_OUTPUT_BASE>/abc_outputs/ tagged with
 # ABC_OUTPUT_LABEL, so successive phases / runs don't overwrite each other.
-ABC_OUTPUT_BASE  <- ANALYSIS_DIR
+# Routed to the repo-level outputs/ folder (two levels up from ANALYSIS_DIR).
+ABC_OUTPUT_BASE  <- normalizePath(
+  file.path(ANALYSIS_DIR, "..", "..", "outputs"),
+  mustWork = FALSE
+)
+if (!dir.exists(ABC_OUTPUT_BASE)) {
+  dir.create(ABC_OUTPUT_BASE, recursive = TRUE, showWarnings = FALSE)
+}
 ABC_OUTPUT_LABEL <- "final"
 
 # Symmetric base for both prob_hcw_cond_*_hospital probabilities. The fitted
