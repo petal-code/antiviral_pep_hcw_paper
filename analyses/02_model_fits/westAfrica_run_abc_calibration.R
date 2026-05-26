@@ -76,7 +76,7 @@ MODEL_OVERRIDES <- list(
 # subdirectory of <ABC_OUTPUT_BASE>/abc_outputs/ tagged with
 # ABC_OUTPUT_LABEL, so successive phases / runs don't overwrite each other.
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
-ABC_OUTPUT_LABEL <- "final"
+ABC_OUTPUT_LABEL <- ""
 
 # Repo-level outputs/ folder. The final-result RDS is copied here in addition
 # to being written under ABC_OUTPUT_DIR, so manuscript-ready artefacts live
@@ -283,7 +283,7 @@ end_time <- Sys.time()
 print(end_time - start_time)
 
 result_filename <- paste0(
-  "fiber_abc_smc_result_", SCENARIO_ID,
+  "fiber_ABC_SMC_", SCENARIO_ID,
   if (nzchar(ABC_OUTPUT_LABEL)) paste0("_", ABC_OUTPUT_LABEL) else "",
   ".rds"
 )
