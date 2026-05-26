@@ -76,7 +76,7 @@ MODEL_OVERRIDES <- list(
 # subdirectory of <ABC_OUTPUT_BASE>/abc_outputs/ tagged with
 # ABC_OUTPUT_LABEL, so successive phases / runs don't overwrite each other.
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
-ABC_OUTPUT_LABEL <- "phase4"
+ABC_OUTPUT_LABEL <- "final"
 
 # Symmetric base for both prob_hcw_cond_*_hospital probabilities. The fitted
 # hcw_risk_scalar multiplies this for both, capped at 1.0 — see
