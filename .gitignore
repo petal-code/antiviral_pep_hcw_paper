@@ -1,0 +1,20 @@
+# R
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj.user
+.Ruserdata
+
+# OS
+.DS_Store
+Thumbs.db
+
+# renv (if added later)
+renv/library/
+renv/local/
+renv/cellar/
+renv/python/
+renv/staging/
+
+# Uncomment if outputs are large/regenerable and you don't want them tracked:
+# outputs/
