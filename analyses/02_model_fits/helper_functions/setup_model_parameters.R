@@ -112,8 +112,7 @@ DEFAULT_SCALAR_INPUTS <- list(
   seeding_cases = 5,
   check_final_size = 30000,
   initial_immune = 0,
-  susceptible_deplete = FALSE,
-  tf = Inf
+  susceptible_deplete = FALSE
 )
 
 
@@ -301,7 +300,6 @@ make_base_args <- function(overrides = list()) {
     prob_hcw_cond_funeral_genPop = scalar_inputs$prob_hcw_cond_funeral_genPop,
 
     # Simulation controls.
-    tf = scalar_inputs$tf,
     population = scalar_inputs$population,
     hcw_per_capita = scalar_inputs$hcw_per_capita,
     check_final_size = scalar_inputs$check_final_size,
