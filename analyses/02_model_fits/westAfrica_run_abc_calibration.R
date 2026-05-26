@@ -96,7 +96,6 @@ HCW_BASE_PROB <- 0.25
 
 # ABC tuning. These travel into each worker via bootstrap_abc_worker().
 ABC_CONFIG <- list(
-  check_final_size        = 30000,
   takeoff_death_threshold = 100,         # >= K deaths counts as a take-off
   n_reps                  = 60,          # replicates per particle (per theta)
   seeding_cases           = 25,
@@ -109,7 +108,7 @@ ABC_CONFIG <- list(
 # EasyABC::ABC_sequential settings.
 ABC_SETTINGS <- list(
   method              = "Delmoral",
-  nb_simul            = 220,
+  nb_simul            = 230,
   alpha               = 0.5,
   tolerance_target    = 0.27,            # ~0.04 above the N=60 noise floor
   M                   = 1,
@@ -120,7 +119,7 @@ ABC_SETTINGS <- list(
 # Worker count. Aggressive on the PETAL box (Phase 4 target 110), modest
 # on dev workstations.
 N_CLUSTER <- if (grepl("PETAL", Sys.info()[["user"]], ignore.case = TRUE)) {
-  min(110, parallel::detectCores() - 10)
+  min(120, parallel::detectCores() - 10)
 } else {
   min(10, parallel::detectCores() - 4)
 }
@@ -282,14 +281,15 @@ result <- with_abc_output_dir(
 end_time <- Sys.time()
 print(end_time - start_time)
 
+result_date <- format(start_time, "%Y-%m-%d")
 result_filename <- paste0(
   "fiber_ABC_SMC_", SCENARIO_ID,
   if (nzchar(ABC_OUTPUT_LABEL)) paste0("_", ABC_OUTPUT_LABEL) else "",
+  "_", result_date,
   ".rds"
 )
 saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))
 saveRDS(result, file = file.path(FINAL_OUTPUTS_DIR, result_filename))
-
 
 # -----------------------------------------------------------------------------
 # 8. POSTERIOR INSPECTION
