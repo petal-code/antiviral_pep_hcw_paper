@@ -52,6 +52,7 @@ ANALYSIS_DIR <- switch(
   Sys.info()[["user"]],
   "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_model_fits",
   "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_model_fits",
+  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_model_fits",
   getwd()
 )
 HELPER_DIR     <- file.path(ANALYSIS_DIR, "helper_functions")
@@ -96,7 +97,7 @@ HCW_BASE_PROB <- 0.25
 # ABC tuning. These travel into each worker via bootstrap_abc_worker().
 ABC_CONFIG <- list(
   takeoff_death_threshold = 100,         # >= K deaths counts as a take-off
-  n_reps                  = 60,          # replicates per particle (per theta)
+  n_reps                  = 40,          # replicates per particle (per theta)
   seeding_cases           = 25,
   hcw_base_prob           = HCW_BASE_PROB,
   setup_R0_n              = 100000L,
@@ -109,7 +110,7 @@ ABC_SETTINGS <- list(
   method              = "Delmoral",
   nb_simul            = 230,
   alpha               = 0.5,
-  tolerance_target    = 0.27,            # ~0.04 above the N=60 noise floor
+  tolerance_target    = 1,            # remember to change this back to something lower
   M                   = 1,
   use_seed            = TRUE,
   verbose             = TRUE
