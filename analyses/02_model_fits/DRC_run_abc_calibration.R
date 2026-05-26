@@ -66,7 +66,7 @@ SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed"
 # here as a named list; new parameters that get added to the model in the
 # future automatically become overridable without further code changes.
 MODEL_OVERRIDES <- list(
-  check_final_size = 30000
+  check_final_size = 10000
 )
 
 # Where ABC_sequential's intermediate files (output_step*, tolerance_step*,
@@ -210,22 +210,40 @@ priors <- list(
 # To parallelise, set up a future plan first; the function will then use
 # future_lapply when parallel = TRUE.
 #
-# set.seed(1)
-# pp <- prior_predictive_check(
-#   n_draws       = 20,
-#   prior_list    = priors,
-#   base          = base_args,
-#   tv            = tv_args_model,
-#   D             = D_direct_multiplier,
-#   F_fun         = F_funeral_multiplier,
-#   parallel      = FALSE,
-#   n_replicates  = 5,
-#   seeding_cases = ABC_CONFIG$seeding_cases,
-#   takeoff_death_threshold = ABC_CONFIG$takeoff_death_threshold,
-#   hcw_base_prob = HCW_BASE_PROB
-# )
-# print(pp)
-# summary(pp)
+set.seed(1)
+
+cl <- parallel::makeCluster(N_CLUSTER)
+parallel::clusterExport(cl, c("HELPER_DIR"))
+parallel::clusterEvalQ(cl, {
+  library(fiber)
+  source(file.path(HELPER_DIR, "setup_model_parameters.R"))
+  source(file.path(HELPER_DIR, "abc_calibration_functions.R"))
+  source(file.path(HELPER_DIR, "calculate_model_approx_r0.R"))
+})
+future::plan(future::cluster, workers = cl)
+
+set.seed(1)
+system.time(pp_par <- prior_predictive_check(
+  n_draws = 30, 
+  prior_list = priors,
+  base = base_args, 
+  tv = tv_args_model,
+  D = D_direct_multiplier, 
+  F_fun = F_funeral_multiplier,
+  parallel = TRUE, 
+  n_replicates = 5,
+  seeding_cases           = ABC_CONFIG$seeding_cases,
+  takeoff_death_threshold = ABC_CONFIG$takeoff_death_threshold,
+  hcw_base_prob           = HCW_BASE_PROB
+))
+
+parallel::stopCluster(cl)
+future::plan(future::sequential)
+rm(cl)
+gc()
+
+summary(pp_par)
+print(pp_par)
 
 
 # -----------------------------------------------------------------------------
