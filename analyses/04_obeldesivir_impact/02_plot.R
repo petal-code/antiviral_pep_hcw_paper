@@ -20,37 +20,56 @@
 
 
 # -----------------------------------------------------------------------------
-# 0. Locate this script / the repo
+# 0. Locate the repo root (works however you launch the script)
 # -----------------------------------------------------------------------------
-get_script_dir <- function() {
-  args     <- commandArgs(trailingOnly = FALSE)
-  file_arg <- grep("^--file=", args, value = TRUE)
-  if (length(file_arg)) {
-    return(dirname(normalizePath(sub("^--file=", "", file_arg[1]), mustWork = FALSE)))
-  }
-  for (i in rev(seq_len(sys.nframe()))) {
-    of <- sys.frame(i)$ofile
-    if (!is.null(of)) return(dirname(normalizePath(of, mustWork = FALSE)))
-  }
-  NULL
-}
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0L) b else a
-ANALYSIS_DIR <- get_script_dir() %||% getwd()
 
-find_repo_root_local <- function(start, marker = "obv_hcw_paper.Rproj") {
-  d <- normalizePath(start, winslash = "/", mustWork = FALSE)
-  repeat {
-    if (file.exists(file.path(d, marker))) return(d)
-    parent <- dirname(d)
-    if (identical(parent, d)) return(NULL)
-    d <- parent
+# Path to the repo root (the folder containing obv_hcw_paper.Rproj). Known
+# machines are baked in; on any other machine we fall back to auto-detection.
+# If neither works, set REPO_ROOT directly below, e.g.
+#   REPO_ROOT <- "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper"
+REPO_ROOT <- switch(
+  Sys.info()[["user"]],
+  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper",
+  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper",
+  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper",
+  NA_character_
+)
+
+if (is.na(REPO_ROOT)) {
+  get_script_dir <- function() {
+    args     <- commandArgs(trailingOnly = FALSE)
+    file_arg <- grep("^--file=", args, value = TRUE)
+    if (length(file_arg)) return(dirname(normalizePath(sub("^--file=", "", file_arg[1]), mustWork = FALSE)))
+    for (i in rev(seq_len(sys.nframe()))) {
+      of <- sys.frame(i)$ofile
+      if (!is.null(of)) return(dirname(normalizePath(of, mustWork = FALSE)))
+    }
+    NULL
   }
+  find_repo_root_local <- function(start, marker = "obv_hcw_paper.Rproj") {
+    d <- normalizePath(start, winslash = "/", mustWork = FALSE)
+    repeat {
+      if (file.exists(file.path(d, marker))) return(d)
+      parent <- dirname(d)
+      if (identical(parent, d)) return(NULL)
+      d <- parent
+    }
+  }
+  REPO_ROOT <- find_repo_root_local(get_script_dir() %||% getwd()) %||%
+               find_repo_root_local(getwd())
 }
-REPO_ROOT <- find_repo_root_local(ANALYSIS_DIR) %||% find_repo_root_local(getwd())
-if (is.null(REPO_ROOT)) stop("Could not locate the repo root (obv_hcw_paper.Rproj).", call. = FALSE)
 
-OUTPUT_DIR  <- file.path(REPO_ROOT, "outputs")
-RESULTS_RDS <- file.path(ANALYSIS_DIR, "obeldesivir_simulation_results.rds")
+if (is.null(REPO_ROOT) || is.na(REPO_ROOT) ||
+    !file.exists(file.path(REPO_ROOT, "obv_hcw_paper.Rproj"))) {
+  stop("Could not locate the repo root. Set REPO_ROOT at the top of this script, e.g.\n",
+       '  REPO_ROOT <- "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper"',
+       call. = FALSE)
+}
+
+ANALYSIS_DIR <- file.path(REPO_ROOT, "analyses", "04_obeldesivir_impact")
+OUTPUT_DIR   <- file.path(REPO_ROOT, "outputs")
+RESULTS_RDS  <- file.path(ANALYSIS_DIR, "obeldesivir_simulation_results.rds")
 dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 
