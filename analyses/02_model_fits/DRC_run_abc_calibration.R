@@ -97,7 +97,7 @@ HCW_BASE_PROB <- 0.25
 # ABC tuning. These travel into each worker via bootstrap_abc_worker().
 ABC_CONFIG <- list(
   takeoff_death_threshold = 100,         # >= K deaths counts as a take-off
-  n_reps                  = 40,          # replicates per particle (per theta)
+  n_reps                  = 150,          # replicates per particle (per theta)
   seeding_cases           = 25,
   hcw_base_prob           = HCW_BASE_PROB,
   setup_R0_n              = 100000L,
@@ -108,9 +108,9 @@ ABC_CONFIG <- list(
 # EasyABC::ABC_sequential settings.
 ABC_SETTINGS <- list(
   method              = "Delmoral",
-  nb_simul            = 230,
+  nb_simul            = 690,
   alpha               = 0.5,
-  tolerance_target    = 1,            # remember to change this back to something lower
+  tolerance_target    = 0.2, 
   M                   = 1,
   use_seed            = TRUE,
   verbose             = TRUE
@@ -246,9 +246,6 @@ gc()
 summary(pp_par)
 print(pp_par)
 
-
-
-
 # -----------------------------------------------------------------------------
 # 6. PER-RUN OUTPUT DIRECTORY + WORKER CONFIG
 # -----------------------------------------------------------------------------
@@ -282,6 +279,10 @@ save_abc_config(list(
 # -----------------------------------------------------------------------------
 # Wrap the call so cwd is temporarily ABC_OUTPUT_DIR while step files are
 # written; the workers' cwd is independent.
+
+ABC_SETTINGS$tolerance_target
+ABC_SETTINGS$nb_simul
+ABC_CONFIG$n_reps
 
 start_time <- Sys.time()
 result <- with_abc_output_dir(
@@ -324,7 +325,7 @@ print(apply(posterior, 2, quantile, probs = c(0.025, 0.5, 0.975)))
 
 par(mfrow = c(1, 3))
 for (j in seq_len(ncol(posterior))) {
-  hist(posterior[, j], breaks = 15,
+  hist(posterior[, j], breaks = 10,
        main = colnames(posterior)[j],
        xlab = colnames(posterior)[j])
   abline(v = quantile(posterior[, j], c(0.025, 0.5, 0.975)),
@@ -340,22 +341,23 @@ par(mfrow = c(1, 1))
 # (rebuild an ABC_sequential()-style result object from output_step*). Point
 # them at ABC_OUTPUT_DIR for the current run, or at any previous run's
 # subdirectory under <ABC_OUTPUT_BASE>/abc_outputs/.
-#
-# abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target)
-# print(abc_compare_steps(ABC_OUTPUT_DIR))
-#
-# # Inspect the final step's particle cloud directly:
-# last_step_file <- tail(list.files(ABC_OUTPUT_DIR, pattern = "^output_step[0-9]+$",
-#                                   full.names = TRUE), 1L)
-# step_last <- read.table(last_step_file, header = FALSE)
-# colnames(step_last) <- c("weight", "R0", "prop_funeral", "hcw_risk_scalar",
-#                          "takeoff", "n_deaths", "n_hcw_deaths", "duration")
-# summary(step_last)
-#
-# # Reconstruct an ABC result object from the latest completed step:
-# # result <- reconstruct_abc_result(ABC_OUTPUT_DIR)
-# # Or from a specific step:
-# # result <- reconstruct_abc_result(ABC_OUTPUT_DIR, step = 3)
+
+directory <- "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_model_fits/abc_outputs/Middle_DRC_ConflictSmoothed_20260526_205041"
+abc_progress(directory, tolerance_target = ABC_SETTINGS$tolerance_target)
+print(abc_compare_steps(directory))
+
+# Inspect the final step's particle cloud directly:
+last_step_file <- tail(list.files(directory, pattern = "^output_step[0-9]+$",
+                                  full.names = TRUE), 1L)
+step_last <- read.table(last_step_file, header = FALSE)
+colnames(step_last) <- c("weight", "R0", "prop_funeral", "hcw_risk_scalar",
+                         "takeoff", "n_deaths", "n_hcw_deaths", "duration")
+summary(step_last)
+
+# Reconstruct an ABC result object from the latest completed step:
+# result <- reconstruct_abc_result(ABC_OUTPUT_DIR)
+# Or from a specific step:
+# result <- reconstruct_abc_result(ABC_OUTPUT_DIR, step = 3)
 
 
 # -----------------------------------------------------------------------------
