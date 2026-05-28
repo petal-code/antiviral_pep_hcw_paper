@@ -52,6 +52,7 @@
 ANALYSIS_DIR <- switch(
   Sys.info()[["user"]],
   "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_model_fits",
+  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_model_fits",
   "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_model_fits",
   getwd()
 )
