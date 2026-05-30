@@ -1,4 +1,4 @@
-# 02_plot.R  (analyses/04_obeldesivir_impact)
+# 02_WHO_CORC_plot.R  (analyses/Misc_WHO_CORC_antiviral_impact_eval)
 # =============================================================================
 # Obeldesivir (OBV PEP) impact analysis — plotting step.
 #
@@ -67,9 +67,9 @@ if (is.null(REPO_ROOT) || is.na(REPO_ROOT) ||
        call. = FALSE)
 }
 
-ANALYSIS_DIR <- file.path(REPO_ROOT, "analyses", "Misc_WHO_CORC_obeldesivir_impact_eval")
-OUTPUT_DIR  <- file.path(REPO_ROOT, "outputs/misc")
-RESULTS_RDS <- file.path(ANALYSIS_DIR, "WHO_CORC_prelim_obeldesivir_simulation_results.rds")
+ANALYSIS_DIR <- file.path(REPO_ROOT, "analyses", "Misc_WHO_CORC_antiviral_impact_eval")
+OUTPUT_DIR  <- file.path(REPO_ROOT, "outputs", "misc", "WHO_CORC_outputs")
+RESULTS_RDS <- file.path(ANALYSIS_DIR, "WHO_CORC_prelim_antiviral_simulation_results.rds")
 dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 
@@ -170,13 +170,13 @@ p_hcw_band    <- plot_band      ("hcw_deaths_per_bin", ylab_hcw,
 cowplot::plot_grid(p_deaths_ind, p_deaths_band, p_hcw_ind, p_hcw_band,
                    nrow = 2)
 
-ggsave(file.path(OUTPUT_DIR, "obeldesivir_deaths_over_time_individual.png"),
+ggsave(file.path(OUTPUT_DIR, "antiviral_deaths_over_time_individual.png"),
        p_deaths_ind, width = 9, height = 5.5, dpi = 300)
-ggsave(file.path(OUTPUT_DIR, "obeldesivir_deaths_over_time_median_iqr.png"),
+ggsave(file.path(OUTPUT_DIR, "antiviral_deaths_over_time_median_iqr.png"),
        p_deaths_band, width = 9, height = 5.5, dpi = 300)
-ggsave(file.path(OUTPUT_DIR, "obeldesivir_hcw_deaths_over_time_individual.png"),
+ggsave(file.path(OUTPUT_DIR, "antiviral_hcw_deaths_over_time_individual.png"),
        p_hcw_ind, width = 9, height = 5.5, dpi = 300)
-ggsave(file.path(OUTPUT_DIR, "obeldesivir_hcw_deaths_over_time_median_iqr.png"),
+ggsave(file.path(OUTPUT_DIR, "antiviral_hcw_deaths_over_time_median_iqr.png"),
        p_hcw_band, width = 9, height = 5.5, dpi = 300)
 
 # Combined 2x2 panel (deaths on top, HCW deaths on bottom; individual left,
@@ -186,7 +186,7 @@ if (have_patchwork) {
   combined <- (p_deaths_ind + p_deaths_band) / (p_hcw_ind + p_hcw_band) +
     plot_layout(guides = "collect") &
     theme(legend.position = "top")
-  ggsave(file.path(OUTPUT_DIR, "obeldesivir_epidemic_curves_combined.png"),
+  ggsave(file.path(OUTPUT_DIR, "antiviral_epidemic_curves_combined.png"),
          combined, width = 15, height = 11, dpi = 300)
 } else {
   message("Note: install the 'patchwork' package to also get the combined 2x2 panel.")
@@ -225,7 +225,7 @@ p_bar <- ggplot(subset(bar_df, metric == "HCW deaths"), aes(x = metric, y = medi
         #panel.grid.major.x = element_blank(),
         # panel.grid.minor = element_blank())
 
-ggsave(file.path(OUTPUT_DIR, "obeldesivir_pct_hcw_deaths_averted_bar.png"),
+ggsave(file.path(OUTPUT_DIR, "antiviral_pct_hcw_deaths_averted_bar.png"),
        p_bar, width = 8, height = 5.8, dpi = 300)
 
 
@@ -233,12 +233,12 @@ ggsave(file.path(OUTPUT_DIR, "obeldesivir_pct_hcw_deaths_averted_bar.png"),
 # 5. DONE
 # -----------------------------------------------------------------------------
 message("Figures written to: ", OUTPUT_DIR)
-figs <- c("obeldesivir_deaths_over_time_individual.png",
-          "obeldesivir_deaths_over_time_median_iqr.png",
-          "obeldesivir_hcw_deaths_over_time_individual.png",
-          "obeldesivir_hcw_deaths_over_time_median_iqr.png",
-          "obeldesivir_pct_hcw_deaths_averted_bar.png")
-if (have_patchwork) figs <- c(figs, "obeldesivir_epidemic_curves_combined.png")
+figs <- c("antiviral_deaths_over_time_individual.png",
+          "antiviral_deaths_over_time_median_iqr.png",
+          "antiviral_hcw_deaths_over_time_individual.png",
+          "antiviral_hcw_deaths_over_time_median_iqr.png",
+          "antiviral_pct_hcw_deaths_averted_bar.png")
+if (have_patchwork) figs <- c(figs, "antiviral_epidemic_curves_combined.png")
 for (f in figs) message("  - ", f)
 
 p_hcw_update <- p_hcw_band +

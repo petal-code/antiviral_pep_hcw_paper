@@ -1,4 +1,4 @@
-# helper_functions.R  (analyses/04_obeldesivir_impact)
+# WHO_CORC_helper_functions.R  (analyses/Misc_WHO_CORC_antiviral_impact_eval)
 # =============================================================================
 # Analysis-specific helpers for the obeldesivir (OBV PEP) impact analysis.
 #
