@@ -4,7 +4,7 @@
 #
 # What this script does, end to end:
 #   1. Reads the posterior of the 3 fitted parameters (R0, prop_funeral,
-#      hcw_risk_scalar) from the DRC ABC-SMC run in analyses/02_model_fits,
+#      hcw_risk_scalar) from the DRC ABC-SMC run in analyses/02_ABC_model_fits_HCWrisk,
 #      using the final completed step (step 7 by default).
 #   2. Converts the 3 fitted parameters into the 4 fiber model parameters
 #      (mn_offspring_genPop, mn_offspring_funeral, and the two
@@ -36,7 +36,7 @@
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0L) b else a
 
 # Path to the repo root (the folder containing obv_hcw_paper.Rproj). Known
-# machines are baked in (mirroring analyses/02_model_fits/DRC_run_abc_calibration.R);
+# machines are baked in (mirroring analyses/02_ABC_model_fits_HCWrisk/DRC_run_abc_calibration.R);
 # on any other machine we fall back to auto-detection. If neither works, just set
 # REPO_ROOT directly below, e.g.
 #   REPO_ROOT <- "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper"
@@ -145,7 +145,7 @@ library(future.apply)
 library(progressr)
 
 # Calibration helpers (parameter setup, build_abc_model_args, R0 solver).
-CALIB_HELPERS <- file.path(REPO_ROOT, "analyses", "02_model_fits", "helper_functions")
+CALIB_HELPERS <- file.path(REPO_ROOT, "analyses", "02_ABC_model_fits_HCWrisk", "helper_functions")
 source(file.path(CALIB_HELPERS, "setup_model_parameters.R"))
 source(file.path(CALIB_HELPERS, "abc_calibration_functions.R"))
 source(file.path(CALIB_HELPERS, "calculate_model_approx_r0.R"))
@@ -162,7 +162,7 @@ handlers("progress")
 # Reproduce section 3 of DRC_run_abc_calibration.R so the conversion of the
 # fitted (R0, prop_funeral) into (mn_offspring_genPop, mn_offspring_funeral) is
 # identical to the calibration.
-SCENARIO_CSV <- file.path(REPO_ROOT, "analyses", "02_model_fits", "final_four_scenario_values.csv")
+SCENARIO_CSV <- file.path(REPO_ROOT, "analyses", "02_ABC_model_fits_HCWrisk", "final_four_scenario_values.csv")
 scenario_matrix <- read_scenario_matrix(SCENARIO_CSV)
 
 mp <- make_model_parameters(
@@ -189,7 +189,7 @@ message(sprintf("Scenario %s: D = %.5f, F = %.5f",
 # -----------------------------------------------------------------------------
 # 4. READ POSTERIOR (STEP 7) + DOWNSAMPLE + DERIVE MODEL PARAMETERS
 # -----------------------------------------------------------------------------
-ABC_OUTPUTS_DIR <- file.path(REPO_ROOT, "analyses", "02_model_fits", "abc_outputs")
+ABC_OUTPUTS_DIR <- file.path(REPO_ROOT, "analyses", "02_ABC_model_fits_HCWrisk", "abc_outputs")
 ABC_RUN_DIR     <- find_latest_abc_run_dir(ABC_OUTPUTS_DIR, SCENARIO_ID)
 message("Reading ABC posterior from: ", ABC_RUN_DIR)
 

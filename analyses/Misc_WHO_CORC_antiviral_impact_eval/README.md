@@ -2,14 +2,14 @@
 
 Estimate the impact of antiviral post-exposure prophylaxis (PEP) on a
 DRC-like Ebola outbreak, using the posterior from the ABC-SMC calibration in
-`analyses/02_model_fits`.
+`analyses/02_ABC_model_fits_HCWrisk`.
 
 ## What it does
 
 1. **Posterior** — reads the 3 fitted parameters (`R0`, `prop_funeral`,
    `hcw_risk_scalar`) from the final completed ABC step (step 7) of the latest
    `Middle_DRC_ConflictSmoothed` run under
-   `analyses/02_model_fits/abc_outputs/`.
+   `analyses/02_ABC_model_fits_HCWrisk/abc_outputs/`.
 2. **Parameter conversion** — converts the 3 fitted parameters into the 4 fiber
    model parameters (`mn_offspring_genPop`, `mn_offspring_funeral`,
    `prob_hcw_cond_genPop_hospital`, `prob_hcw_cond_hcw_hospital`) using the same
