@@ -3,7 +3,7 @@
 # Analysis-specific helpers for the obeldesivir (OBV PEP) impact analysis.
 #
 # This analysis takes the posterior from the DRC ABC-SMC calibration
-# (analyses/02_model_fits), converts the 3 fitted parameters into the 4 fiber
+# (analyses/02_ABC_model_fits_HCWrisk), converts the 3 fitted parameters into the 4 fiber
 # model parameters, downsamples to a manageable posterior sample, and runs the
 # fiber branching-process model with and without obeldesivir post-exposure
 # prophylaxis (PEP).
@@ -35,7 +35,7 @@
 #
 # Requires fiber to be loaded (library(fiber)) and, for derive_model_parameters()
 # / building model args, the calibration helpers in
-# analyses/02_model_fits/helper_functions to be sourced (so build_abc_model_args()
+# analyses/02_ABC_model_fits_HCWrisk/helper_functions to be sourced (so build_abc_model_args()
 # and solve_offspring_means_for_R0() are available).
 # =============================================================================
 
@@ -126,7 +126,7 @@ downsample_posterior <- function(posterior,
 
 # Convert the 3 fitted ABC parameters (R0, prop_funeral, hcw_risk_scalar) into
 # the 4 fiber model parameters, using EXACTLY the mapping the calibration used
-# (build_abc_model_args() in analyses/02_model_fits/helper_functions):
+# (build_abc_model_args() in analyses/02_ABC_model_fits_HCWrisk/helper_functions):
 #
 #   mn_offspring_genPop           = (1 - prop_funeral) * R0 / D
 #   mn_offspring_funeral          =      prop_funeral  * R0 / F
