@@ -208,21 +208,22 @@ bar_df <- data.frame(
              qs(per_set$pct_deaths_averted,     0.75))
 )
 
-p_bar <- ggplot(bar_df, aes(x = metric, y = median, fill = metric)) +
+p_bar <- ggplot(subset(bar_df, metric == "HCW deaths"), aes(x = metric, y = median, fill = metric)) +
   geom_col(width = 0.6) +
   geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.18, linewidth = 0.5) +
-  geom_text(aes(label = sprintf("%.1f%%", median)), vjust = -0.6, size = 4) +
+  geom_text(aes(label = sprintf("%.1f%%", median)), vjust = -0.6, hjust = 1.05, size = 4) +
   scale_fill_manual(values = c("HCW deaths" = "#1B9E77", "All deaths" = "#999999"),
                     guide = "none") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
-  labs(x = NULL, y = "% of deaths averted by obeldesivir",
-       title = "Percentage of HCW deaths averted by obeldesivir",
-       subtitle = paste0(paste(strwrap(subtitle_txt, width = 70), collapse = "\n"),
-                         "\nBars: median across parameter sets; error bars: 25-75% interval")) +
-  theme_minimal(base_size = 12) +
-  theme(plot.subtitle = element_text(size = 8, colour = "grey30"),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor = element_blank())
+  labs(x = NULL, y = "% of HCW deaths averted by obeldesivir",
+       title = "",
+       subtitle = "") + 
+         #paste0(paste(strwrap(subtitle_txt, width = 70), collapse = "\n"),
+          #               "\nBars: median across parameter sets; error bars: 25-75% interval")) +
+  theme_bw(base_size = 12) +
+  theme(plot.subtitle = element_text(size = 8, colour = "grey30"))
+        #panel.grid.major.x = element_blank(),
+        # panel.grid.minor = element_blank())
 
 ggsave(file.path(OUTPUT_DIR, "obeldesivir_pct_hcw_deaths_averted_bar.png"),
        p_bar, width = 8, height = 5.8, dpi = 300)
@@ -239,3 +240,15 @@ figs <- c("obeldesivir_deaths_over_time_individual.png",
           "obeldesivir_pct_hcw_deaths_averted_bar.png")
 if (have_patchwork) figs <- c(figs, "obeldesivir_epidemic_curves_combined.png")
 for (f in figs) message("  - ", f)
+
+p_hcw_update <- p_hcw_band +
+  theme_bw() + 
+  labs(x = "Time Since Outbreak Start (Days)", y = "Healthcare Worker\n Deaths Per Week",
+       subtitle = "", title = "") +
+  lims(x = c(0, 500)) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
+cowplot::plot_grid(p_hcw_update, p_bar, labels = c("A", "B"),
+                   align = "h", axis = "b", rel_widths = c(3.5, 1))
+
