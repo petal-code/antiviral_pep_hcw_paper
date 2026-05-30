@@ -1,4 +1,4 @@
-# 04_antiviral_impact
+# Misc_WHO_CORC_antiviral_impact_eval
 
 Estimate the impact of antiviral post-exposure prophylaxis (PEP) on a
 DRC-like Ebola outbreak, using the posterior from the ABC-SMC calibration in
@@ -28,8 +28,10 @@ DRC-like Ebola outbreak, using the posterior from the ABC-SMC calibration in
 - `WHO_CORC_helper_functions.R` — analysis-specific helpers (posterior IO, parameter
   conversion, the per-replicate simulator run on workers, binning/summaries).
 - `01_WHO_CORC_run_simulations.R` — runs the simulations and saves
-  `WHO_CORC_prelim_antiviral_simulation_results.rds` plus summary CSVs in `outputs/`.
-- `02_WHO_CORC_plot.R` — reads the intermediate and writes the figures to `outputs/`.
+  `WHO_CORC_prelim_antiviral_simulation_results.rds` (in this folder) plus
+  summary CSVs in `outputs/misc/WHO_CORC_outputs/`.
+- `02_WHO_CORC_plot.R` — reads the intermediate and writes the figures to
+  `outputs/misc/WHO_CORC_outputs/`.
 
 ## Running
 
@@ -39,18 +41,18 @@ source("analyses/Misc_WHO_CORC_antiviral_impact_eval/01_WHO_CORC_run_simulations
 source("analyses/Misc_WHO_CORC_antiviral_impact_eval/02_WHO_CORC_plot.R")             # figures
 ```
 
-Key knobs live in the CONFIG block at the top of `01_run_simulations.R`
+Key knobs live in the CONFIG block at the top of `01_WHO_CORC_run_simulations.R`
 (`N_SETS`, `N_REPS`, `N_WORKERS`, `OBV_CFG`, `BIN_WIDTH_DAYS`, seeds).
 
-## Figures (in `outputs/`)
+## Figures (in `outputs/misc/WHO_CORC_outputs/`)
 
-- `obeldesivir_deaths_over_time_individual.png` — every parameter set's mean
-  deaths/week trajectory, with vs without obeldesivir.
-- `obeldesivir_deaths_over_time_median_iqr.png` — median + 25–75% band.
-- `obeldesivir_hcw_deaths_over_time_individual.png` — as above, HCW deaths.
-- `obeldesivir_hcw_deaths_over_time_median_iqr.png` — median + 25–75% band.
-- `obeldesivir_epidemic_curves_combined.png` — 2×2 combined panel.
-- `obeldesivir_pct_hcw_deaths_averted_bar.png` — % of HCW deaths averted (with %
+- `antiviral_deaths_over_time_individual.png` — every parameter set's mean
+  deaths/week trajectory, with vs without antiviral.
+- `antiviral_deaths_over_time_median_iqr.png` — median + 25–75% band.
+- `antiviral_hcw_deaths_over_time_individual.png` — as above, HCW deaths.
+- `antiviral_hcw_deaths_over_time_median_iqr.png` — median + 25–75% band.
+- `antiviral_epidemic_curves_combined.png` — 2×2 combined panel.
+- `antiviral_pct_hcw_deaths_averted_bar.png` — % of HCW deaths averted (with %
   of all deaths for context).
 
 ## Note on the paired comparison

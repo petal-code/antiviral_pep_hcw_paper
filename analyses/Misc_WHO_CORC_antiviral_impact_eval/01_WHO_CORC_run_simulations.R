@@ -1,4 +1,4 @@
-# 01_run_simulations.R  (analyses/04_obeldesivir_impact)
+# 01_WHO_CORC_run_simulations.R  (analyses/Misc_WHO_CORC_antiviral_impact_eval)
 # =============================================================================
 # Obeldesivir (OBV PEP) impact analysis — simulation step.
 #
@@ -81,7 +81,7 @@ if (is.null(REPO_ROOT) || is.na(REPO_ROOT) ||
        call. = FALSE)
 }
 
-ANALYSIS_DIR <- file.path(REPO_ROOT, "analyses", "Misc_WHO_CORC_obeldesivir_impact_eval")
+ANALYSIS_DIR <- file.path(REPO_ROOT, "analyses", "Misc_WHO_CORC_antiviral_impact_eval")
 
 
 # -----------------------------------------------------------------------------
@@ -131,8 +131,8 @@ SEED_BASE     <- 20260528L     # base for per-(set, rep) simulation seeds
 BIN_WIDTH_DAYS <- 7L
 
 # Output locations.
-OUTPUT_DIR  <- file.path(REPO_ROOT, "outputs/misc")
-RESULTS_RDS <- file.path(ANALYSIS_DIR, "WHO_CORC_prelim_obeldesivir_simulation_results.rds")
+OUTPUT_DIR  <- file.path(REPO_ROOT, "outputs", "misc", "WHO_CORC_outputs")
+RESULTS_RDS <- file.path(ANALYSIS_DIR, "WHO_CORC_prelim_antiviral_simulation_results.rds")
 dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 
@@ -204,7 +204,7 @@ derived_params <- derive_model_parameters(
   theta, D = D_direct_multiplier, F_fun = F_funeral_multiplier, hcw_base_prob = HCW_BASE_PROB
 )
 write.csv(derived_params,
-          file.path(OUTPUT_DIR, "obeldesivir_downsampled_posterior_parameters.csv"),
+          file.path(OUTPUT_DIR, "antiviral_downsampled_posterior_parameters.csv"),
           row.names = FALSE)
 
 # Pre-build one full fiber argument list per parameter set, in the main session,
@@ -385,9 +385,9 @@ takeoff_rate <- aggregate(n_deaths ~ arm, data = per_rep,
 names(takeoff_rate)[2] <- "prop_takeoff"
 
 # Save CSV tables.
-write.csv(arm_totals,      file.path(OUTPUT_DIR, "obeldesivir_total_deaths_by_arm.csv"),      row.names = FALSE)
-write.csv(averted_summary, file.path(OUTPUT_DIR, "obeldesivir_deaths_averted_summary.csv"),   row.names = FALSE)
-write.csv(per_set_averted, file.path(OUTPUT_DIR, "obeldesivir_per_set_deaths_averted.csv"),   row.names = FALSE)
+write.csv(arm_totals,      file.path(OUTPUT_DIR, "antiviral_total_deaths_by_arm.csv"),      row.names = FALSE)
+write.csv(averted_summary, file.path(OUTPUT_DIR, "antiviral_deaths_averted_summary.csv"),   row.names = FALSE)
+write.csv(per_set_averted, file.path(OUTPUT_DIR, "antiviral_per_set_deaths_averted.csv"),   row.names = FALSE)
 
 
 # -----------------------------------------------------------------------------
