@@ -1,6 +1,6 @@
-# 04_obeldesivir_impact
+# 04_antiviral_impact
 
-Estimate the impact of obeldesivir post-exposure prophylaxis (PEP) on a
+Estimate the impact of antiviral post-exposure prophylaxis (PEP) on a
 DRC-like Ebola outbreak, using the posterior from the ABC-SMC calibration in
 `analyses/02_model_fits`.
 
@@ -16,27 +16,27 @@ DRC-like Ebola outbreak, using the posterior from the ABC-SMC calibration in
    mapping as the calibration (`build_abc_model_args()`).
 3. **Downsample** — weighted resample to **100 parameter sets**, with **5
    stochastic replicates** each.
-4. **Simulate** — runs fiber **with** and **without** obeldesivir (80% efficacy,
+4. **Simulate** — runs fiber **with** and **without** antiviral (80% efficacy,
    100% coverage, 100% adherence; modelled as PEP for HCWs exposed in hospital),
    parallelised with `future` (`multisession`, Windows-compatible; defaults to
    10 workers).
 5. **Outputs** — total deaths and total HCW deaths per arm; deaths averted
-   (total and HCW) by obeldesivir; epidemic-curve trajectories.
+   (total and HCW) by antiviral; epidemic-curve trajectories.
 
 ## Files
 
-- `helper_functions.R` — analysis-specific helpers (posterior IO, parameter
+- `WHO_CORC_helper_functions.R` — analysis-specific helpers (posterior IO, parameter
   conversion, the per-replicate simulator run on workers, binning/summaries).
-- `01_run_simulations.R` — runs the simulations and saves
-  `obeldesivir_simulation_results.rds` plus summary CSVs in `outputs/`.
-- `02_plot.R` — reads the intermediate and writes the figures to `outputs/`.
+- `01_WHO_CORC_run_simulations.R` — runs the simulations and saves
+  `WHO_CORC_prelim_antiviral_simulation_results.rds` plus summary CSVs in `outputs/`.
+- `02_WHO_CORC_plot.R` — reads the intermediate and writes the figures to `outputs/`.
 
 ## Running
 
 ```r
 # From the repo root or this folder:
-source("analyses/04_obeldesivir_impact/01_run_simulations.R")  # heavy compute
-source("analyses/04_obeldesivir_impact/02_plot.R")             # figures
+source("analyses/Misc_WHO_CORC_antiviral_impact_eval/01_WHO_CORC_run_simulations.R")  # heavy compute
+source("analyses/Misc_WHO_CORC_antiviral_impact_eval/02_WHO_CORC_plot.R")             # figures
 ```
 
 Key knobs live in the CONFIG block at the top of `01_run_simulations.R`
