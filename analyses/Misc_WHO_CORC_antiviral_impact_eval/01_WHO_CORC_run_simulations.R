@@ -86,10 +86,14 @@ SEED_BASE     <- 20260528L     # base for per-(set, rep) simulation seeds
 # readable unit for a multi-month outbreak; set to 1 for daily incidence.
 BIN_WIDTH_DAYS <- 7L
 
-# Output locations.
-OUTPUT_DIR  <- file.path(REPO_ROOT, "outputs", "misc", "WHO_CORC_outputs")
-RESULTS_RDS <- file.path(OUTPUT_DIR, "WHO_CORC_prelim_antiviral_simulation_results.rds")
-dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
+# Output locations. Curated finals (figures, summary tables) -> outputs/; the
+# heavy regenerable compute->plot handoff RDS -> a gitignored _intermediate/
+# folder next to this analysis (see .gitignore).
+OUTPUT_DIR       <- file.path(REPO_ROOT, "outputs", "misc", "WHO_CORC_outputs")
+INTERMEDIATE_DIR <- file.path(ANALYSIS_DIR, "_intermediate")
+RESULTS_RDS      <- file.path(INTERMEDIATE_DIR, "WHO_CORC_prelim_antiviral_simulation_results.rds")
+dir.create(OUTPUT_DIR,       recursive = TRUE, showWarnings = FALSE)
+dir.create(INTERMEDIATE_DIR, recursive = TRUE, showWarnings = FALSE)
 
 
 # -----------------------------------------------------------------------------
