@@ -27,8 +27,9 @@
 # install.packages("here").
 REPO_ROOT    <- here::here()
 ANALYSIS_DIR <- here::here("analyses", "Misc_WHO_CORC_antiviral_impact_eval")
-OUTPUT_DIR   <- here::here("outputs", "misc", "WHO_CORC_outputs")
-RESULTS_RDS  <- file.path(OUTPUT_DIR, "WHO_CORC_prelim_antiviral_simulation_results.rds")
+OUTPUT_DIR       <- here::here("outputs", "misc", "WHO_CORC_outputs")
+INTERMEDIATE_DIR <- file.path(ANALYSIS_DIR, "_intermediate")
+RESULTS_RDS      <- file.path(INTERMEDIATE_DIR, "WHO_CORC_prelim_antiviral_simulation_results.rds")
 dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 

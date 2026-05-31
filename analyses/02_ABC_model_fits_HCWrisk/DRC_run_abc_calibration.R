@@ -77,10 +77,10 @@ ABC_OUTPUT_BASE  <- ANALYSIS_DIR
 #   fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_HCWrisk_<date>.rds
 ABC_OUTPUT_LABEL <- "HCWrisk"
 
-# Repo-level outputs/ folder. The final-result RDS is copied here in addition
-# to being written under ABC_OUTPUT_DIR, so manuscript-ready artefacts live
-# in one canonical place.
-FINAL_OUTPUTS_DIR <- here::here("outputs")
+# Curated outputs for this analysis. The final-result RDS is copied here (in
+# addition to being written under ABC_OUTPUT_DIR) so the manuscript-ready fit
+# lives in one canonical, per-analysis place under outputs/<analysis_name>/.
+FINAL_OUTPUTS_DIR <- here::here("outputs", "02_ABC_model_fits_HCWrisk")
 if (!dir.exists(FINAL_OUTPUTS_DIR)) {
   dir.create(FINAL_OUTPUTS_DIR, recursive = TRUE, showWarnings = FALSE)
 }
@@ -300,11 +300,13 @@ result <- with_abc_output_dir(
 end_time <- Sys.time()
 print(end_time - start_time)
 
-result_date <- format(start_time, "%Y-%m-%d")
+# Full timestamp (not date-only) so multiple runs on the same day produce
+# distinct files, and so find_latest_file(by = "name") sorts chronologically.
+result_stamp <- format(start_time, "%Y%m%d_%H%M%S")
 result_filename <- paste0(
   "fiber_ABC_SMC_", SCENARIO_ID,
   if (nzchar(ABC_OUTPUT_LABEL)) paste0("_", ABC_OUTPUT_LABEL) else "",
-  "_", result_date,
+  "_", result_stamp,
   ".rds"
 )
 saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))
