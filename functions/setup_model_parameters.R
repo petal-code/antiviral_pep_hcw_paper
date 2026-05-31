@@ -58,10 +58,12 @@ DEFAULT_SCALAR_INPUTS <- list(
   # See .hospital_quarantine_efficacy_t0() in calculate_model_approx_r0.R.
   etu_efficacy = 0.90,
   general_hospital_quarantine_efficacy = 0.30,
-  # Receiver-side PPE protection for HCWs. Fixed scalar (previously derived from
-  # the time-varying ipc_helper curve). Does NOT enter the R0 approximation, but
-  # does affect simulated HCW deaths.
-  ppe_efficacy_hcw = 0.70,
+  # Per-PPE efficacy at preventing hospital transmission to HCWs (fixed scalar).
+  # In fiber, PPE thinning is ppe_coverage_hcw(t) * ppe_efficacy; the time-varying
+  # coverage lever ppe_coverage_hcw comes from the scenario ipc_helper curve (see
+  # build_time_varying_args()). Does NOT enter the R0 approximation, but does
+  # affect simulated HCW deaths.
+  ppe_efficacy = 0.70,
 
   # Transmission means and dispersion.
   mn_offspring_genPop = 1.25,
@@ -171,7 +173,8 @@ read_scenario_matrix <- function(matrix_path) {
   required_cols <- c(
     "scenario", "scenario_label", "relative_day", "prob_hosp", "delay_hosp",
     "prob_unsafe_funeral_comm", "prob_unsafe_funeral_hosp",
-    "prob_unsafe_funeral_etu", "prop_etu"
+    "prob_unsafe_funeral_etu", "prop_etu",
+    "ipc_helper"   # drives the time-varying PPE coverage lever (ppe_coverage_hcw)
   )
   missing_cols <- setdiff(required_cols, names(x))
   if (length(missing_cols) > 0L) {
@@ -305,10 +308,11 @@ make_base_args <- function(overrides = list()) {
     prob_hcw_cond_hcw_hospital = scalar_inputs$prob_hcw_cond_hcw_hospital,
     prob_hospital_cond_hcw_preAdm = scalar_inputs$prob_hospital_cond_hcw_preAdm,
 
-    # Hospital quarantine + PPE efficacies (fixed scalars).
+    # Hospital quarantine + PPE efficacies (fixed scalars). PPE coverage is a
+    # separate time-varying lever (ppe_coverage_hcw) added in build_time_varying_args().
     etu_efficacy = scalar_inputs$etu_efficacy,
     general_hospital_quarantine_efficacy = scalar_inputs$general_hospital_quarantine_efficacy,
-    ppe_efficacy_hcw = scalar_inputs$ppe_efficacy_hcw,
+    ppe_efficacy = scalar_inputs$ppe_efficacy,
 
     # Safe funerals.
     safe_funeral_efficacy = scalar_inputs$safe_funeral_efficacy,
@@ -372,8 +376,10 @@ build_time_varying_args <- function(
   # offspring functions by mixing the scalar etu_efficacy and
   # general_hospital_quarantine_efficacy (both emitted by make_base_args()) by
   # the time-varying prop_etu(t) curve below; we therefore pass prop_etu forward
-  # rather than pre-computing a single hq curve here. PPE (ppe_efficacy_hcw) is
-  # now a fixed scalar in make_base_args(), no longer a curve off ipc_helper.
+  # rather than pre-computing a single hq curve here. PPE protection is split into
+  # the scalar efficacy ppe_efficacy (in make_base_args()) and the time-varying
+  # coverage lever ppe_coverage_hcw(t) built below from the ipc_helper curve;
+  # fiber applies the two as ppe_coverage_hcw(t) * ppe_efficacy.
 
   list(
     scenario_label = unique(scenario_matrix$scenario_label)[1L],
@@ -405,6 +411,13 @@ build_time_varying_args <- function(
 
     prop_etu = make_curve(
       times, clip01(scenario_matrix$prop_etu), curve_method
+    ),
+
+    # PPE coverage lever: probability a relevant HCW is wearing PPE, ramping
+    # with IPC/response maturity (the scenario ipc_helper curve). Paired with the
+    # scalar ppe_efficacy from make_base_args() as ppe_coverage_hcw(t)*ppe_efficacy.
+    ppe_coverage_hcw = make_curve(
+      times, clip01(scenario_matrix$ipc_helper), curve_method
     )
   )
 }
@@ -418,7 +431,7 @@ build_time_varying_args <- function(
 # Override routing for entries in `overrides`:
 #   * names that match a DEFAULT_SCALAR_INPUTS entry  -> applied via
 #     make_base_args() (these include the efficacy scalars etu_efficacy,
-#     general_hospital_quarantine_efficacy and ppe_efficacy_hcw).
+#     general_hospital_quarantine_efficacy and ppe_efficacy).
 #   * names that match a time-varying-args entry      -> overwrite the
 #     corresponding curve / scalar after build_time_varying_args().
 #   * everything else                                 -> attached as extra
