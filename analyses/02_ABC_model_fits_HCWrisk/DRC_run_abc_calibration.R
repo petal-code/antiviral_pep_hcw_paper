@@ -43,28 +43,17 @@
 # -----------------------------------------------------------------------------
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
-# ANALYSIS_DIR is this script's containing directory (analyses/02_ABC_model_fits_HCWrisk
-# inside the obv_hcw_paper repo). The script assumes you've setwd() to this
-# directory before sourcing; the machine-specific switch below baked in
-# absolute defaults for the most common workstations.
+# Paths are resolved from the repo root with here::here(), which locates
+# obv_hcw_paper.Rproj — so this runs on any machine, from any working directory
+# inside the repo, with no per-user paths to maintain. Requires the `here`
+# package: install.packages("here").
 
-ANALYSIS_DIR <- switch(
-  Sys.info()[["user"]],
-  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
-  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
-  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
-  getwd()
-)
-# Shared model helpers now live in the repo-level functions/ folder
-# (../../functions relative to this analysis directory).
-FUNCTIONS_DIR  <- normalizePath(
-  file.path(ANALYSIS_DIR, "..", "..", "functions"),
-  mustWork = FALSE
-)
+ANALYSIS_DIR   <- here::here("analyses", "02_ABC_model_fits_HCWrisk")
+FUNCTIONS_DIR  <- here::here("functions")
 SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
 FUNCTIONS_PATH <- file.path(FUNCTIONS_DIR, "abc_calibration_functions.R")
 R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
-SCENARIO_CSV   <- file.path(ANALYSIS_DIR, "final_four_scenario_values.csv")
+SCENARIO_CSV   <- here::here("data-processed", "final_four_scenario_values.csv")
 SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed"
 
 # Any scalar-parameter overrides to layer on top of DEFAULT_SCALAR_INPUTS.
@@ -91,10 +80,7 @@ ABC_OUTPUT_LABEL <- "HCWrisk"
 # Repo-level outputs/ folder. The final-result RDS is copied here in addition
 # to being written under ABC_OUTPUT_DIR, so manuscript-ready artefacts live
 # in one canonical place.
-FINAL_OUTPUTS_DIR <- normalizePath(
-  file.path(ANALYSIS_DIR, "..", "..", "outputs"),
-  mustWork = FALSE
-)
+FINAL_OUTPUTS_DIR <- here::here("outputs")
 if (!dir.exists(FINAL_OUTPUTS_DIR)) {
   dir.create(FINAL_OUTPUTS_DIR, recursive = TRUE, showWarnings = FALSE)
 }
@@ -352,7 +338,9 @@ par(mfrow = c(1, 1))
 # them at ABC_OUTPUT_DIR for the current run, or at any previous run's
 # subdirectory under <ABC_OUTPUT_BASE>/abc_outputs/.
 
-directory <- "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk/abc_outputs/Middle_DRC_ConflictSmoothed_20260526_205041"
+# Inspect any run under <ABC_OUTPUT_BASE>/abc_outputs/. Defaults to the run we
+# just produced; swap in a prior run's subdirectory to inspect that instead.
+directory <- ABC_OUTPUT_DIR
 abc_progress(directory, tolerance_target = ABC_SETTINGS$tolerance_target)
 print(abc_compare_steps(directory))
 

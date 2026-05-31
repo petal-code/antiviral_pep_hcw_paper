@@ -31,57 +31,13 @@
 
 
 # -----------------------------------------------------------------------------
-# 0. Locate the repo root (works however you launch the script)
+# 0. Locate the repo root (works on any machine, from anywhere in the repo)
 # -----------------------------------------------------------------------------
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0L) b else a
-
-# Path to the repo root (the folder containing obv_hcw_paper.Rproj). Known
-# machines are baked in (mirroring analyses/02_ABC_model_fits_HCWrisk/DRC_run_abc_calibration.R);
-# on any other machine we fall back to auto-detection. If neither works, just set
-# REPO_ROOT directly below, e.g.
-#   REPO_ROOT <- "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper"
-REPO_ROOT <- switch(
-  Sys.info()[["user"]],
-  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper",
-  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper",
-  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper",
-  NA_character_
-)
-
-# Fallback: walk up from the script location (Rscript / RStudio "Source") or,
-# failing that, the current working directory, until the .Rproj is found.
-if (is.na(REPO_ROOT)) {
-  get_script_dir <- function() {
-    args     <- commandArgs(trailingOnly = FALSE)
-    file_arg <- grep("^--file=", args, value = TRUE)
-    if (length(file_arg)) return(dirname(normalizePath(sub("^--file=", "", file_arg[1]), mustWork = FALSE)))
-    for (i in rev(seq_len(sys.nframe()))) {
-      of <- sys.frame(i)$ofile
-      if (!is.null(of)) return(dirname(normalizePath(of, mustWork = FALSE)))
-    }
-    NULL
-  }
-  find_repo_root_local <- function(start, marker = "obv_hcw_paper.Rproj") {
-    d <- normalizePath(start, winslash = "/", mustWork = FALSE)
-    repeat {
-      if (file.exists(file.path(d, marker))) return(d)
-      parent <- dirname(d)
-      if (identical(parent, d)) return(NULL)
-      d <- parent
-    }
-  }
-  REPO_ROOT <- find_repo_root_local(get_script_dir() %||% getwd()) %||%
-    find_repo_root_local(getwd())
-}
-
-if (is.null(REPO_ROOT) || is.na(REPO_ROOT) ||
-    !file.exists(file.path(REPO_ROOT, "obv_hcw_paper.Rproj"))) {
-  stop("Could not locate the repo root. Set REPO_ROOT at the top of this script, e.g.\n",
-       '  REPO_ROOT <- "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper"',
-       call. = FALSE)
-}
-
-ANALYSIS_DIR <- file.path(REPO_ROOT, "analyses", "Misc_WHO_CORC_antiviral_impact_eval")
+# here::here() finds the repo root by locating obv_hcw_paper.Rproj, so there are
+# no per-user paths to maintain. Requires the `here` package:
+# install.packages("here").
+REPO_ROOT    <- here::here()
+ANALYSIS_DIR <- here::here("analyses", "Misc_WHO_CORC_antiviral_impact_eval")
 
 
 # -----------------------------------------------------------------------------
@@ -144,14 +100,13 @@ library(future)
 library(future.apply)
 library(progressr)
 
-# Shared model helpers (parameter setup, map/build model args, R0 solver).
-FUNCTIONS_DIR <- file.path(REPO_ROOT, "functions")
-source(file.path(FUNCTIONS_DIR, "setup_model_parameters.R"))
-source(file.path(FUNCTIONS_DIR, "abc_calibration_functions.R"))
-source(file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R"))
-
-# This analysis's helpers.
-source(file.path(ANALYSIS_DIR, "WHO_CORC_helper_functions.R"))
+# Shared model helpers, all sourced from the repo-level functions/ folder.
+FUNCTIONS_DIR <- here::here("functions")
+source(file.path(FUNCTIONS_DIR, "setup_model_parameters.R"))     # scenario -> model args
+source(file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R"))  # R0 calc + D/F solver
+source(file.path(FUNCTIONS_DIR, "abc_calibration_functions.R"))  # map/build ABC model args
+source(file.path(FUNCTIONS_DIR, "abc_posterior.R"))              # read/downsample posterior
+source(file.path(FUNCTIONS_DIR, "simulation_helpers.R"))         # run replicate + summaries
 
 handlers("progress")
 
@@ -162,7 +117,7 @@ handlers("progress")
 # Reproduce section 3 of DRC_run_abc_calibration.R so the conversion of the
 # fitted (R0, prop_funeral) into (mn_offspring_genPop, mn_offspring_funeral) is
 # identical to the calibration.
-SCENARIO_CSV <- file.path(REPO_ROOT, "analyses", "02_ABC_model_fits_HCWrisk", "final_four_scenario_values.csv")
+SCENARIO_CSV <- here::here("data-processed", "final_four_scenario_values.csv")
 scenario_matrix <- read_scenario_matrix(SCENARIO_CSV)
 
 mp <- make_model_parameters(
