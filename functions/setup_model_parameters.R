@@ -171,7 +171,7 @@ read_scenario_matrix <- function(matrix_path) {
   required_cols <- c(
     "scenario", "scenario_label", "relative_day", "prob_hosp", "delay_hosp",
     "prob_unsafe_funeral_comm", "prob_unsafe_funeral_hosp",
-    "prob_unsafe_funeral_etu", "prop_etu", "ipc_helper"
+    "prob_unsafe_funeral_etu", "prop_etu"
   )
   missing_cols <- setdiff(required_cols, names(x))
   if (length(missing_cols) > 0L) {
