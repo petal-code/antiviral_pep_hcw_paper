@@ -102,6 +102,7 @@ library(progressr)
 
 # Shared model helpers, all sourced from the repo-level functions/ folder.
 FUNCTIONS_DIR <- here::here("functions")
+source(file.path(FUNCTIONS_DIR, "io_helpers.R"))                 # find latest artefact on disk
 source(file.path(FUNCTIONS_DIR, "setup_model_parameters.R"))     # scenario -> model args
 source(file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R"))  # R0 calc + D/F solver
 source(file.path(FUNCTIONS_DIR, "abc_calibration_functions.R"))  # map/build ABC model args

@@ -5,8 +5,10 @@ Code and analysis for [PAPER TITLE].
 ## Repo structure
 
 - `functions/` — shared model code used across analyses (parameter setup, the
-  approximate-R0 solver, and the ABC parameter→model-args mapping). Analyses
-  source these files from here rather than keeping their own copies.
+  approximate-R0 solver, and the ABC parameter→model-args mapping), plus generic
+  helpers like `io_helpers.R` (e.g. `find_latest_file()` to pull the most recent
+  timestamped artefact out of a folder). Analyses source these files from here
+  rather than keeping their own copies.
 - `data-raw/` — raw, read-only input data.
 - `data-processed/` — processed data, regenerable from `data-raw/`.
 - `analyses/` — analysis scripts. Each subfolder is one data-processing step or
