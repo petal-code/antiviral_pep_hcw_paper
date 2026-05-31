@@ -105,7 +105,8 @@ FUNCTIONS_DIR <- here::here("functions")
 source(file.path(FUNCTIONS_DIR, "io_helpers.R"))                 # find latest artefact on disk
 source(file.path(FUNCTIONS_DIR, "setup_model_parameters.R"))     # scenario -> model args
 source(file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R"))  # R0 calc + D/F solver
-source(file.path(FUNCTIONS_DIR, "abc_calibration_functions.R"))  # map/build ABC model args
+source(file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R"))   # generic ABC helpers
+source(file.path(FUNCTIONS_DIR, "abc_calibration_functions_hcwRisk.R"))  # map/build ABC model args
 source(file.path(FUNCTIONS_DIR, "abc_posterior.R"))              # read/downsample posterior
 source(file.path(FUNCTIONS_DIR, "simulation_helpers.R"))         # run replicate + summaries
 

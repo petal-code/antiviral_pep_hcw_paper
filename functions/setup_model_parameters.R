@@ -105,7 +105,7 @@ DEFAULT_SCALAR_INPUTS <- list(
   # (0.12 and 0.20). Those defaults were not literature-derived and have
   # been replaced with a symmetric 0.25 because (i) we now fit these via
   # ABC, with hcw_risk_scalar multiplying the symmetric base (see
-  # hcw_base_prob in abc_calibration_functions.R), and (ii) the previous
+  # hcw_base_prob in abc_calibration_functions_hcwRisk.R), and (ii) the previous
   # asymmetry was arbitrary.
   prob_hcw_cond_genPop_comm = 0.005,
   prob_hcw_cond_genPop_hospital = 0.25,   # was 0.12; symmetric ABC base, see note above
@@ -114,7 +114,7 @@ DEFAULT_SCALAR_INPUTS <- list(
   prob_hospital_cond_hcw_preAdm = 0.50,
 
   # Funeral control / assignment.
-  safe_funeral_efficacy = 1.0,
+  safe_funeral_efficacy = 0.90,
   prob_hcw_cond_funeral_hcw = 0.02,
   prob_hcw_cond_funeral_genPop = 0.005,
 
@@ -124,7 +124,11 @@ DEFAULT_SCALAR_INPUTS <- list(
   seeding_cases = 5,
   check_final_size = 30000,
   initial_immune = 0,
-  susceptible_deplete = FALSE
+  susceptible_deplete = FALSE,
+
+  # OBV post-exposure-prophylaxis gate. Off by default / during calibration;
+  # switched on by the OBV impact analyses.
+  obv_pep_enabled = FALSE
 )
 
 
@@ -205,7 +209,9 @@ check_model_function_version <- function() {
     )
   }
   required_branching_args <- c("prop_etu", "etu_efficacy",
-                               "general_hospital_quarantine_efficacy")
+                               "general_hospital_quarantine_efficacy",
+                               "ppe_coverage_hcw", "ppe_efficacy",
+                               "safe_funeral_efficacy")
   missing_branching_args <- setdiff(
     required_branching_args, names(formals(branching_process_main))
   )
@@ -325,7 +331,8 @@ make_base_args <- function(overrides = list()) {
     check_final_size = scalar_inputs$check_final_size,
     initial_immune = scalar_inputs$initial_immune,
     seeding_cases = scalar_inputs$seeding_cases,
-    susceptible_deplete = scalar_inputs$susceptible_deplete
+    susceptible_deplete = scalar_inputs$susceptible_deplete,
+    obv_pep_enabled = scalar_inputs$obv_pep_enabled
   )
 
   # Attach any unknown overrides so they still reach the model args list.

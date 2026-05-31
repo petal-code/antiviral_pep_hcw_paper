@@ -1,8 +1,9 @@
 # abc_posterior.R
 # -----------------------------------------------------------------------------
 # Read and use a finished ABC-SMC fit. These helpers turn the on-disk output of
-# an ABC_sequential() run (see abc_calibration_functions.R) into a usable
-# posterior sample for any downstream analysis.
+# an ABC_sequential() run (see abc_calibration_functions_hcwRisk.R) into a usable
+# posterior sample for any downstream analysis. HCW-risk-flavoured: the
+# derive_model_parameters() helper maps the HCW-risk parameter triple.
 #
 # Contents
 #   find_latest_abc_run_dir()  : newest timestamped ABC run dir for a scenario.
@@ -13,7 +14,7 @@
 #                                mapping to map_abc_params_to_model() so the
 #                                record can never drift from what is simulated.
 #
-# Requires abc_calibration_functions.R to be sourced first (for
+# Requires abc_calibration_functions_hcwRisk.R to be sourced first (for
 # map_abc_params_to_model(), used by derive_model_parameters()).
 # -----------------------------------------------------------------------------
 
@@ -82,7 +83,7 @@ downsample_posterior <- function(posterior,
 # Convert the 3 fitted ABC parameters (R0, prop_funeral, hcw_risk_scalar) into
 # the 4 fiber model parameters, as a tidy one-row-per-set data.frame for a
 # transparent, saved record. The mapping itself is delegated to
-# map_abc_params_to_model() (in abc_calibration_functions.R) -- the SAME function
+# map_abc_params_to_model() (in abc_calibration_functions_hcwRisk.R) -- the SAME function
 # build_abc_model_args() uses to build the args fed to the simulator, so this
 # record can never drift from what is actually simulated.
 #

@@ -4,11 +4,19 @@ Code and analysis for [PAPER TITLE].
 
 ## Repo structure
 
-- `functions/` — shared model code used across analyses (parameter setup, the
-  approximate-R0 solver, and the ABC parameter→model-args mapping), plus generic
-  helpers like `io_helpers.R` (e.g. `find_latest_file()` to pull the most recent
-  timestamped artefact out of a folder). Analyses source these files from here
-  rather than keeping their own copies.
+- `functions/` — shared model code used across analyses. Parameter setup
+  (`setup_model_parameters.R`) and the approximate-R0 solver
+  (`calculate_model_approx_r0.R`) are shared by every analysis and target the
+  current fiber NPI interface. ABC calibration is split so two fitting schemes
+  can be run side by side without duplicated plumbing:
+    - `abc_calibration_functions_common.R` — generic ABC helpers (summaries,
+      output dirs, disk readers) used by both schemes.
+    - `abc_calibration_functions_hcwRisk.R` — the HCW-risk scheme (fits a
+      `hcw_risk_scalar`).
+    - `abc_calibration_functions_npi.R` — the NPI-efficacy scheme (fits a single
+      `npi_scaler` over PPE/ETU conditional efficacies).
+  Plus generic helpers like `io_helpers.R` (`find_latest_file()`). Analyses
+  source these files from here rather than keeping their own copies.
 - `data-raw/` — raw, read-only input data.
 - `data-processed/` — processed data, regenerable from `data-raw/`.
 - `analyses/` — analysis scripts. Each subfolder is one data-processing step or

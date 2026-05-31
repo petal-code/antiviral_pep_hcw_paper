@@ -23,20 +23,17 @@
 # -----------------------------------------------------------------------------
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
-ANALYSIS_DIR <- switch(
-  Sys.info()[["user"]],
-  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_ABC_model_fits_NPI_Eff",
-  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_NPI_Eff",
-  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_NPI_Eff",
-  getwd()
-)
-
-FUNCTIONS_DIR  <- normalizePath(file.path(ANALYSIS_DIR, "..", "..", "functions"),
-                                mustWork = FALSE)
-SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters_new_approach.R")
-FUNCTIONS_PATH <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_new_approach.R")
-R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0_new_approach.R")
-SCENARIO_CSV   <- file.path(ANALYSIS_DIR, "final_four_scenario_values.csv")
+# Paths resolved from the repo root with here::here() (locates obv_hcw_paper.Rproj),
+# so the script runs the same regardless of working directory / machine.
+ANALYSIS_DIR   <- here::here("analyses", "02_ABC_model_fits_NPI_Eff")
+FUNCTIONS_DIR  <- here::here("functions")
+# Shared model code + the NPI-specific ABC helpers (sources the generic common
+# file via dirname() on the workers; see bootstrap_abc_worker()).
+SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
+COMMON_PATH    <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R")
+FUNCTIONS_PATH <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_npi.R")
+R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
+SCENARIO_CSV   <- here::here("data-processed", "final_four_scenario_values.csv")
 SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed"
 
 # >>> PLACEHOLDER: fixed conditional efficacies (NOT fitted). UPDATE. <<<
@@ -59,10 +56,7 @@ MODEL_OVERRIDES <- c(
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
 ABC_OUTPUT_LABEL <- "NPIeff"
 
-FINAL_OUTPUTS_DIR <- normalizePath(
-  file.path(ANALYSIS_DIR, "..", "..", "outputs"),
-  mustWork = FALSE
-)
+FINAL_OUTPUTS_DIR <- here::here("outputs", "02_ABC_model_fits_NPI_Eff")
 if (!dir.exists(FINAL_OUTPUTS_DIR)) {
   dir.create(FINAL_OUTPUTS_DIR, recursive = TRUE, showWarnings = FALSE)
 }
@@ -108,6 +102,7 @@ library(fiber)
 handlers("progress")
 
 source(SETUP_PATH)
+source(COMMON_PATH)
 source(FUNCTIONS_PATH)
 source(R0_PATH)
 
@@ -227,11 +222,11 @@ result <- with_abc_output_dir(
 end_time <- Sys.time()
 print(end_time - start_time)
 
-result_date <- format(start_time, "%Y-%m-%d")
+result_stamp <- format(start_time, "%Y%m%d_%H%M%S")
 result_filename <- paste0(
   "fiber_ABC_SMC_", SCENARIO_ID,
   if (nzchar(ABC_OUTPUT_LABEL)) paste0("_", ABC_OUTPUT_LABEL) else "",
-  "_", result_date, ".rds"
+  "_", result_stamp, ".rds"
 )
 saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))
 saveRDS(result, file = file.path(FINAL_OUTPUTS_DIR, result_filename))
