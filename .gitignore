@@ -16,11 +16,5 @@ renv/cellar/
 renv/python/
 renv/staging/
 
-# Heavy, regenerable analysis intermediates — kept next to their analysis on
-# disk but never tracked. Curated final artefacts (figures, tables, and the
-# single final ABC fit) live under outputs/ and ARE tracked.
-abc_outputs/
-analyses/**/_intermediate/
-
 # Uncomment if outputs are large/regenerable and you don't want them tracked:
 # outputs/
