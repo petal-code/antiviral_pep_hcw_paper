@@ -122,8 +122,10 @@ approx_eq <- function(a, b, tol = 1e-8) {
     all(is.finite(a)) && all(is.finite(b)) && all(abs(a - b) <= tol)
 }
 
-# Reused objects (pre-declared so the compute-and-assert idiom can <<- into them)
-ba <- sm <- ar <- sol <- r0 <- rd <- ps <- mpf <- solf <- NULL
+# Reused objects (pre-declared so the compute-and-assert idiom can <<- into them).
+# NB: avoid names that exist on the search path (e.g. stats::ar) — <<- would
+# walk past globalenv and hit the locked package binding. Hence `r0args`.
+ba <- sm <- r0args <- sol <- r0 <- rd <- ps <- mpf <- solf <- NULL
 
 
 # ----------------------------------------------------------------------------
@@ -231,12 +233,12 @@ test("map: hcw prob capped at 1.0",
 # Invariant: the simulator path (build_abc_model_args) and the saved-record
 # path (derive_model_parameters) must derive identical numbers from the mapping.
 bargs <- build_abc_model_args(R0 = 2, prop_funeral = 0.25, hcw_risk_scalar = 2,
-                              base = list(dummy = 1), tv = list(dummy2 = 2),
+                              base = list(dummy = 1, seed = 999), tv = list(dummy2 = 2),
                               D = 0.8, F_fun = 0.5, seeding_cases = 7, hcw_base_prob = 0.25)
 test("build_abc_model_args splices the same genPop mean",  approx_eq(bargs$mn_offspring_genPop,  m$mn_offspring_genPop))
 test("build_abc_model_args splices the same funeral mean", approx_eq(bargs$mn_offspring_funeral, m$mn_offspring_funeral))
 test("build_abc_model_args sets seeding_cases + clears seed",
-     identical(bargs$seeding_cases, 7) && is.null(bargs$seed))
+     isTRUE(bargs$seeding_cases == 7) && is.null(bargs[["seed"]]))
 
 theta <- list(set_id = 1L, particle = 1L, R0 = 2, prop_funeral = 0.25, hcw_risk_scalar = 2)
 dp <- derive_model_parameters(theta, D = 0.8, F_fun = 0.5, hcw_base_prob = 0.25)
@@ -259,19 +261,19 @@ test("assemble fiber-free R0 args from make_base_args()",
        a$p_unsafe_funeral_comm_genPop <- 0.3
        a$p_unsafe_funeral_hosp_genPop <- 0.2
        a$prop_etu                     <- 0.4
-       ar <<- a
-       is.list(ar)
+       r0args <<- a
+       is.list(r0args)
      })
 # Mix = prop_etu*etu_efficacy + (1-prop_etu)*general = .4*.9 + .6*.3 = 0.54
 test("hospital_quarantine_efficacy(0) = mix of the new triplet",
-     approx_eq(.hospital_quarantine_efficacy_t0(ar), 0.54))
+     approx_eq(.hospital_quarantine_efficacy_t0(r0args), 0.54))
 test_error("errors if etu_efficacy missing (new triplet required)",
-           { bad <- ar; bad$etu_efficacy <- NULL; .hospital_quarantine_efficacy_t0(bad) })
+           { bad <- r0args; bad$etu_efficacy <- NULL; .hospital_quarantine_efficacy_t0(bad) })
 test_error("errors if general_hospital_quarantine_efficacy missing",
-           { bad <- ar; bad$general_hospital_quarantine_efficacy <- NULL; .hospital_quarantine_efficacy_t0(bad) })
+           { bad <- r0args; bad$general_hospital_quarantine_efficacy <- NULL; .hospital_quarantine_efficacy_t0(bad) })
 
 test("solve_offspring_means_for_R0() runs",
-     { sol <<- solve_offspring_means_for_R0(R0 = 1.5, args = ar,
+     { sol <<- solve_offspring_means_for_R0(R0 = 1.5, args = r0args,
                                             proportion_transmission_from_funerals = 0.3,
                                             n = 20000, seed = 123); is.list(sol) })
 test("solver D multiplier in (0, 1]",
@@ -282,7 +284,7 @@ test("solver reports hq(0) = 0.54", approx_eq(sol$hospital_quarantine_efficacy_t
 # Round-trip: plug solved means back in (same seed + n => identical MC draws).
 test("R0 round-trip recovers the target R0",
      {
-       a2 <- ar
+       a2 <- r0args
        a2$mn_offspring_genPop  <- sol$mn_offspring_genPop_required
        a2$mn_offspring_funeral <- sol$mn_offspring_funeral_required
        r0 <<- R0_single_type_from_args(a2, n = 20000, seed = 123)
