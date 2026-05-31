@@ -56,10 +56,15 @@ ANALYSIS_DIR <- switch(
   "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
   getwd()
 )
-HELPER_DIR     <- file.path(ANALYSIS_DIR, "helper_functions")
-SETUP_PATH     <- file.path(HELPER_DIR,   "setup_model_parameters.R")
-FUNCTIONS_PATH <- file.path(HELPER_DIR,   "abc_calibration_functions.R")
-R0_PATH        <- file.path(HELPER_DIR,   "calculate_model_approx_r0.R")
+# Shared model helpers now live in the repo-level functions/ folder
+# (../../functions relative to this analysis directory).
+FUNCTIONS_DIR  <- normalizePath(
+  file.path(ANALYSIS_DIR, "..", "..", "functions"),
+  mustWork = FALSE
+)
+SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
+FUNCTIONS_PATH <- file.path(FUNCTIONS_DIR, "abc_calibration_functions.R")
+R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
 SCENARIO_CSV   <- file.path(ANALYSIS_DIR, "final_four_scenario_values.csv")
 SCENARIO_ID    <- "Worst_WestAfrica"
 
@@ -97,7 +102,7 @@ if (!dir.exists(FINAL_OUTPUTS_DIR)) {
 
 # Symmetric base for both prob_hcw_cond_*_hospital probabilities. The fitted
 # hcw_risk_scalar multiplies this for both, capped at 1.0 — see
-# build_abc_model_args() in abc_calibration_functions.R.
+# build_abc_model_args() in functions/abc_calibration_functions.R.
 HCW_BASE_PROB <- 0.25
 
 # ABC tuning. These travel into each worker via bootstrap_abc_worker().

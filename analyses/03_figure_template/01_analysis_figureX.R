@@ -1,7 +1,7 @@
 # Computation step. Reads inputs, runs analysis, saves intermediate as .rds.
 
-source(here::here("R", "<top-level-helpers>.R"))  # if needed
-source("helper_functions.R")
+source(here::here("functions", "<shared-helpers>.R"))  # if needed
+source("helper_functions_figureX.R")
 
 # ... analysis ...
 

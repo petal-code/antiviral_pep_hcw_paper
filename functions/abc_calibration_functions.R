@@ -9,11 +9,14 @@
 #                                        per-replicate input to ABC.
 #
 #   --- Turning ABC parameters into model args ---
-#     build_abc_model_args()           : maps (R0, prop_funeral,
-#                                        hcw_risk_scalar) onto fiber inputs
-#                                        using pre-computed D and F
-#                                        multipliers from
-#                                        solve_offspring_means_for_R0().
+#     map_abc_params_to_model()        : single source of truth for the
+#                                        (R0, prop_funeral, hcw_risk_scalar)
+#                                        -> 4 fiber model parameters mapping,
+#                                        using pre-computed D and F multipliers
+#                                        from solve_offspring_means_for_R0().
+#     build_abc_model_args()           : splices map_abc_params_to_model()
+#                                        onto the base + time-varying args to
+#                                        produce a ready-to-run fiber arg list.
 #     run_one_abc_replicate()          : do.call(branching_process_main) +
 #                                        abc_summarise() for one replicate.
 #
@@ -123,6 +126,24 @@ abc_summarise <- function(out) {
 #   prob_hcw_cond_hcw_hospital    <- pmin(hcw_base_prob * hcw_risk_scalar, 1)
 # A symmetric base is a more honest reflection of prior uncertainty about
 # the relative magnitudes than the older asymmetric defaults (0.12, 0.20).
+#
+# map_abc_params_to_model() is the SINGLE source of truth for this mapping.
+# build_abc_model_args() (which feeds the simulator) and the WHO CORC analysis's
+# derive_model_parameters() (which writes the saved, human-readable record of
+# the derived parameters) both call it, so the recorded parameters can never
+# drift from the ones actually simulated. It is vectorised over R0 /
+# prop_funeral / hcw_risk_scalar, so it works for one particle or a whole cloud.
+
+map_abc_params_to_model <- function(R0, prop_funeral, hcw_risk_scalar,
+                                    D, F_fun, hcw_base_prob = 0.25) {
+  hcw_hospital <- pmin(hcw_base_prob * hcw_risk_scalar, 1.0)
+  list(
+    mn_offspring_genPop           = (1 - prop_funeral) * R0 / D,
+    mn_offspring_funeral          =      prop_funeral  * R0 / F_fun,
+    prob_hcw_cond_genPop_hospital = hcw_hospital,
+    prob_hcw_cond_hcw_hospital    = hcw_hospital
+  )
+}
 
 build_abc_model_args <- function(R0,
                                  prop_funeral,
@@ -133,14 +154,16 @@ build_abc_model_args <- function(R0,
                                  F_fun,
                                  seeding_cases = 25,
                                  hcw_base_prob = 0.25) {
-  mn_genPop  <- (1 - prop_funeral) * R0 / D
-  mn_funeral <-      prop_funeral  * R0 / F_fun
+  model_pars <- map_abc_params_to_model(
+    R0 = R0, prop_funeral = prop_funeral, hcw_risk_scalar = hcw_risk_scalar,
+    D = D, F_fun = F_fun, hcw_base_prob = hcw_base_prob
+  )
 
   args <- c(base, tv)
-  args$mn_offspring_genPop           <- mn_genPop
-  args$mn_offspring_funeral          <- mn_funeral
-  args$prob_hcw_cond_genPop_hospital <- pmin(hcw_base_prob * hcw_risk_scalar, 1.0)
-  args$prob_hcw_cond_hcw_hospital    <- pmin(hcw_base_prob * hcw_risk_scalar, 1.0)
+  args$mn_offspring_genPop           <- model_pars$mn_offspring_genPop
+  args$mn_offspring_funeral          <- model_pars$mn_offspring_funeral
+  args$prob_hcw_cond_genPop_hospital <- model_pars$prob_hcw_cond_genPop_hospital
+  args$prob_hcw_cond_hcw_hospital    <- model_pars$prob_hcw_cond_hcw_hospital
   args$seed          <- NULL
   args$seeding_cases <- seeding_cases
   args
