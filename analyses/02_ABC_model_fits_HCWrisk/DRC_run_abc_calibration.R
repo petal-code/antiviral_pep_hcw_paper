@@ -1,7 +1,7 @@
-# westAfrica_run_abc_calibration.R
+# DRC_run_abc_calibration.R
 # =============================================================================
 # Phase 4 ABC-SMC calibration of the fiber branching-process model against
-# the 2014-16 West Africa Ebola outbreak (Worst_WestAfrica scenario).
+# a DRC Ebola outbreak (Middle_DRC_ConflictSmoothed scenario).
 #
 # Fitted parameters (3):
 #   R0               : baseline reproduction number for a typical genPop
@@ -19,13 +19,12 @@
 #   n_hcw_deaths : HCW deaths
 #   duration     : first death -> last outcome, in days
 #
-# Phase 4 production targets (Worst_WestAfrica):
-#   nb_simul         = 220
+# Phase 4 production targets (Middle_DRC_ConflictSmoothed):
+#   nb_simul         = 230
 #   n_reps           = 60
 #   tolerance_target = 0.27  (~0.04 above the N=60 noise floor of ~0.23)
 #   hcw_base_prob    = 0.25  (symmetric base for both HCW-hospital probs)
-#   n_cluster        = 110   (PETAL workstation)
-# Expected ~9 SMC steps, ~46 h wall time on PETAL.
+#   n_cluster        = 120   (PETAL workstation)
 #
 # Sections:
 #   1. Configuration (paths, scenario, ABC tuning)
@@ -44,15 +43,16 @@
 # -----------------------------------------------------------------------------
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
-# ANALYSIS_DIR is this script's containing directory (analyses/02_model_fits
+# ANALYSIS_DIR is this script's containing directory (analyses/02_ABC_model_fits_HCWrisk
 # inside the obv_hcw_paper repo). The script assumes you've setwd() to this
 # directory before sourcing; the machine-specific switch below baked in
 # absolute defaults for the most common workstations.
 
 ANALYSIS_DIR <- switch(
   Sys.info()[["user"]],
-  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_model_fits",
-  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_model_fits",
+  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
+  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
+  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
   getwd()
 )
 HELPER_DIR     <- file.path(ANALYSIS_DIR, "helper_functions")
@@ -60,14 +60,14 @@ SETUP_PATH     <- file.path(HELPER_DIR,   "setup_model_parameters.R")
 FUNCTIONS_PATH <- file.path(HELPER_DIR,   "abc_calibration_functions.R")
 R0_PATH        <- file.path(HELPER_DIR,   "calculate_model_approx_r0.R")
 SCENARIO_CSV   <- file.path(ANALYSIS_DIR, "final_four_scenario_values.csv")
-SCENARIO_ID    <- "Worst_WestAfrica"
+SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed"
 
 # Any scalar-parameter overrides to layer on top of DEFAULT_SCALAR_INPUTS.
 # Pass anything you want to differ from the literature-informed defaults
 # here as a named list; new parameters that get added to the model in the
 # future automatically become overridable without further code changes.
 MODEL_OVERRIDES <- list(
-  check_final_size = 30000
+  check_final_size = 10000
 )
 
 # Where ABC_sequential's intermediate files (output_step*, tolerance_step*,
@@ -76,7 +76,12 @@ MODEL_OVERRIDES <- list(
 # subdirectory of <ABC_OUTPUT_BASE>/abc_outputs/ tagged with
 # ABC_OUTPUT_LABEL, so successive phases / runs don't overwrite each other.
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
-ABC_OUTPUT_LABEL <- ""
+# Labels this run as the HCW-risk ABC fit. The label is appended to the per-run
+# output directory name (via make_abc_output_dir()) and to the result RDS
+# filename in section 8, e.g.
+#   abc_outputs/Middle_DRC_ConflictSmoothed_<timestamp>_HCWrisk/
+#   fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_HCWrisk_<date>.rds
+ABC_OUTPUT_LABEL <- "HCWrisk"
 
 # Repo-level outputs/ folder. The final-result RDS is copied here in addition
 # to being written under ABC_OUTPUT_DIR, so manuscript-ready artefacts live
@@ -97,7 +102,7 @@ HCW_BASE_PROB <- 0.25
 # ABC tuning. These travel into each worker via bootstrap_abc_worker().
 ABC_CONFIG <- list(
   takeoff_death_threshold = 100,         # >= K deaths counts as a take-off
-  n_reps                  = 60,          # replicates per particle (per theta)
+  n_reps                  = 150,          # replicates per particle (per theta)
   seeding_cases           = 25,
   hcw_base_prob           = HCW_BASE_PROB,
   setup_R0_n              = 100000L,
@@ -108,15 +113,15 @@ ABC_CONFIG <- list(
 # EasyABC::ABC_sequential settings.
 ABC_SETTINGS <- list(
   method              = "Delmoral",
-  nb_simul            = 230,
+  nb_simul            = 690,
   alpha               = 0.5,
-  tolerance_target    = 0.27,            # ~0.04 above the N=60 noise floor
+  tolerance_target    = 0.2, 
   M                   = 1,
   use_seed            = TRUE,
   verbose             = TRUE
 )
 
-# Worker count. Aggressive on the PETAL box (Phase 4 target 110), modest
+# Worker count. Aggressive on the PETAL box (Phase 4 target 120), modest
 # on dev workstations.
 N_CLUSTER <- if (grepl("PETAL", Sys.info()[["user"]], ignore.case = TRUE)) {
   min(120, parallel::detectCores() - 10)
@@ -182,19 +187,21 @@ F_funeral_multiplier <- setup_solve$F_funeral_multiplier
 # -----------------------------------------------------------------------------
 # 4. OBSERVED TARGETS AND PRIORS
 # -----------------------------------------------------------------------------
+# TODO: fill in DRC observed summary values. Placeholders left as NA so the
+# script fails fast if launched before targets are set.
 
 observed_summaries <- c(
   takeoff      = 1.0,
-  n_deaths     = 11325,
-  n_hcw_deaths = 513,
-  duration     = 365    # spatial heterogeneity sustained it; main outbreak ~ a year
+  n_deaths     = 2299,   
+  n_hcw_deaths = 79,     # https://afenet-journal.org/10-37432-jieph-d-25-00072/
+  duration     = 450     # August 1, 2018 – November 1st (ish), 2019 as the "main phase" of the epidemic
 )
 
 # Phase 4 priors. R0 and prop_funeral inherited unchanged from Phase 3;
 # hcw_risk_scalar widened/shifted to (0.50, 4.00) to reflect the new
 # symmetric HCW_BASE_PROB = 0.25 base.
 priors <- list(
-  c("unif", 1.35, 1.55),   # R0
+  c("unif", 1.25, 1.65),   # R0
   c("unif", 0.10, 0.40),   # prop_funeral
   c("unif", 0.50, 4.00)    # hcw_risk_scalar
 )
@@ -209,23 +216,40 @@ priors <- list(
 # To parallelise, set up a future plan first; the function will then use
 # future_lapply when parallel = TRUE.
 #
-# set.seed(1)
-# pp <- prior_predictive_check(
-#   n_draws       = 20,
-#   prior_list    = priors,
-#   base          = base_args,
-#   tv            = tv_args_model,
-#   D             = D_direct_multiplier,
-#   F_fun         = F_funeral_multiplier,
-#   parallel      = FALSE,
-#   n_replicates  = 5,
-#   seeding_cases = ABC_CONFIG$seeding_cases,
-#   takeoff_death_threshold = ABC_CONFIG$takeoff_death_threshold,
-#   hcw_base_prob = HCW_BASE_PROB
-# )
-# print(pp)
-# summary(pp)
+set.seed(1)
 
+cl <- parallel::makeCluster(N_CLUSTER)
+parallel::clusterExport(cl, c("HELPER_DIR"))
+parallel::clusterEvalQ(cl, {
+  library(fiber)
+  source(file.path(HELPER_DIR, "setup_model_parameters.R"))
+  source(file.path(HELPER_DIR, "abc_calibration_functions.R"))
+  source(file.path(HELPER_DIR, "calculate_model_approx_r0.R"))
+})
+future::plan(future::cluster, workers = cl)
+
+set.seed(1)
+system.time(pp_par <- prior_predictive_check(
+  n_draws = 250, 
+  prior_list = priors,
+  base = base_args, 
+  tv = tv_args_model,
+  D = D_direct_multiplier, 
+  F_fun = F_funeral_multiplier,
+  parallel = TRUE, 
+  n_replicates = 5,
+  seeding_cases           = ABC_CONFIG$seeding_cases,
+  takeoff_death_threshold = ABC_CONFIG$takeoff_death_threshold,
+  hcw_base_prob           = HCW_BASE_PROB
+))
+
+parallel::stopCluster(cl)
+future::plan(future::sequential)
+rm(cl)
+gc()
+
+summary(pp_par)
+print(pp_par)
 
 # -----------------------------------------------------------------------------
 # 6. PER-RUN OUTPUT DIRECTORY + WORKER CONFIG
@@ -260,6 +284,10 @@ save_abc_config(list(
 # -----------------------------------------------------------------------------
 # Wrap the call so cwd is temporarily ABC_OUTPUT_DIR while step files are
 # written; the workers' cwd is independent.
+
+ABC_SETTINGS$tolerance_target
+ABC_SETTINGS$nb_simul
+ABC_CONFIG$n_reps
 
 start_time <- Sys.time()
 result <- with_abc_output_dir(
@@ -302,7 +330,7 @@ print(apply(posterior, 2, quantile, probs = c(0.025, 0.5, 0.975)))
 
 par(mfrow = c(1, 3))
 for (j in seq_len(ncol(posterior))) {
-  hist(posterior[, j], breaks = 15,
+  hist(posterior[, j], breaks = 10,
        main = colnames(posterior)[j],
        xlab = colnames(posterior)[j])
   abline(v = quantile(posterior[, j], c(0.025, 0.5, 0.975)),
@@ -318,22 +346,23 @@ par(mfrow = c(1, 1))
 # (rebuild an ABC_sequential()-style result object from output_step*). Point
 # them at ABC_OUTPUT_DIR for the current run, or at any previous run's
 # subdirectory under <ABC_OUTPUT_BASE>/abc_outputs/.
-#
-# abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target)
-# print(abc_compare_steps(ABC_OUTPUT_DIR))
-#
-# # Inspect the final step's particle cloud directly:
-# last_step_file <- tail(list.files(ABC_OUTPUT_DIR, pattern = "^output_step[0-9]+$",
-#                                   full.names = TRUE), 1L)
-# step_last <- read.table(last_step_file, header = FALSE)
-# colnames(step_last) <- c("weight", "R0", "prop_funeral", "hcw_risk_scalar",
-#                          "takeoff", "n_deaths", "n_hcw_deaths", "duration")
-# summary(step_last)
-#
-# # Reconstruct an ABC result object from the latest completed step:
-# # result <- reconstruct_abc_result(ABC_OUTPUT_DIR)
-# # Or from a specific step:
-# # result <- reconstruct_abc_result(ABC_OUTPUT_DIR, step = 3)
+
+directory <- "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk/abc_outputs/Middle_DRC_ConflictSmoothed_20260526_205041"
+abc_progress(directory, tolerance_target = ABC_SETTINGS$tolerance_target)
+print(abc_compare_steps(directory))
+
+# Inspect the final step's particle cloud directly:
+last_step_file <- tail(list.files(directory, pattern = "^output_step[0-9]+$",
+                                  full.names = TRUE), 1L)
+step_last <- read.table(last_step_file, header = FALSE)
+colnames(step_last) <- c("weight", "R0", "prop_funeral", "hcw_risk_scalar",
+                         "takeoff", "n_deaths", "n_hcw_deaths", "duration")
+summary(step_last)
+
+# Reconstruct an ABC result object from the latest completed step:
+# result <- reconstruct_abc_result(ABC_OUTPUT_DIR)
+# Or from a specific step:
+# result <- reconstruct_abc_result(ABC_OUTPUT_DIR, step = 3)
 
 
 # -----------------------------------------------------------------------------
