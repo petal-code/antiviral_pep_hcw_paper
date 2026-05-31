@@ -88,7 +88,7 @@ BIN_WIDTH_DAYS <- 7L
 
 # Output locations.
 OUTPUT_DIR  <- file.path(REPO_ROOT, "outputs", "misc", "WHO_CORC_outputs")
-RESULTS_RDS <- file.path(ANALYSIS_DIR, "WHO_CORC_prelim_antiviral_simulation_results.rds")
+RESULTS_RDS <- file.path(OUTPUT_DIR, "WHO_CORC_prelim_antiviral_simulation_results.rds")
 dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 
