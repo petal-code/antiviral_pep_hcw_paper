@@ -10,10 +10,10 @@
 #   1. All functions/*.R files parse and the public functions exist.
 #   2. make_base_args(): the new fixed efficacy scalars are emitted
 #      (etu_efficacy 0.90, general_hospital_quarantine_efficacy 0.30,
-#      ppe_efficacy_hcw 0.70) and the dropped legacy ones are gone.
-#   3. read_scenario_matrix(): reads the real CSV, still validates WITHOUT
-#      ipc_helper (the dropped requirement), still errors when a genuinely
-#      required column is missing.
+#      ppe_efficacy 0.70) and the dropped legacy ones are gone.
+#   3. read_scenario_matrix(): reads the real CSV, requires ipc_helper (it now
+#      drives the PPE coverage lever) plus the other scenario columns, and
+#      errors when any required column is missing.
 #   4. The ABC parameter -> model mapping, and the "no drift" invariant that
 #      map_abc_params_to_model() / build_abc_model_args() / derive_model_
 #      parameters() all agree.
@@ -29,7 +29,7 @@
 #      filename sorting chronologically via find_latest_file().
 #   9. simulation_helpers: bin_counts(), q_summary(), %||%.
 #  10. (fiber only) The live model interface: check_model_function_version(),
-#      ppe_efficacy_hcw in the signature, and one tiny end-to-end run through
+#      ppe_efficacy/ppe_coverage_hcw in the signature, and one tiny end-to-end run
 #      make_model_parameters() -> solve -> build_abc_model_args() ->
 #      branching_process_main() -> abc_summarise()/simulate_one().
 #
@@ -182,16 +182,18 @@ section("2. make_base_args(): new efficacy scalars wired, legacy ones dropped")
 test("make_base_args() builds without error", { ba <<- make_base_args(); is.list(ba) })
 test("emits etu_efficacy = 0.90",                          approx_eq(ba$etu_efficacy, 0.90))
 test("emits general_hospital_quarantine_efficacy = 0.30",  approx_eq(ba$general_hospital_quarantine_efficacy, 0.30))
-test("emits ppe_efficacy_hcw = 0.70",                      approx_eq(ba$ppe_efficacy_hcw, 0.70))
+test("emits ppe_efficacy = 0.70",                          approx_eq(ba$ppe_efficacy, 0.70))
+test("does NOT emit legacy ppe_efficacy_hcw",              is.null(ba[["ppe_efficacy_hcw"]]))
 test("does NOT emit legacy etu_efficacy_baseline",         is.null(ba$etu_efficacy_baseline))
-test("does NOT emit legacy ipc_helper",                    is.null(ba$ipc_helper))
+test("does NOT emit legacy ipc_helper (it's a scenario column, not a base arg)",
+     is.null(ba$ipc_helper))
 test("scalar override of etu_efficacy is applied",
      approx_eq(suppressWarnings(make_base_args(list(etu_efficacy = 0.5)))$etu_efficacy, 0.5))
 test_warns("unknown override name warns", make_base_args(list(not_a_real_param = 1)))
 
 
 # ----------------------------------------------------------------------------
-section("3. read_scenario_matrix(): ipc_helper no longer required")
+section("3. read_scenario_matrix(): required columns incl. ipc_helper")
 # ----------------------------------------------------------------------------
 csv <- file.path(REPO, "data-processed", "final_four_scenario_values.csv")
 test("scenario CSV exists", file.exists(csv))
@@ -199,7 +201,7 @@ test("read_scenario_matrix() reads the real CSV",
      { sm <<- read_scenario_matrix(csv); is.data.frame(sm) && nrow(sm) > 0L })
 req_cols <- c("scenario", "scenario_label", "relative_day", "prob_hosp",
               "delay_hosp", "prob_unsafe_funeral_comm", "prob_unsafe_funeral_hosp",
-              "prob_unsafe_funeral_etu", "prop_etu")
+              "prob_unsafe_funeral_etu", "prop_etu", "ipc_helper")
 test("matrix has all required columns", all(req_cols %in% names(sm)))
 test("run-script scenarios present in matrix$scenario",
      all(c("Worst_WestAfrica", "Middle_DRC_ConflictSmoothed") %in% sm$scenario))
@@ -207,8 +209,8 @@ test("run-script scenarios present in matrix$scenario",
 raw <- read.csv(csv, check.names = FALSE, stringsAsFactors = FALSE)
 f_no_ipc <- tempfile(fileext = ".csv")
 write.csv(raw[setdiff(names(raw), "ipc_helper")], f_no_ipc, row.names = FALSE)
-test("validates WITHOUT an ipc_helper column (dropped requirement confirmed)",
-     is.data.frame(read_scenario_matrix(f_no_ipc)))
+test_error("errors WITHOUT ipc_helper (now required: drives ppe_coverage_hcw)",
+           read_scenario_matrix(f_no_ipc))
 
 f_no_req <- tempfile(fileext = ".csv")
 write.csv(raw[setdiff(names(raw), "prop_etu")], f_no_req, row.names = FALSE)
@@ -405,7 +407,7 @@ section("10. Live model interface + end-to-end (requires fiber)")
 # ----------------------------------------------------------------------------
 if (!has_fiber) {
   skip("check_model_function_version()",          "fiber not installed")
-  skip("ppe_efficacy_hcw in branching_process_main() signature", "fiber not installed")
+  skip("ppe_efficacy + ppe_coverage_hcw in branching_process_main() signature", "fiber not installed")
   skip("make_model_parameters() builds tv curves", "fiber not installed")
   skip("end-to-end branching_process_main() run",  "fiber not installed")
   skip("simulate_one() one replicate",             "fiber not installed")
@@ -419,8 +421,8 @@ if (!has_fiber) {
        exists("branching_process_main", mode = "function"))
   test("check_model_function_version() passes (prop_etu/etu_efficacy/general_* in formals)",
        { check_model_function_version(); TRUE })
-  test("ppe_efficacy_hcw is accepted by branching_process_main()",
-       "ppe_efficacy_hcw" %in% names(formals(branching_process_main)))
+  test("ppe_efficacy + ppe_coverage_hcw accepted by branching_process_main()",
+       all(c("ppe_efficacy", "ppe_coverage_hcw") %in% names(formals(branching_process_main))))
 
   test("make_model_parameters() builds time-varying curves for Worst_WestAfrica",
        { mpf <<- make_model_parameters(scenario_id = "Worst_WestAfrica",
