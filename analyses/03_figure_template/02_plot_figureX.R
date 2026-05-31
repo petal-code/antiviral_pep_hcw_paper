@@ -1,6 +1,6 @@
 # Plot step. Reads intermediate from 01_compute.R, renders the figure.
 
-source("helper_functions.R")
+source("helper_functions_figureX.R")
 
 results <- readRDS("fig_X_results.rds")
 

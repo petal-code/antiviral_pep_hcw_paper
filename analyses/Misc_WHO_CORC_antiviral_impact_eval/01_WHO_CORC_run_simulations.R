@@ -144,14 +144,14 @@ library(future)
 library(future.apply)
 library(progressr)
 
-# Calibration helpers (parameter setup, build_abc_model_args, R0 solver).
-CALIB_HELPERS <- file.path(REPO_ROOT, "analyses", "02_ABC_model_fits_HCWrisk", "helper_functions")
-source(file.path(CALIB_HELPERS, "setup_model_parameters.R"))
-source(file.path(CALIB_HELPERS, "abc_calibration_functions.R"))
-source(file.path(CALIB_HELPERS, "calculate_model_approx_r0.R"))
+# Shared model helpers (parameter setup, map/build model args, R0 solver).
+FUNCTIONS_DIR <- file.path(REPO_ROOT, "functions")
+source(file.path(FUNCTIONS_DIR, "setup_model_parameters.R"))
+source(file.path(FUNCTIONS_DIR, "abc_calibration_functions.R"))
+source(file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R"))
 
 # This analysis's helpers.
-source(file.path(ANALYSIS_DIR, "helper_functions.R"))
+source(file.path(ANALYSIS_DIR, "WHO_CORC_helper_functions.R"))
 
 handlers("progress")
 
