@@ -142,10 +142,14 @@ cat(sprintf("  fiber pkg   : %s\n", if (has_fiber) "available (live model checks
 # ----------------------------------------------------------------------------
 section("1. Source functions/ + public functions exist")
 # ----------------------------------------------------------------------------
-# Order matters: abc_calibration needs setup + r0; abc_posterior needs the
-# mapping from abc_calibration. io_helpers is dependency-free.
+# Order matters: the ABC files need setup + r0; abc_posterior needs the HCW-risk
+# mapping. io_helpers is dependency-free. We source the COMMON generics and the
+# HCW-risk approach here; the NPI approach (which shares function names) is
+# sourced separately in section 11 so the two don't clobber each other.
 src_files <- c("io_helpers.R", "setup_model_parameters.R",
-               "calculate_model_approx_r0.R", "abc_calibration_functions.R",
+               "calculate_model_approx_r0.R",
+               "abc_calibration_functions_common.R",
+               "abc_calibration_functions_hcwRisk.R",
                "abc_posterior.R", "simulation_helpers.R")
 src_ok <- TRUE
 for (f in src_files) {
@@ -163,7 +167,9 @@ expected_fns <- c(
   "derive_model_parameters", "find_latest_file", "list_files_matching",
   "simulate_one", "bin_counts", "q_summary",
   "R0_single_type_from_args", "solve_offspring_means_for_R0",
-  ".hospital_quarantine_efficacy_t0"
+  ".hospital_quarantine_efficacy_t0",
+  "compute_R0_invariants", "D_from_invariants", "F_from_invariants",
+  "solve_offspring_means"
 )
 test("all expected public functions are defined",
      all(vapply(expected_fns, exists, logical(1), mode = "function")))
@@ -451,6 +457,54 @@ if (!has_fiber) {
        { r <- simulate_one(list(set_id = 1L, rep_id = 1L, arm = "base", seed = 1L),
                            list(build_one()), obv_cfg = list());
          all(c("n_cases", "n_deaths", "n_hcw_deaths", "death_days") %in% names(r)) })
+}
+
+
+# ----------------------------------------------------------------------------
+section("11. NPI-efficacy approach (separate fitting scheme)")
+# ----------------------------------------------------------------------------
+# Source the NPI specifics LAST: they intentionally share names (build_abc_model_args,
+# fiber_abc_model_parallel, ...) with the HCW-risk file, so sourcing here overrides
+# them for this section only — every HCW-risk section above has already run.
+test("source functions/abc_calibration_functions_npi.R",
+     { source(file.path(FN, "abc_calibration_functions_npi.R")); TRUE })
+test("NPI functions + DEFAULT_NPI_SPEC are defined",
+     exists("DEFAULT_NPI_SPEC") &&
+       all(vapply(c("npi_efficacy_from_scaler", "build_abc_model_args",
+                    "fiber_abc_model_parallel"), exists, logical(1), mode = "function")))
+test("npi_efficacy_from_scaler(0) = interval midpoints",
+     { e0 <- npi_efficacy_from_scaler(0, DEFAULT_NPI_SPEC);
+       approx_eq(e0$ppe_efficacy, mean(c(DEFAULT_NPI_SPEC$ppe_efficacy$min, DEFAULT_NPI_SPEC$ppe_efficacy$max))) &&
+       approx_eq(e0$etu_efficacy, mean(c(DEFAULT_NPI_SPEC$etu_efficacy$min, DEFAULT_NPI_SPEC$etu_efficacy$max))) })
+test("npi_efficacy_from_scaler(-1) = mins, (+1) = maxs",
+     { lo <- npi_efficacy_from_scaler(-1, DEFAULT_NPI_SPEC); hi <- npi_efficacy_from_scaler(1, DEFAULT_NPI_SPEC);
+       approx_eq(lo$ppe_efficacy, DEFAULT_NPI_SPEC$ppe_efficacy$min) &&
+       approx_eq(hi$etu_efficacy, DEFAULT_NPI_SPEC$etu_efficacy$max) })
+test_error("npi_efficacy_from_scaler errors outside [-1, 1]", npi_efficacy_from_scaler(2))
+# Per-particle path (fiber-free): invariants (from the section-5 args) + the NPI
+# build_abc_model_args, which derives D/F per particle and sets the scaler effs.
+test("NPI build_abc_model_args() yields positive means + scaler efficacies (fiber-free)",
+     { inv <- compute_R0_invariants(r0args, n = 5000, seed = 1);
+       a <- build_abc_model_args(R0 = 1.5, prop_funeral = 0.3, npi_scaler = 0,
+                                 base = make_base_args(), tv = list(),
+                                 invariants = inv, npi_spec = DEFAULT_NPI_SPEC,
+                                 general_hospital_quarantine_efficacy = 0.30,
+                                 safe_funeral_efficacy = 0.90, seeding_cases = 5);
+       is.finite(a$mn_offspring_genPop) && a$mn_offspring_genPop > 0 &&
+         approx_eq(a$etu_efficacy, npi_efficacy_from_scaler(0, DEFAULT_NPI_SPEC)$etu_efficacy) &&
+         is.null(a[["seed"]]) })
+if (has_fiber && !is.null(mpf)) {
+  test("NPI end-to-end: build_abc_model_args(npi) + branching_process_main() runs",
+       { invf <- compute_R0_invariants(mpf$args, n = 5000, seed = 1);
+         a <- build_abc_model_args(R0 = 1.5, prop_funeral = 0.3, npi_scaler = 0,
+                                   base = mpf$base_args, tv = mpf$tv_args,
+                                   invariants = invf, npi_spec = DEFAULT_NPI_SPEC,
+                                   general_hospital_quarantine_efficacy = 0.30,
+                                   safe_funeral_efficacy = 0.90, seeding_cases = 5);
+         set.seed(1); out <- do.call(branching_process_main, a);
+         is.list(out) && is.data.frame(out$tdf) })
+} else {
+  skip("NPI end-to-end branching_process_main() run", "fiber not installed")
 }
 
 
