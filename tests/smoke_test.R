@@ -509,6 +509,50 @@ if (has_fiber && !is.null(mpf)) {
 
 
 # ----------------------------------------------------------------------------
+section("12. ABC worker self-bootstrap + parallel model (both approaches)")
+# ----------------------------------------------------------------------------
+# Exercises the PSOCK worker path IN-PROCESS: save_abc_config() advertises the
+# config, then fiber_abc_model_parallel() self-bootstraps on its first call
+# (reads FIBER_ABC_CONFIG, sources the approach file, bootstrap_abc_worker()
+# sources the COMMON file via dirname(functions_path), builds base/tv + D/F or
+# invariants, then runs a few replicates). This is the one path sections 1-11
+# do not cover. Both approaches are driven through it.
+if (!has_fiber) {
+  skip("HCW-risk worker self-bootstrap + fiber_abc_model_parallel()", "fiber not installed")
+  skip("NPI worker self-bootstrap + fiber_abc_model_parallel()", "fiber not installed")
+} else {
+  run_worker <- function(functions_file, theta3, extra_cfg = list()) {
+    ## Clear any prior worker state so the self-bootstrap actually fires.
+    for (v in c(".fiber_abc_ready", "base_args", "tv_args_model", "R0_invariants",
+                "D_direct_multiplier", "F_funeral_multiplier", ".abc_config",
+                ".npi_spec", ".fixed_general_hosp", ".fixed_safe_funeral")) {
+      if (exists(v, envir = globalenv())) rm(list = v, envir = globalenv())
+    }
+    ## Define the approach's fiber_abc_model_parallel(), then advertise the config.
+    source(file.path(FN, functions_file))
+    save_abc_config(list(
+      setup_path      = file.path(FN, "setup_model_parameters.R"),
+      functions_path  = file.path(FN, functions_file),
+      r0_path         = file.path(FN, "calculate_model_approx_r0.R"),
+      scenario_csv    = csv,
+      scenario_id     = "Worst_WestAfrica",
+      abc_config      = utils::modifyList(
+        list(n_reps = 3L, seeding_cases = 5L, takeoff_death_threshold = 1L,
+             setup_R0_n = 3000L), extra_cfg),
+      model_overrides = list(check_final_size = 2000L)
+    ))
+    fiber_abc_model_parallel(c(1, theta3))   # c(seed, R0, prop_funeral, param3)
+  }
+  test("HCW-risk: worker self-bootstrap + fiber_abc_model_parallel() returns a 4-stat summary",
+       { o <- run_worker("abc_calibration_functions_hcwRisk.R", c(1.5, 0.3, 1.5));
+         is.numeric(o) && all(c("n_deaths", "n_hcw_deaths", "duration") %in% names(o)) })
+  test("NPI: worker self-bootstrap + fiber_abc_model_parallel() returns a 4-stat summary",
+       { o <- run_worker("abc_calibration_functions_npi.R", c(1.5, 0.3, 0));
+         is.numeric(o) && all(c("n_deaths", "n_hcw_deaths", "duration") %in% names(o)) })
+}
+
+
+# ----------------------------------------------------------------------------
 section("Summary")
 # ----------------------------------------------------------------------------
 cat(sprintf("\n  PASS: %d    FAIL: %d    SKIP: %d\n", .smoke$pass, .smoke$fail, .smoke$skip))
