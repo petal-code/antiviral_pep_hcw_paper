@@ -44,16 +44,16 @@
 # -----------------------------------------------------------------------------
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
-# ANALYSIS_DIR is this script's containing directory (analyses/02_model_fits
+# ANALYSIS_DIR is this script's containing directory (analyses/02_ABC_model_fits_HCWrisk
 # inside the obv_hcw_paper repo). The script assumes you've setwd() to this
 # directory before sourcing; the machine-specific switch below baked in
 # absolute defaults for the most common workstations.
 
 ANALYSIS_DIR <- switch(
   Sys.info()[["user"]],
-  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_model_fits",
-  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_model_fits",
-  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_model_fits",
+  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
+  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
+  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
   getwd()
 )
 HELPER_DIR     <- file.path(ANALYSIS_DIR, "helper_functions")
@@ -77,7 +77,12 @@ MODEL_OVERRIDES <- list(
 # subdirectory of <ABC_OUTPUT_BASE>/abc_outputs/ tagged with
 # ABC_OUTPUT_LABEL, so successive phases / runs don't overwrite each other.
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
-ABC_OUTPUT_LABEL <- ""
+# Labels this run as the HCW-risk ABC fit. The label is appended to the per-run
+# output directory name (via make_abc_output_dir()) and to the result RDS
+# filename in section 8, e.g.
+#   abc_outputs/Worst_WestAfrica_<timestamp>_HCWrisk/
+#   fiber_ABC_SMC_Worst_WestAfrica_HCWrisk_<date>.rds
+ABC_OUTPUT_LABEL <- "HCWrisk"
 
 # Repo-level outputs/ folder. The final-result RDS is copied here in addition
 # to being written under ABC_OUTPUT_DIR, so manuscript-ready artefacts live
