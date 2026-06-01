@@ -25,11 +25,12 @@
 # ---------------------------------------------------------------------------
 # 0. CONFIGURATION (everything tweakable lives here)
 # ---------------------------------------------------------------------------
-N_REPS  <- 5L     # stochastic replicates per particle per arm (1 = one draw per particle)
+N_REPS  <- 1L     # stochastic replicates per particle per arm (1 = one draw per particle)
 N_CORES <- 10L    # parallel workers (capped at availableCores() below)
 
 # OBV efficacies to test (the "with obeldesivir" arms). Add/remove freely.
-OBV_EFFICACIES <- c(obv_40 = 0.40, obv_80 = 0.80)
+OBV_EFFICACIES <- c(obv_40 = 0.40, 
+                    obv_80 = 0.80)
 # Fixed OBV delivery settings shared by every OBV arm: full coverage/adherence,
 # modelled as PEP for HCWs exposed in hospital (matches the WHO CORC analysis).
 OBV_BASE <- list(coverage = 1.0, adherence = 1.0, dpc = 1,
@@ -45,13 +46,14 @@ SCENARIOS <- list(
 
 # Calibration settings reproduced so the posterior -> model-args conversion is
 # identical to how each ABC was run (see 01_WHO_CORC_run_simulations.R).
-HCW_BASE_PROB <- 0.25; SEEDING_CASES <- 25L; CHECK_FINAL_SIZE <- 10000L
-SETUP_FUNERAL_SHARE <- 0.5; SETUP_R0_N <- 100000L; SETUP_R0_SEED <- 42L
+HCW_BASE_PROB <- 0.25 ## note this relates a fitted parameter, which scales this to influence amount of healthcare transmission
+                      ## this will be replaced with a different fitted parameter in the final version of the fits
+SEEDING_CASES <- 25L
+CHECK_FINAL_SIZE <- 10000L
+SETUP_FUNERAL_SHARE <- 0.5
+SETUP_R0_N <- 100000
+SETUP_R0_SEED <- 42L
 RESAMPLE_SEED <- 1L; SEED_BASE <- 20260601L
-
-OUTPUT_DIR <- here::here("outputs", "obv_two_scenario_comparison")
-dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
-
 
 # ---------------------------------------------------------------------------
 # 1. LIBRARIES + SHARED HELPERS
@@ -67,6 +69,7 @@ source(file.path(FN, "simulation_helpers.R"))                # simulate_one()
 handlers("progress")
 
 # Per-arm OBV config: no_obv = NULL (gate stays off); each OBV arm = base + efficacy.
+## Creating a list of model parameters for each of the two different obeldesivir parameterisations
 arms_cfg <- c(list(no_obv = NULL),
               lapply(OBV_EFFICACIES, function(e) c(OBV_BASE, list(efficacy = e))))
 
@@ -78,14 +81,16 @@ arms_cfg <- c(list(no_obv = NULL),
 # prop_funeral, hcw_risk_scalar) and $weights. Rebuild the weighted-posterior
 # data frame downsample_posterior() expects.
 posteriors <- lapply(SCENARIOS, function(sc) {
-  res <- readRDS(here::here("inst", sc$rds))
-  data.frame(weight = res$weights, R0 = res$param[, 1],
-             prop_funeral = res$param[, 2], hcw_risk_scalar = res$param[, 3])
+  res <- readRDS(here::here("inst", sc$rds))  ## reading in the fitted results for each scenario
+  data.frame(weight = res$weights, 
+             R0 = res$param[, 1],               ## first fitted parameter is R0 - this will stay the same in the new fitting version currently underway
+             prop_funeral = res$param[, 2],     ## second fitted parameter is % of transmission attributable to funerals - this will stay the same in the new fitting version currently underway
+             hcw_risk_scalar = res$param[, 3])  ## third fitted parameter is a parameter that scales in-hospital transmission towards HCW - this will change in the new fitting version
 })
-N_SETS <- min(vapply(posteriors, nrow, integer(1)))   # equal footing across scenarios
+N_SETS <- min(50, ## change this number if you want to do fewer that the number of posterior draws available
+              min(vapply(posteriors, nrow, integer(1))))   # calculate which output has the least number of posterior draws
 message(sprintf("Particles available: %s; using N_SETS = %d.",
-                paste(sprintf("%s=%d", names(posteriors), vapply(posteriors, nrow, integer(1))),
-                      collapse = ", "), N_SETS))
+                paste(sprintf("%s=%d", names(posteriors), vapply(posteriors, nrow, integer(1))), collapse = ", "), N_SETS))
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +101,7 @@ message(sprintf("Particles available: %s; using N_SETS = %d.",
 scenario_matrix  <- read_scenario_matrix(here::here("data-processed", "final_four_scenario_values.csv"))
 args_by_scenario <- list()
 for (sc in names(SCENARIOS)) {
-  # Scenario-specific scalars + time-varying curves (prop_etu, ppe_coverage, ...).
+  # Scenario-specific parameters + time-varying curves (prop_etu, ppe_coverage etc).
   mp <- make_model_parameters(SCENARIOS[[sc]]$id, scenario_matrix,
                               overrides = list(check_final_size = CHECK_FINAL_SIZE))
   # D and F are the t=0 direct/funeral R0 multipliers for THIS scenario (they
@@ -121,7 +126,8 @@ for (sc in names(SCENARIOS)) {
 # ---------------------------------------------------------------------------
 # One job = one fiber simulation. The seed depends on (scenario, set, rep) but
 # NOT the arm, so the 3 arms share a stochastic history -> a paired comparison.
-jobs <- list(); k <- 0L
+jobs <- list()
+k <- 0L
 for (sc in names(SCENARIOS)) {
   sc_i <- match(sc, names(SCENARIOS))
   for (s in seq_len(N_SETS)) for (r in seq_len(N_REPS)) {
@@ -144,10 +150,9 @@ with_progress({
     # simulate_one() switches OBV on only when arm == "obv", reading efficacy
     # from obv_cfg. We have several OBV arms, so collapse the descriptive label
     # to "obv"/"no_obv" for the call, pass the matching config, then restore the
-    # descriptive label on the result. (Anonymous worker, as in the WHO script.)
-    cfg <- arms_cfg[[job$arm]]
-    j   <- list(set_id = job$set_id, rep_id = job$rep_id, seed = job$seed,
-                arm = if (is.null(cfg)) "no_obv" else "obv")
+    # descriptive label on the result.
+    cfg <- arms_cfg[[job$arm]] ## get the specific model parameters for this scenario and posterior draw 
+    j   <- list(set_id = job$set_id, rep_id = job$rep_id, seed = job$seed, arm = if (is.null(cfg)) "no_obv" else "obv")
     out <- simulate_one(j, args_list = args_by_scenario[[job$scenario]],
                         obv_cfg = if (is.null(cfg)) list() else cfg)
     out$scenario <- job$scenario
