@@ -114,7 +114,7 @@ DEFAULT_SCALAR_INPUTS <- list(
   prob_hospital_cond_hcw_preAdm = 0.50,
 
   # Funeral control / assignment.
-  safe_funeral_efficacy = 0.90,
+  safe_funeral_efficacy = 0.80,
   prob_hcw_cond_funeral_hcw = 0.02,
   prob_hcw_cond_funeral_genPop = 0.005,
 
