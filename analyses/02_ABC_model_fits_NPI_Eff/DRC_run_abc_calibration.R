@@ -44,8 +44,8 @@ SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed"
 
 # >>> PLACEHOLDER: bounds for the two fitted efficacies (Approach B). UPDATE. <<<
 NPI_SPEC <- list(
-  ppe_efficacy = list(min = 0.20, max = 0.90),   # PLACEHOLDER
-  etu_efficacy = list(min = 0.50, max = 0.95)    # PLACEHOLDER
+  ppe_efficacy = list(min = 0.30, max = 0.90),   # PLACEHOLDER
+  etu_efficacy = list(min = 0.60, max = 0.95)    # PLACEHOLDER
 )
 
 MODEL_OVERRIDES <- list(check_final_size = 12500)
