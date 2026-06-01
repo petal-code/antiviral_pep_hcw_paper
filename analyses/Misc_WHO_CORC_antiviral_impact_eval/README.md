@@ -25,13 +25,16 @@ DRC-like Ebola outbreak, using the posterior from the ABC-SMC calibration in
 
 ## Files
 
-- `WHO_CORC_helper_functions.R` — analysis-specific helpers (posterior IO, parameter
-  conversion, the per-replicate simulator run on workers, binning/summaries).
 - `01_WHO_CORC_run_simulations.R` — runs the simulations and saves
   `WHO_CORC_prelim_antiviral_simulation_results.rds` (in this folder) plus
   summary CSVs in `outputs/misc/WHO_CORC_outputs/`.
 - `02_WHO_CORC_plot.R` — reads the intermediate and writes the figures to
   `outputs/misc/WHO_CORC_outputs/`.
+
+This analysis has no helper file of its own: the model setup, ABC-posterior
+handling, and simulation/summary helpers it uses all live in the repo-level
+`functions/` folder and are sourced from there (see the `source()` block near
+the top of `01_WHO_CORC_run_simulations.R`).
 
 ## Running
 

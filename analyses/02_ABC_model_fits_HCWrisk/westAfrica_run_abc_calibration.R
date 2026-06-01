@@ -44,23 +44,18 @@
 # -----------------------------------------------------------------------------
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
-# ANALYSIS_DIR is this script's containing directory (analyses/02_ABC_model_fits_HCWrisk
-# inside the obv_hcw_paper repo). The script assumes you've setwd() to this
-# directory before sourcing; the machine-specific switch below baked in
-# absolute defaults for the most common workstations.
+# Paths are resolved from the repo root with here::here(), which locates
+# obv_hcw_paper.Rproj — so this runs on any machine, from any working directory
+# inside the repo, with no per-user paths to maintain. Requires the `here`
+# package: install.packages("here").
 
-ANALYSIS_DIR <- switch(
-  Sys.info()[["user"]],
-  "cwhittaker" = "C:/Users/cwhittaker/Documents/Research Projects/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
-  "PETAL_WS_1" = "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
-  "PETAL_WS_2" = "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_HCWrisk",
-  getwd()
-)
-HELPER_DIR     <- file.path(ANALYSIS_DIR, "helper_functions")
-SETUP_PATH     <- file.path(HELPER_DIR,   "setup_model_parameters.R")
-FUNCTIONS_PATH <- file.path(HELPER_DIR,   "abc_calibration_functions.R")
-R0_PATH        <- file.path(HELPER_DIR,   "calculate_model_approx_r0.R")
-SCENARIO_CSV   <- file.path(ANALYSIS_DIR, "final_four_scenario_values.csv")
+ANALYSIS_DIR   <- here::here("analyses", "02_ABC_model_fits_HCWrisk")
+FUNCTIONS_DIR  <- here::here("functions")
+SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
+COMMON_PATH    <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R")
+FUNCTIONS_PATH <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_hcwRisk.R")
+R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
+SCENARIO_CSV   <- here::here("data-processed", "final_four_scenario_values.csv")
 SCENARIO_ID    <- "Worst_WestAfrica"
 
 # Any scalar-parameter overrides to layer on top of DEFAULT_SCALAR_INPUTS.
@@ -84,20 +79,17 @@ ABC_OUTPUT_BASE  <- ANALYSIS_DIR
 #   fiber_ABC_SMC_Worst_WestAfrica_HCWrisk_<date>.rds
 ABC_OUTPUT_LABEL <- "HCWrisk"
 
-# Repo-level outputs/ folder. The final-result RDS is copied here in addition
-# to being written under ABC_OUTPUT_DIR, so manuscript-ready artefacts live
-# in one canonical place.
-FINAL_OUTPUTS_DIR <- normalizePath(
-  file.path(ANALYSIS_DIR, "..", "..", "outputs"),
-  mustWork = FALSE
-)
+# Curated outputs for this analysis. The final-result RDS is copied here (in
+# addition to being written under ABC_OUTPUT_DIR) so the manuscript-ready fit
+# lives in one canonical, per-analysis place under outputs/<analysis_name>/.
+FINAL_OUTPUTS_DIR <- here::here("outputs", "02_ABC_model_fits_HCWrisk")
 if (!dir.exists(FINAL_OUTPUTS_DIR)) {
   dir.create(FINAL_OUTPUTS_DIR, recursive = TRUE, showWarnings = FALSE)
 }
 
 # Symmetric base for both prob_hcw_cond_*_hospital probabilities. The fitted
 # hcw_risk_scalar multiplies this for both, capped at 1.0 — see
-# build_abc_model_args() in abc_calibration_functions.R.
+# build_abc_model_args() in functions/abc_calibration_functions_hcwRisk.R.
 HCW_BASE_PROB <- 0.25
 
 # ABC tuning. These travel into each worker via bootstrap_abc_worker().
@@ -144,6 +136,7 @@ library(fiber)
 handlers("progress")
 
 source(SETUP_PATH)
+source(COMMON_PATH)
 source(FUNCTIONS_PATH)
 source(R0_PATH)
 
@@ -287,11 +280,13 @@ result <- with_abc_output_dir(
 end_time <- Sys.time()
 print(end_time - start_time)
 
-result_date <- format(start_time, "%Y-%m-%d")
+# Full timestamp (not date-only) so multiple runs on the same day produce
+# distinct files, and so find_latest_file(by = "name") sorts chronologically.
+result_stamp <- format(start_time, "%Y%m%d_%H%M%S")
 result_filename <- paste0(
   "fiber_ABC_SMC_", SCENARIO_ID,
   if (nzchar(ABC_OUTPUT_LABEL)) paste0("_", ABC_OUTPUT_LABEL) else "",
-  "_", result_date,
+  "_", result_stamp,
   ".rds"
 )
 saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))

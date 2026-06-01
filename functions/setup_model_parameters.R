@@ -50,8 +50,20 @@
 # make_model_parameters().
 
 DEFAULT_SCALAR_INPUTS <- list(
-  # Hospital / ETU efficacy.
-  etu_efficacy_baseline = 0.90,
+  # Hospital quarantine efficacy (fixed scalars). The offspring functions /
+  # R0 approximation derive hospital_quarantine_efficacy(t) by mixing these two
+  # by the (time-varying) prop_etu(t):
+  #   hq_eff(t) = prop_etu(t) * etu_efficacy
+  #             + (1 - prop_etu(t)) * general_hospital_quarantine_efficacy
+  # See .hospital_quarantine_efficacy_t0() in calculate_model_approx_r0.R.
+  etu_efficacy = 0.90,
+  general_hospital_quarantine_efficacy = 0.30,
+  # Per-PPE efficacy at preventing hospital transmission to HCWs (fixed scalar).
+  # In fiber, PPE thinning is ppe_coverage_hcw(t) * ppe_efficacy; the time-varying
+  # coverage lever ppe_coverage_hcw comes from the scenario ipc_helper curve (see
+  # build_time_varying_args()). Does NOT enter the R0 approximation, but does
+  # affect simulated HCW deaths.
+  ppe_efficacy = 0.70,
 
   # Transmission means and dispersion.
   mn_offspring_genPop = 1.25,
@@ -93,7 +105,7 @@ DEFAULT_SCALAR_INPUTS <- list(
   # (0.12 and 0.20). Those defaults were not literature-derived and have
   # been replaced with a symmetric 0.25 because (i) we now fit these via
   # ABC, with hcw_risk_scalar multiplying the symmetric base (see
-  # hcw_base_prob in abc_calibration_functions.R), and (ii) the previous
+  # hcw_base_prob in abc_calibration_functions_hcwRisk.R), and (ii) the previous
   # asymmetry was arbitrary.
   prob_hcw_cond_genPop_comm = 0.005,
   prob_hcw_cond_genPop_hospital = 0.25,   # was 0.12; symmetric ABC base, see note above
@@ -102,7 +114,7 @@ DEFAULT_SCALAR_INPUTS <- list(
   prob_hospital_cond_hcw_preAdm = 0.50,
 
   # Funeral control / assignment.
-  safe_funeral_efficacy = 1.0,
+  safe_funeral_efficacy = 0.90,
   prob_hcw_cond_funeral_hcw = 0.02,
   prob_hcw_cond_funeral_genPop = 0.005,
 
@@ -112,7 +124,11 @@ DEFAULT_SCALAR_INPUTS <- list(
   seeding_cases = 5,
   check_final_size = 30000,
   initial_immune = 0,
-  susceptible_deplete = FALSE
+  susceptible_deplete = FALSE,
+
+  # OBV post-exposure-prophylaxis gate. Off by default / during calibration;
+  # switched on by the OBV impact analyses.
+  obv_pep_enabled = FALSE
 )
 
 
@@ -161,7 +177,8 @@ read_scenario_matrix <- function(matrix_path) {
   required_cols <- c(
     "scenario", "scenario_label", "relative_day", "prob_hosp", "delay_hosp",
     "prob_unsafe_funeral_comm", "prob_unsafe_funeral_hosp",
-    "prob_unsafe_funeral_etu", "prop_etu", "ipc_helper"
+    "prob_unsafe_funeral_etu", "prop_etu",
+    "ipc_helper"   # drives the time-varying PPE coverage lever (ppe_coverage_hcw)
   )
   missing_cols <- setdiff(required_cols, names(x))
   if (length(missing_cols) > 0L) {
@@ -191,7 +208,10 @@ check_model_function_version <- function() {
       call. = FALSE
     )
   }
-  required_branching_args <- c("prop_etu", "ipc_helper", "etu_efficacy_baseline")
+  required_branching_args <- c("prop_etu", "etu_efficacy",
+                               "general_hospital_quarantine_efficacy",
+                               "ppe_coverage_hcw", "ppe_efficacy",
+                               "safe_funeral_efficacy")
   missing_branching_args <- setdiff(
     required_branching_args, names(formals(branching_process_main))
   )
@@ -294,6 +314,12 @@ make_base_args <- function(overrides = list()) {
     prob_hcw_cond_hcw_hospital = scalar_inputs$prob_hcw_cond_hcw_hospital,
     prob_hospital_cond_hcw_preAdm = scalar_inputs$prob_hospital_cond_hcw_preAdm,
 
+    # Hospital quarantine + PPE efficacies (fixed scalars). PPE coverage is a
+    # separate time-varying lever (ppe_coverage_hcw) added in build_time_varying_args().
+    etu_efficacy = scalar_inputs$etu_efficacy,
+    general_hospital_quarantine_efficacy = scalar_inputs$general_hospital_quarantine_efficacy,
+    ppe_efficacy = scalar_inputs$ppe_efficacy,
+
     # Safe funerals.
     safe_funeral_efficacy = scalar_inputs$safe_funeral_efficacy,
     prob_hcw_cond_funeral_hcw = scalar_inputs$prob_hcw_cond_funeral_hcw,
@@ -305,7 +331,8 @@ make_base_args <- function(overrides = list()) {
     check_final_size = scalar_inputs$check_final_size,
     initial_immune = scalar_inputs$initial_immune,
     seeding_cases = scalar_inputs$seeding_cases,
-    susceptible_deplete = scalar_inputs$susceptible_deplete
+    susceptible_deplete = scalar_inputs$susceptible_deplete,
+    obv_pep_enabled = scalar_inputs$obv_pep_enabled
   )
 
   # Attach any unknown overrides so they still reach the model args list.
@@ -328,8 +355,7 @@ make_base_args <- function(overrides = list()) {
 build_time_varying_args <- function(
     scenario_id,
     matrix,
-    curve_method = "linear",
-    etu_efficacy_baseline = DEFAULT_SCALAR_INPUTS$etu_efficacy_baseline
+    curve_method = "linear"
 ) {
   if (missing(matrix) || is.null(matrix)) {
     stop("`matrix` is required: pass a data frame from read_scenario_matrix().",
@@ -354,9 +380,13 @@ build_time_varying_args <- function(
   )
 
   # NOTE: hospital_quarantine_efficacy(t) is derived internally inside the
-  # offspring functions from prop_etu(t), ipc_helper(t), and the scalar
-  # etu_efficacy_baseline; we therefore pass those three forward rather than
-  # pre-computing a single curve here.
+  # offspring functions by mixing the scalar etu_efficacy and
+  # general_hospital_quarantine_efficacy (both emitted by make_base_args()) by
+  # the time-varying prop_etu(t) curve below; we therefore pass prop_etu forward
+  # rather than pre-computing a single hq curve here. PPE protection is split into
+  # the scalar efficacy ppe_efficacy (in make_base_args()) and the time-varying
+  # coverage lever ppe_coverage_hcw(t) built below from the ipc_helper curve;
+  # fiber applies the two as ppe_coverage_hcw(t) * ppe_efficacy.
 
   list(
     scenario_label = unique(scenario_matrix$scenario_label)[1L],
@@ -386,16 +416,16 @@ build_time_varying_args <- function(
       times, p_unsafe_funeral_hosp_values, curve_method
     ),
 
-    ppe_efficacy_hcw = make_curve(
-      times, clip01(scenario_matrix$ipc_helper), curve_method
-    ),
     prop_etu = make_curve(
       times, clip01(scenario_matrix$prop_etu), curve_method
     ),
-    ipc_helper = make_curve(
+
+    # PPE coverage lever: probability a relevant HCW is wearing PPE, ramping
+    # with IPC/response maturity (the scenario ipc_helper curve). Paired with the
+    # scalar ppe_efficacy from make_base_args() as ppe_coverage_hcw(t)*ppe_efficacy.
+    ppe_coverage_hcw = make_curve(
       times, clip01(scenario_matrix$ipc_helper), curve_method
-    ),
-    etu_efficacy_baseline = etu_efficacy_baseline
+    )
   )
 }
 
@@ -407,8 +437,8 @@ build_time_varying_args <- function(
 #
 # Override routing for entries in `overrides`:
 #   * names that match a DEFAULT_SCALAR_INPUTS entry  -> applied via
-#     make_base_args() (these include etu_efficacy_baseline, which is also
-#     forwarded into the time-varying derivation).
+#     make_base_args() (these include the efficacy scalars etu_efficacy,
+#     general_hospital_quarantine_efficacy and ppe_efficacy).
 #   * names that match a time-varying-args entry      -> overwrite the
 #     corresponding curve / scalar after build_time_varying_args().
 #   * everything else                                 -> attached as extra
@@ -431,19 +461,12 @@ make_model_parameters <- function(
   scalar_names <- names(DEFAULT_SCALAR_INPUTS)
   scalar_overrides <- overrides[intersect(names(overrides), scalar_names)]
 
-  etu_baseline <- if ("etu_efficacy_baseline" %in% names(overrides)) {
-    overrides$etu_efficacy_baseline
-  } else {
-    DEFAULT_SCALAR_INPUTS$etu_efficacy_baseline
-  }
-
   base_args <- make_base_args(overrides = scalar_overrides)
 
   tv_args_full <- build_time_varying_args(
     scenario_id = scenario_id,
     matrix = scenario_matrix,
-    curve_method = curve_method,
-    etu_efficacy_baseline = etu_baseline
+    curve_method = curve_method
   )
   scenario_label <- tv_args_full$scenario_label
   scenario_matrix_used <- tv_args_full$scenario_matrix
@@ -453,9 +476,6 @@ make_model_parameters <- function(
 
   tv_names <- names(tv_args)
   tv_overrides <- overrides[intersect(names(overrides), tv_names)]
-  # `etu_efficacy_baseline` is already applied via build_time_varying_args(),
-  # so drop it from the tv-layer override to avoid a no-op overwrite.
-  tv_overrides[["etu_efficacy_baseline"]] <- NULL
   if (length(tv_overrides) > 0L) {
     tv_args <- utils::modifyList(tv_args, tv_overrides)
   }
