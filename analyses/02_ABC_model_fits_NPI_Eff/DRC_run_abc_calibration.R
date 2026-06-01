@@ -282,3 +282,96 @@ for (s in names(observed_summaries)) {
   abline(v = observed_summaries[s], col = "red", lwd = 2.5)
 }
 par(mfrow = c(1, 1))
+
+
+# -----------------------------------------------------------------------------
+# 11. POSTERIOR TRAJECTORY CHECKS
+# -----------------------------------------------------------------------------
+# Run the fitted posterior forward and look at the WHOLE epidemic curve (not just
+# the scalar summary stats of section 10). We draw N_TRAJ parameter sets from the
+# weighted posterior, simulate one stochastic outbreak each, bin weekly incidence
+# of (a) new infections ["cases"] and (b) deaths, and plot:
+#   (1) every individual trajectory (spaghetti), and
+#   (2) the across-simulation median with a 95% credible interval (2.5-97.5%),
+# which together fold in BOTH parameter uncertainty (different posterior draws)
+# and stochastic uncertainty (one random outbreak per draw).
+library(ggplot2)
+library(future.apply)
+source(file.path(FUNCTIONS_DIR, "simulation_helpers.R"))   # bin_counts()
+
+N_TRAJ   <- 200L   # posterior draws to simulate (one stochastic outbreak each)
+BIN_WIDTH <- 7L    # days per bin (weekly incidence)
+TRAJ_SEED <- 100L  # base seed for reproducible per-draw simulations
+
+# Weighted resample of posterior ROW indices (each row = one parameter set).
+set.seed(TRAJ_SEED)
+traj_idx <- sample(seq_len(nrow(posterior)), size = N_TRAJ, replace = TRUE,
+                   prob = result$weights)
+
+# Run each drawn parameter set forward once, in parallel. The worker rebuilds the
+# fiber args for that draw (NPI mapping: npi_scaler -> efficacies; fixed efficacies
+# from DEFAULT_SCALAR_INPUTS), runs one outbreak, and returns the absolute-day
+# vectors of infections and deaths from tdf.
+plan(multisession, workers = min(N_CLUSTER, future::availableCores()))
+traj_runs <- future_lapply(seq_along(traj_idx), function(k) {
+  i <- traj_idx[k]
+  a <- build_abc_model_args(
+    R0 = posterior$R0[i], prop_funeral = posterior$prop_funeral[i],
+    npi_scaler = posterior$npi_scaler[i],
+    base = base_args, tv = tv_args_model, invariants = R0_invariants,
+    npi_spec = NPI_SPEC,
+    general_hospital_quarantine_efficacy = DEFAULT_SCALAR_INPUTS$general_hospital_quarantine_efficacy,
+    safe_funeral_efficacy = DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy,
+    seeding_cases = ABC_CONFIG$seeding_cases)
+  a$seed <- TRAJ_SEED + k
+  tdf <- do.call(branching_process_main, a)$tdf
+  tdf <- tdf[!is.na(tdf$time_infection_absolute), , drop = FALSE]
+  died <- !is.na(tdf$outcome) & tdf$outcome
+  list(case_days  = as.integer(floor(tdf$time_infection_absolute)),
+       death_days = as.integer(floor(tdf$time_outcome_absolute[died])))
+}, future.packages = "fiber", future.seed = TRUE)
+plan(sequential)
+
+# Common weekly grid spanning the longest trajectory, then bin every run onto it.
+max_day <- max(unlist(lapply(traj_runs, function(r) c(r$case_days, r$death_days))), 0)
+n_bins  <- max(1L, ceiling((max_day + 1L) / BIN_WIDTH))
+week    <- ((seq_len(n_bins) - 1L) + 0.5) * BIN_WIDTH          # bin midpoints (days)
+
+# Long data frame: one row per (draw, week, metric) with the binned incidence.
+traj_long <- do.call(rbind, lapply(seq_along(traj_runs), function(k) {
+  r <- traj_runs[[k]]
+  rbind(
+    data.frame(draw = k, week = week, metric = "Cases",
+               incidence = bin_counts(r$case_days,  BIN_WIDTH, n_bins)),
+    data.frame(draw = k, week = week, metric = "Deaths",
+               incidence = bin_counts(r$death_days, BIN_WIDTH, n_bins))
+  )
+}))
+
+# (1) Individual trajectories (one faint line per posterior draw), faceted by metric.
+print(
+  ggplot(traj_long, aes(week, incidence, group = draw)) +
+    geom_line(alpha = 0.15, colour = "steelblue", linewidth = 0.3) +
+    facet_wrap(~ metric, scales = "free_y") +
+    labs(x = "Time since outbreak start (days)", y = "Count per week",
+         title = sprintf("Posterior trajectories: %s", SCENARIO_ID),
+         subtitle = sprintf("%d posterior draws, one stochastic outbreak each", N_TRAJ)) +
+    theme_bw()
+)
+
+# (2) Across-draw median + 95% credible interval per week, faceted by metric.
+band <- do.call(rbind, lapply(split(traj_long, list(traj_long$metric, traj_long$week), drop = TRUE),
+  function(d) data.frame(metric = d$metric[1], week = d$week[1],
+                         lo  = quantile(d$incidence, 0.025, names = FALSE),
+                         med = quantile(d$incidence, 0.500, names = FALSE),
+                         hi  = quantile(d$incidence, 0.975, names = FALSE))))
+print(
+  ggplot(band, aes(week, med)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), fill = "steelblue", alpha = 0.3) +
+    geom_line(colour = "steelblue", linewidth = 0.8) +
+    facet_wrap(~ metric, scales = "free_y") +
+    labs(x = "Time since outbreak start (days)", y = "Count per week",
+         title = sprintf("Posterior median and 95%% CrI: %s", SCENARIO_ID),
+         subtitle = sprintf("Across %d posterior draws (parameter + stochastic uncertainty)", N_TRAJ)) +
+    theme_bw()
+)
