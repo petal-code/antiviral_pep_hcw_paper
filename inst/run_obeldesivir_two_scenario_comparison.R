@@ -30,17 +30,6 @@
 N_REPS  <- 5L     # stochastic replicates per particle per arm (1 = one draw per particle)
 N_CORES <- 14L    # parallel workers (capped at availableCores() below)
 
-<<<<<<< Updated upstream
-# A parameter set enters the % averted plot only if its no-OBV baseline outbreak
-# TOOK OFF, i.e. produced at least this many TOTAL deaths. The % is
-# 100*(baseline - obv)/baseline, so a small/fizzled outbreak makes it explode
-# (and, because OBV decouples the per-arm RNG stream, occasionally go sharply
-# negative). Gating on total deaths is a clean "did the outbreak happen" filter;
-# the ABSOLUTE averted (computed alongside) is robust and never blows up.
-MIN_BASELINE_DEATHS <- 50
-
-=======
->>>>>>> Stashed changes
 # OBV efficacies to test (the "with obeldesivir" arms). Add/remove freely.
 OBV_EFFICACIES <- c(obv_40 = 0.40, 
                     obv_80 = 0.80)
