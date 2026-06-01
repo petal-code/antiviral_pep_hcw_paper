@@ -34,8 +34,8 @@ SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
 COMMON_PATH    <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R")
 FUNCTIONS_PATH <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_npi.R")
 R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
-SCENARIO_CSV   <- here::here("data-processed", "final_four_scenario_values.csv")
-SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed"
+SCENARIO_CSV   <- here::here("data-processed", "final_six_scenario_values_original_approach.csv")
+SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed_PlusPlus" # either "Middle_DRC_ConflictSmoothed" or "Middle_DRC_ConflictSmoothed_PlusPlus"
 
 # The fixed (not fitted) efficacies general_hospital_quarantine_efficacy and
 # safe_funeral_efficacy are NOT set here -- they default to DEFAULT_SCALAR_INPUTS
@@ -48,7 +48,7 @@ NPI_SPEC <- list(
   etu_efficacy = list(min = 0.60, max = 0.95)    # PLACEHOLDER
 )
 
-MODEL_OVERRIDES <- list(check_final_size = 12500)
+MODEL_OVERRIDES <- list(check_final_size = 10000)
 
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
 ABC_OUTPUT_LABEL <- "NPIeff"
@@ -62,7 +62,7 @@ if (!dir.exists(FINAL_OUTPUTS_DIR)) {
 # bootstrap_abc_worker() fills them from DEFAULT_SCALAR_INPUTS.
 ABC_CONFIG <- list(
   takeoff_death_threshold = 100,
-  n_reps                  = 3, #150,
+  n_reps                  = 50, # 100
   seeding_cases           = 25,
   setup_R0_n              = 100000L,
   setup_R0_seed           = 42L,
@@ -71,7 +71,7 @@ ABC_CONFIG <- list(
 
 ABC_SETTINGS <- list(
   method              = "Delmoral",
-  nb_simul            = 10, #690,
+  nb_simul            = 220, #660
   alpha               = 0.5,
   tolerance_target    = 0.2,
   M                   = 1,
@@ -282,6 +282,20 @@ for (s in names(observed_summaries)) {
   abline(v = observed_summaries[s], col = "red", lwd = 2.5)
 }
 par(mfrow = c(1, 1))
+
+# Single-panel summary: simulated vs observed.
+plot(NA, xlim = c(0.5, 4.5), ylim = c(0, 1.5),
+     xaxt = "n", xlab = "", ylab = "Simulated / Observed",
+     main = "Posterior-predictive fit ratio")
+axis(1, at = 1:4, labels = names(observed_summaries))
+abline(h = 1, lty = 2, col = "red")
+for (i in seq_along(observed_summaries)) {
+  x  <- sim_stats_post[[names(observed_summaries)[i]]] /
+    observed_summaries[names(observed_summaries)[i]]
+  qs <- quantile(x, c(0.025, 0.5, 0.975))
+  segments(i, qs[1], i, qs[3], lwd = 2, col = "darkblue")
+  points(i, qs[2], pch = 16, cex = 1.5, col = "darkblue")
+}
 
 
 # -----------------------------------------------------------------------------
