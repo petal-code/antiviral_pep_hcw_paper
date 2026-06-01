@@ -15,9 +15,10 @@
 #      time-varying inputs and the calibration's exact mapping.
 #   4. Run every (scenario x particle x replicate) under 3 arms -- no OBV,
 #      OBV@40%, OBV@80% -- in parallel, pairing arms on a shared seed.
-#   5. Per parameter set, take the MEDIAN over replicates and compute both the
-#      absolute and (denominator-guarded) % HCW deaths averted vs the no-OBV arm;
-#      plot the % distribution by scenario x efficacy.
+#   5. Compare ARM-LEVEL DISTRIBUTIONS (not paired reps -- OBV decouples the
+#      per-arm RNG stream, so per-rep differences are meaningless): % HCW deaths
+#      averted = 100*(median_no_obv - median_obv)/median_no_obv per scenario,
+#      with a bootstrap 95% CI; plot by scenario x efficacy.
 #
 # Run from the repo root with:  Rscript inst/run_obeldesivir_two_scenario_comparison.R
 # =============================================================================
@@ -29,6 +30,7 @@
 N_REPS  <- 5L     # stochastic replicates per particle per arm (1 = one draw per particle)
 N_CORES <- 14L    # parallel workers (capped at availableCores() below)
 
+<<<<<<< Updated upstream
 # A parameter set enters the % averted plot only if its no-OBV baseline outbreak
 # TOOK OFF, i.e. produced at least this many TOTAL deaths. The % is
 # 100*(baseline - obv)/baseline, so a small/fizzled outbreak makes it explode
@@ -37,6 +39,8 @@ N_CORES <- 14L    # parallel workers (capped at availableCores() below)
 # the ABSOLUTE averted (computed alongside) is robust and never blows up.
 MIN_BASELINE_DEATHS <- 50
 
+=======
+>>>>>>> Stashed changes
 # OBV efficacies to test (the "with obeldesivir" arms). Add/remove freely.
 OBV_EFFICACIES <- c(obv_40 = 0.40, 
                     obv_80 = 0.80)
@@ -174,64 +178,68 @@ plan(sequential)
 
 
 # ---------------------------------------------------------------------------
-# 5. % HCW DEATHS AVERTED, PAIRED AT THE PARAMETER-SET LEVEL
+# 5. % HCW DEATHS AVERTED -- DISTRIBUTION-LEVEL (unpaired) ESTIMAND
 # ---------------------------------------------------------------------------
-# Collect TOTAL deaths (for the take-off filter) and HCW deaths (the outcome).
+# WHY NOT PAIR PER (set, rep): enabling OBV consumes extra rbinom() draws inside
+# branching_process_main(), so an OBV arm and its same-seed no-OBV arm DESYNC as
+# soon as the first OBV draw fires (documented fiber caveat). Near R0 = 1 with
+# heavy overdispersion, that desync routinely flips a rep between fizzle and full
+# take-off -- so a per-rep difference compares two *independent* outbreaks and its
+# sign is meaningless (the diagnostic showed total deaths rose under OBV in ~48%
+# of reps, which is impossible in a truly paired run). fiber's own guidance:
+# "use many replicates and compare distributions." So we do exactly that.
 per_rep <- data.frame(
   scenario     = vapply(results, `[[`, character(1), "scenario"),
-  set_id       = vapply(results, `[[`, integer(1),   "set_id"),
   arm          = vapply(results, `[[`, character(1), "arm"),
   n_deaths     = vapply(results, `[[`, integer(1),   "n_deaths"),
   n_hcw_deaths = vapply(results, `[[`, integer(1),   "n_hcw_deaths"),
   stringsAsFactors = FALSE
 )
 
-# Summarise the N_REPS replicates within each (scenario, set, arm) by their
-# MEDIAN -- more robust than the mean to the occasional takeoff/fizzle split a
-# single decoupled OBV replicate can cause.
-agg <- aggregate(cbind(n_deaths, n_hcw_deaths) ~ scenario + set_id + arm,
-                 data = per_rep, FUN = median)
+# Compare ARM-LEVEL DISTRIBUTIONS, not paired reps. Within each (scenario, arm)
+# we summarise all N_SETS x N_REPS draws by their MEDIAN HCW deaths, then
+#     % averted = 100 * (median_no_obv - median_arm) / median_no_obv.
+# A CI comes from a non-parametric bootstrap: resample the reps within each arm,
+# recompute the two medians and the % -- no pairing, so it cannot blow up.
+N_BOOT <- 2000L
 
-# Split off the no-OBV baseline (its total + HCW deaths) and merge onto each OBV arm.
-base_hcw <- agg[agg$arm == "no_obv", c("scenario", "set_id", "n_deaths", "n_hcw_deaths")]
-names(base_hcw)[3:4] <- c("deaths_no_obv", "hcw_no_obv")
-averted  <- merge(agg[agg$arm != "no_obv", ], base_hcw, by = c("scenario", "set_id"))
-
-# ABSOLUTE averted is always well-defined (HCW deaths prevented by OBV).
-averted$hcw_deaths_averted <- averted$hcw_no_obv - averted$n_hcw_deaths
-# % averted is 100 * absolute / baseline, but ONLY where the baseline outbreak
-# took off (>= MIN_BASELINE_DEATHS total deaths) -- otherwise the ratio is
-# dominated by sampling noise (and OBV's RNG decoupling), so set it to NA.
-averted$pct_hcw_averted <- ifelse(averted$deaths_no_obv >= MIN_BASELINE_DEATHS,
-                                  100 * averted$hcw_deaths_averted / averted$hcw_no_obv,
-                                  NA_real_)
-n_dropped <- sum(is.na(averted$pct_hcw_averted))
-if (n_dropped > 0) message(sprintf(
-  "%d of %d (scenario, set, efficacy) cells have a baseline outbreak < %d total deaths; shown in the absolute panel only.",
-  n_dropped, nrow(averted), MIN_BASELINE_DEATHS))
+pct_averted_ci <- do.call(rbind, lapply(names(SCENARIOS), function(sc) {
+  d   <- per_rep[per_rep$scenario == sc, ]
+  obs <- tapply(d$n_hcw_deaths, d$arm, median)   # median HCW deaths per arm
+  do.call(rbind, lapply(names(OBV_EFFICACIES), function(e) {
+    # Point estimate from the observed medians.
+    point <- 100 * (obs[["no_obv"]] - obs[[e]]) / obs[["no_obv"]]
+    # Bootstrap: resample reps within the no_obv and this-efficacy arm separately.
+    base_v <- d$n_hcw_deaths[d$arm == "no_obv"]
+    obv_v  <- d$n_hcw_deaths[d$arm == e]
+    boot <- replicate(N_BOOT, {
+      mb <- median(sample(base_v, length(base_v), replace = TRUE))
+      mo <- median(sample(obv_v,  length(obv_v),  replace = TRUE))
+      100 * (mb - mo) / mb
+    })
+    data.frame(scenario = sc, arm = e,
+               pct_averted = point,
+               lo = quantile(boot, 0.025, names = FALSE),
+               hi = quantile(boot, 0.975, names = FALSE),
+               stringsAsFactors = FALSE)
+  }))
+}))
 
 # Friendly labels for the plot.
-averted$scenario_lbl <- c(DRC = "DRC", WestAfrica = "West Africa")[averted$scenario]
-averted$efficacy_lbl <- sprintf("%d%% efficacy", round(100 * OBV_EFFICACIES[averted$arm]))
+pct_averted_ci$scenario_lbl <- c(DRC = "DRC", WestAfrica = "West Africa")[pct_averted_ci$scenario]
+pct_averted_ci$efficacy_lbl <- sprintf("%d%% efficacy", round(100 * OBV_EFFICACIES[pct_averted_ci$arm]))
+print(pct_averted_ci[, c("scenario_lbl", "efficacy_lbl", "pct_averted", "lo", "hi")], row.names = FALSE)
 
 # ---------------------------------------------------------------------------
-# 6. PLOT: HCW deaths averted, stratified by scenario and OBV efficacy
+# 6. PLOT: % HCW deaths averted (distribution-level), by scenario and efficacy
 # ---------------------------------------------------------------------------
-# Stack the two views to long form: the guarded % (NA-dropped) and the robust
-# absolute count. facet_wrap with free y-scales then draws one panel each.
-plot_long <- rbind(
-  data.frame(scenario_lbl = averted$scenario_lbl, efficacy_lbl = averted$efficacy_lbl,
-             panel = "HCW deaths averted (%)",      value = averted$pct_hcw_averted),
-  data.frame(scenario_lbl = averted$scenario_lbl, efficacy_lbl = averted$efficacy_lbl,
-             panel = "HCW deaths averted (absolute)", value = averted$hcw_deaths_averted)
-)
-
-ggplot(plot_long[!is.na(plot_long$value), ],
-       aes(scenario_lbl, value, fill = efficacy_lbl)) +
-  geom_boxplot(outlier.size = 0.5, position = position_dodge(0.8), width = 0.7) +
-  facet_wrap(~ panel, scales = "free_y") +
-  labs(x = NULL, y = NULL, fill = "Obeldesivir",
+# A point estimate per scenario x efficacy with its bootstrap 95% interval.
+ggplot(pct_averted_ci, aes(scenario_lbl, pct_averted, colour = efficacy_lbl)) +
+  geom_hline(yintercept = 0, linetype = 2, colour = "grey60") +
+  geom_pointrange(aes(ymin = lo, ymax = hi),
+                  position = position_dodge(0.4), linewidth = 0.8) +
+  labs(x = NULL, y = "HCW deaths averted (%)", colour = "Obeldesivir",
        title = "Obeldesivir impact on HCW deaths, by scenario and efficacy",
-       subtitle = sprintf("Per-set medians across %d posterior draws x %d reps per arm; %% panel shows baselines >= %d total deaths",
-                          N_SETS, N_REPS, MIN_BASELINE_DEATHS)) +
+       subtitle = sprintf("Distribution-level (unpaired) estimate across %d posterior draws x %d reps per arm; bars = bootstrap 95%% CI",
+                          N_SETS, N_REPS)) +
   theme_bw()
