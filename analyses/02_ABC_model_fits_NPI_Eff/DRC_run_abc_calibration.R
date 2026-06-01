@@ -12,11 +12,12 @@
 #                  [min, max] intervals (Approach B).
 #                    s = -1 -> min,  s = 0 -> central,  s = +1 -> max.
 #
-# FIXED (not fitted): general_hospital_quarantine_efficacy, safe_funeral_efficacy.
-#   prob_hcw_cond_*_hospital fixed at 0.25 (no HCW-risk scalar).
+# FIXED (not fitted): general_hospital_quarantine_efficacy, safe_funeral_efficacy
+#   are taken from DEFAULT_SCALAR_INPUTS in functions/setup_model_parameters.R
+#   (not overridden here). prob_hcw_cond_*_hospital fixed at 0.25 (no HCW-risk scalar).
 #
-# >>> PLACEHOLDERS <<<  NPI_SPEC bounds and FIXED_EFFICACIES are PLACEHOLDER
-#     values. UPDATE WITH REAL NUMBERS before any production run.
+# >>> PLACEHOLDERS <<<  NPI_SPEC bounds are PLACEHOLDER values. UPDATE WITH REAL
+#     NUMBERS before any production run.
 # =============================================================================
 
 
@@ -36,11 +37,10 @@ R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
 SCENARIO_CSV   <- here::here("data-processed", "final_four_scenario_values.csv")
 SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed"
 
-# >>> PLACEHOLDER: fixed conditional efficacies (NOT fitted). UPDATE. <<<
-FIXED_EFFICACIES <- list(
-  general_hospital_quarantine_efficacy = 0.30,   # PLACEHOLDER
-  safe_funeral_efficacy                = 0.95    # PLACEHOLDER
-)
+# The fixed (not fitted) efficacies general_hospital_quarantine_efficacy and
+# safe_funeral_efficacy are NOT set here -- they default to DEFAULT_SCALAR_INPUTS
+# in setup_model_parameters.R (via make_base_args() and the NPI worker's
+# default_config). Add them to MODEL_OVERRIDES / ABC_CONFIG only to deviate.
 
 # >>> PLACEHOLDER: bounds for the two fitted efficacies (Approach B). UPDATE. <<<
 NPI_SPEC <- list(
@@ -48,10 +48,7 @@ NPI_SPEC <- list(
   etu_efficacy = list(min = 0.50, max = 0.95)    # PLACEHOLDER
 )
 
-MODEL_OVERRIDES <- c(
-  list(check_final_size = 10000),
-  FIXED_EFFICACIES
-)
+MODEL_OVERRIDES <- list(check_final_size = 10000)
 
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
 ABC_OUTPUT_LABEL <- "NPIeff"
@@ -61,16 +58,15 @@ if (!dir.exists(FINAL_OUTPUTS_DIR)) {
   dir.create(FINAL_OUTPUTS_DIR, recursive = TRUE, showWarnings = FALSE)
 }
 
+# general_hospital_quarantine_efficacy and safe_funeral_efficacy are omitted, so
+# bootstrap_abc_worker() fills them from DEFAULT_SCALAR_INPUTS.
 ABC_CONFIG <- list(
   takeoff_death_threshold = 100,
   n_reps                  = 150,
   seeding_cases           = 25,
   setup_R0_n              = 100000L,
   setup_R0_seed           = 42L,
-  npi_spec                = NPI_SPEC,
-  general_hospital_quarantine_efficacy =
-    FIXED_EFFICACIES$general_hospital_quarantine_efficacy,
-  safe_funeral_efficacy   = FIXED_EFFICACIES$safe_funeral_efficacy
+  npi_spec                = NPI_SPEC
 )
 
 ABC_SETTINGS <- list(
@@ -134,8 +130,8 @@ cat(sprintf("  ppe_efficacy = %.3f, etu_efficacy = %.3f\n",
             central_effs$ppe_efficacy, central_effs$etu_efficacy))
 cat(sprintf("  D = %.4f, F = %.4f, Q_g = %.4f\n",
             D_from_invariants(R0_invariants, central_effs$etu_efficacy,
-                              FIXED_EFFICACIES$general_hospital_quarantine_efficacy),
-            F_from_invariants(R0_invariants, FIXED_EFFICACIES$safe_funeral_efficacy),
+                              DEFAULT_SCALAR_INPUTS$general_hospital_quarantine_efficacy),
+            F_from_invariants(R0_invariants, DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy),
             R0_invariants$Q_g))
 
 
@@ -168,8 +164,8 @@ priors <- list(
 #   invariants    = R0_invariants,
 #   npi_spec      = NPI_SPEC,
 #   general_hospital_quarantine_efficacy =
-#     FIXED_EFFICACIES$general_hospital_quarantine_efficacy,
-#   safe_funeral_efficacy = FIXED_EFFICACIES$safe_funeral_efficacy,
+#     DEFAULT_SCALAR_INPUTS$general_hospital_quarantine_efficacy,
+#   safe_funeral_efficacy = DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy,
 #   parallel      = FALSE,
 #   n_replicates  = 5,
 #   seeding_cases = ABC_CONFIG$seeding_cases,
