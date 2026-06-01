@@ -192,21 +192,13 @@ averted$pct_hcw_averted <- ifelse(averted$hcw_no_obv > 0,
 averted$scenario_lbl <- c(DRC = "DRC", WestAfrica = "West Africa")[averted$scenario]
 averted$efficacy_lbl <- sprintf("%d%% efficacy", round(100 * OBV_EFFICACIES[averted$arm]))
 
-write.csv(averted, file.path(OUTPUT_DIR, "pct_hcw_deaths_averted_per_set.csv"), row.names = FALSE)
-
-
 # ---------------------------------------------------------------------------
 # 6. PLOT: % HCW deaths averted, stratified by scenario and OBV efficacy
 # ---------------------------------------------------------------------------
-p_out <- ggplot(averted[!is.na(averted$pct_hcw_averted), ],
+ggplot(averted[!is.na(averted$pct_hcw_averted), ],
                 aes(scenario_lbl, pct_hcw_averted, fill = efficacy_lbl)) +
   geom_boxplot(outlier.size = 0.5, position = position_dodge(0.8), width = 0.7) +
   labs(x = NULL, y = "HCW deaths averted (%)", fill = "Obeldesivir",
        title = "Obeldesivir impact on HCW deaths, by scenario and efficacy",
        subtitle = sprintf("Paired comparison across %d posterior draws x %d reps per arm", N_SETS, N_REPS)) +
   theme_bw()
-print(p_out)
-ggsave(file.path(OUTPUT_DIR, "pct_hcw_deaths_averted.png"), p_out,
-       width = 8, height = 5, dpi = 200)
-
-message("Wrote results + plot to: ", OUTPUT_DIR)
