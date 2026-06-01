@@ -1,47 +1,38 @@
 # =============================================================================
-# run_obeldesivir_two_scenario_comparison_totalEffect.R
+# run_obeldesivir_two_scenario_comparison_directVsTotal.R
 #
-# Estimates the % of healthcare-worker (HCW) deaths that obeldesivir (OBV)
-# post-exposure prophylaxis averts, for BOTH fitted scenarios (DRC and West
-# Africa) and at TWO OBV efficacies (40% and 80%), then draws one stratified plot.
+# Plots the DIRECT vs TOTAL obeldesivir (OBV) effect side by side, for BOTH
+# scenarios (DRC, West Africa) and TWO efficacies (40%, 80%). The gap between
+# them is exactly the benefit OBV gets from averting ONWARD transmission chains
+# (not just the index HCW infections it blocks).
 #
-# TOTAL vs DIRECT effect
-# ----------------------
-# The companion script ..._directEffect.R uses fiber's within-run counterfactual
-# (prevented_deaths), which counts ONLY the would-be death of each prevented
-# index HCW infection -- it excludes the onward transmission those infections
-# would have seeded. That is a conservative DIRECT estimate.
+# Two estimands, BOTH extracted from ONE set of simulations:
+#   DIRECT (within-run counterfactual; conservative): of the HCW infections OBV
+#     blocked, how many would themselves have died -- excludes their onward
+#     chains. Per OBV run, fiber reports these as
+#       out$sim_info$obv_pep_num_treated$prevented_deaths
+#     %direct = 100 * prevented / (realised + prevented).
+#   TOTAL (with vs without OBV, difference of arm MEANS; full effect): includes
+#     averted onward chains. Needs a no-OBV baseline arm.
+#     %total = 100 * (mean_no_obv - mean_obv) / mean_no_obv.
+#   (Means are unbiased despite OBV's RNG desync -- expectations don't depend on
+#   coupling -- so the difference is valid; see the totalEffect script header.)
 #
-# This script measures the FULL (TOTAL) effect, including averted onward chains,
-# by actually simulating both worlds and differencing their MEANS:
-#   * For each posterior draw, run many reps WITHOUT OBV and many reps WITH OBV.
-#   * Average HCW deaths over reps in each arm  -> mu_no(draw), mu_obv(draw).
-#   * Averted(draw)   = mu_no - mu_obv ;  %Averted = 100 * (mu_no - mu_obv)/mu_no.
-#
-# WHY MEANS (and why this avoids the earlier negative-% artefact): enabling OBV
-# consumes extra RNG, so a WITH-OBV run and a same-seed WITHOUT-OBV run desync --
-# you cannot pair them rep-to-rep. But the MEAN over reps estimates the arm's
-# EXPECTED deaths, and expectations do not depend on coupling. So mu_no - mu_obv
-# is an UNBIASED estimate of the true averted burden regardless of desync; the
-# desync only adds variance, never a biased sign. Because OBV can only remove
-# deaths, the true per-draw effect is >= 0 -- so with ENOUGH reps each estimate
-# sits at a genuine non-negative number. The bimodal fizzle/takeoff split means
-# "enough" is large: prefer N_REPS >= 50, not 5.
-#
-# Efficiency: the no-OBV arm does not depend on efficacy, so it is run ONCE per
-# (scenario, draw, rep) and reused as the shared baseline for every efficacy.
+# Each OBV run yields BOTH its realised HCW deaths (-> total) and its prevented
+# deaths (-> direct), so no extra simulation is needed for the comparison; we
+# only add the shared no-OBV arm the total effect requires.
 #
 # Defines NO new functions -- composes existing functions/ helpers with base R +
 # ggplot. Run from the repo root:
-#   Rscript inst/run_obeldesivir_two_scenario_comparison_totalEffect.R
+#   Rscript inst/run_obeldesivir_two_scenario_comparison_directVsTotal.R
 # =============================================================================
 
 
 # ---------------------------------------------------------------------------
 # 0. CONFIGURATION (everything tweakable lives here)
 # ---------------------------------------------------------------------------
-# NOTE: differencing arm means needs many reps to settle (bimodal outbreak
-# sizes). 50 is a sensible floor; raise for a smoother estimate.
+# The TOTAL effect differences arm means of a bimodal outbreak-size distribution,
+# so it needs many reps to settle. 50 is a sensible floor.
 N_REPS  <- 50L    # stochastic replicates per particle per arm
 N_CORES <- 12L    # parallel workers (capped at availableCores() below)
 
@@ -83,7 +74,6 @@ source(file.path(FN, "calculate_model_approx_r0.R"))         # D/F solver
 source(file.path(FN, "abc_calibration_functions_common.R"))  # generic ABC helpers
 source(file.path(FN, "abc_calibration_functions_hcwRisk.R")) # build_abc_model_args()
 source(file.path(FN, "abc_posterior.R"))                     # downsample_posterior()
-source(file.path(FN, "simulation_helpers.R"))                # simulate_one()
 handlers("progress")
 check_model_function_version()   # fail fast if fiber predates the NPI interface
 
@@ -136,11 +126,10 @@ for (sc in names(SCENARIOS)) {
 # ---------------------------------------------------------------------------
 # 4. BUILD THE JOB LIST (scenario x particle x rep x arm) AND RUN IN PARALLEL
 # ---------------------------------------------------------------------------
-# Arms = "no_obv" (the shared baseline) + one per efficacy. simulate_one() turns
-# OBV on only when arm == "obv", so we run each arm via simulate_one() with the
-# matching config and tag the descriptive arm name onto the result.
-arms_cfg <- c(list(no_obv = NULL),
-              lapply(OBV_EFFICACIES, function(e) c(OBV_BASE, list(efficacy = e))))
+# Arms = "no_obv" (shared baseline for TOTAL) + one per efficacy. Every run is
+# executed directly (not via simulate_one) so we can read both realised HCW
+# deaths AND the deferred prevented-deaths counterfactual from the same call.
+arms <- c("no_obv", names(OBV_EFFICACIES))
 
 jobs <- list(); k <- 0L
 for (sc in names(SCENARIOS)) {
@@ -148,89 +137,116 @@ for (sc in names(SCENARIOS)) {
   for (s in seq_len(N_SETS)) for (r in seq_len(N_REPS)) {
     # Seed depends on (scenario, set, rep) only -- arms within a rep share it.
     seed_sr <- SEED_BASE + ((sc_i - 1L) * N_SETS + (s - 1L)) * N_REPS + (r - 1L)
-    for (arm in names(arms_cfg)) {
+    for (arm in arms) {
       k <- k + 1L
-      jobs[[k]] <- list(scenario = sc, set_id = s, rep_id = r, arm = arm, seed = seed_sr)
+      jobs[[k]] <- list(scenario = sc, set_id = s, rep_id = r, arm = arm,
+                        eff_value = if (arm == "no_obv") NA_real_ else OBV_EFFICACIES[[arm]],
+                        seed = seed_sr)
     }
   }
 }
 message(sprintf("Total simulations: %d (%d scenarios x %d sets x %d reps x %d arms).",
-                length(jobs), length(SCENARIOS), N_SETS, N_REPS, length(arms_cfg)))
+                length(jobs), length(SCENARIOS), N_SETS, N_REPS, length(arms)))
 
 plan(multisession, workers = min(N_CORES, future::availableCores()))
 on.exit(plan(sequential), add = TRUE)
 
 with_progress({
   p <- progressor(along = jobs)
-  results <- future_lapply(jobs, function(job, args_by_scenario, arms_cfg) {
-    # Collapse the descriptive arm (no_obv / obv_40 / obv_80) to simulate_one()'s
-    # "no_obv"/"obv" switch + matching config, then restore the descriptive label.
-    cfg <- arms_cfg[[job$arm]]
-    j   <- list(set_id = job$set_id, rep_id = job$rep_id, seed = job$seed,
-                arm = if (is.null(cfg)) "no_obv" else "obv")
-    out <- simulate_one(j, args_list = args_by_scenario[[job$scenario]],
-                        obv_cfg = if (is.null(cfg)) list() else cfg)
-    out$scenario <- job$scenario
-    out$arm      <- job$arm
-    p(); out
-  }, args_by_scenario = args_by_scenario, arms_cfg = arms_cfg,
+  results <- future_lapply(jobs, function(job, args_by_scenario, OBV_BASE) {
+    a <- args_by_scenario[[job$scenario]][[job$set_id]]
+    a$seed <- job$seed
+    if (job$arm != "no_obv") {                 # OBV arms: turn the gate on
+      a$obv_pep_enabled          <- TRUE
+      a$obv_pep_coverage         <- OBV_BASE$coverage
+      a$obv_pep_adherence        <- OBV_BASE$adherence
+      a$obv_pep_efficacy         <- job$eff_value
+      a$obv_pep_dpc              <- OBV_BASE$dpc
+      a$obv_pep_target_class     <- OBV_BASE$target_class
+      a$obv_pep_target_locations <- OBV_BASE$target_locations
+    }
+    out <- do.call(fiber::branching_process_main, a)
+
+    tdf <- out$tdf
+    tdf <- tdf[!is.na(tdf$time_infection_absolute), , drop = FALSE]
+    realised_hcw <- sum(!is.na(tdf$outcome) & tdf$outcome &
+                        !is.na(tdf$class) & tdf$class == "HCW")
+    prevented_hcw <- out$sim_info$obv_pep_num_treated$prevented_deaths   # 0 for no_obv
+    if (is.null(prevented_hcw) || length(prevented_hcw) == 0L || is.na(prevented_hcw)) prevented_hcw <- 0
+
+    p()
+    list(scenario = job$scenario, arm = job$arm, set_id = job$set_id,
+         realised_hcw = realised_hcw, prevented_hcw = prevented_hcw)
+  }, args_by_scenario = args_by_scenario, OBV_BASE = OBV_BASE,
      future.packages = "fiber", future.seed = TRUE)
 })
 plan(sequential)
 
 
 # ---------------------------------------------------------------------------
-# 5. % HCW DEATHS AVERTED -- DIFFERENCE OF ARM MEANS, PER POSTERIOR DRAW
+# 5. COMPUTE BOTH ESTIMANDS PER PARTICLE
 # ---------------------------------------------------------------------------
-per_rep <- data.frame(
-  scenario     = vapply(results, `[[`, character(1), "scenario"),
-  arm          = vapply(results, `[[`, character(1), "arm"),
-  set_id       = vapply(results, `[[`, integer(1),   "set_id"),
-  n_hcw_deaths = vapply(results, `[[`, integer(1),   "n_hcw_deaths"),
+per_run <- data.frame(
+  scenario      = vapply(results, `[[`, character(1), "scenario"),
+  arm           = vapply(results, `[[`, character(1), "arm"),
+  set_id        = vapply(results, `[[`, integer(1),   "set_id"),
+  realised_hcw  = vapply(results, `[[`, numeric(1),   "realised_hcw"),
+  prevented_hcw = vapply(results, `[[`, numeric(1),   "prevented_hcw"),
   stringsAsFactors = FALSE
 )
+if (sum(per_run$prevented_hcw) == 0)
+  warning("No prevented HCW deaths recorded -- check fiber is the updated version (PR #70).",
+          call. = FALSE)
 
-# Mean HCW deaths over reps, per (scenario, set, arm) -- the per-arm EXPECTED
-# burden for that posterior draw (unbiased despite OBV's RNG desync; see header).
-mu <- aggregate(n_hcw_deaths ~ scenario + set_id + arm, data = per_rep, FUN = mean)
-
-# Pull out the shared no-OBV baseline and merge onto each OBV arm.
-base_mu <- mu[mu$arm == "no_obv", c("scenario", "set_id", "n_hcw_deaths")]
+# Mean realised HCW deaths over reps, per (scenario, set, arm).
+mu <- aggregate(realised_hcw ~ scenario + set_id + arm, data = per_run, FUN = mean)
+base_mu <- mu[mu$arm == "no_obv", c("scenario", "set_id", "realised_hcw")]
 names(base_mu)[3] <- "mu_no"
-averted <- merge(mu[mu$arm != "no_obv", ], base_mu, by = c("scenario", "set_id"))
-names(averted)[names(averted) == "n_hcw_deaths"] <- "mu_obv"
 
-# Per-draw TOTAL effect: averted burden and % averted (>= 0 in expectation; tiny
-# negatives can still occur from finite-rep noise where the baseline is small).
-averted$hcw_averted     <- averted$mu_no - averted$mu_obv
-averted$pct_hcw_averted <- ifelse(averted$mu_no > 0,
-                                  100 * averted$hcw_averted / averted$mu_no, NA_real_)
+# --- TOTAL: (mean_no_obv - mean_obv) / mean_no_obv, per particle x efficacy ----
+total <- merge(mu[mu$arm != "no_obv", ], base_mu, by = c("scenario", "set_id"))
+names(total)[names(total) == "realised_hcw"] <- "mu_obv"
+total$pct <- ifelse(total$mu_no > 0, 100 * (total$mu_no - total$mu_obv) / total$mu_no, NA_real_)
+total$estimand <- "Total (incl. averted chains)"
 
-# Friendly labels.
-averted$scenario_lbl <- c(DRC = "DRC", WestAfrica = "West Africa")[averted$scenario]
-averted$efficacy_lbl <- sprintf("%d%% efficacy", round(100 * OBV_EFFICACIES[averted$arm]))
+# --- DIRECT: prevented / (realised + prevented), per particle x efficacy -------
+# Sum across reps within the OBV arm (burden-weighted, stable denominator).
+obv_runs <- per_run[per_run$arm != "no_obv", ]
+obv_runs$counterfactual_hcw <- obv_runs$realised_hcw + obv_runs$prevented_hcw
+direct_agg <- aggregate(cbind(prevented_hcw, counterfactual_hcw) ~ scenario + set_id + arm,
+                        data = obv_runs, FUN = sum)
+direct_agg$pct <- ifelse(direct_agg$counterfactual_hcw > 0,
+                         100 * direct_agg$prevented_hcw / direct_agg$counterfactual_hcw, NA_real_)
+direct_agg$estimand <- "Direct (index deaths only)"
 
-# Headline: per-draw median [IQR] % averted, plus the burden-weighted pooled %
-# (sum of averted over sum of baseline -- weights draws by outbreak size).
-summ <- do.call(rbind, lapply(split(averted, list(averted$scenario_lbl, averted$efficacy_lbl), drop = TRUE),
-  function(d) {
-    q <- quantile(d$pct_hcw_averted, c(0.25, 0.5, 0.75), na.rm = TRUE, names = FALSE)
-    pooled <- 100 * sum(d$hcw_averted) / sum(d$mu_no)
-    data.frame(scenario = d$scenario_lbl[1], efficacy = d$efficacy_lbl[1],
-               median = round(q[2], 1), iqr_lo = round(q[1], 1), iqr_hi = round(q[3], 1),
-               pooled = round(pooled, 1), stringsAsFactors = FALSE)
-  }))
-print(summ, row.names = FALSE)
+# Stack the two estimands into one long frame for a faceted comparison.
+combined <- rbind(
+  total[,      c("scenario", "set_id", "arm", "pct", "estimand")],
+  direct_agg[, c("scenario", "set_id", "arm", "pct", "estimand")]
+)
+combined$scenario_lbl <- c(DRC = "DRC", WestAfrica = "West Africa")[combined$scenario]
+combined$efficacy_lbl <- sprintf("%d%% efficacy", round(100 * OBV_EFFICACIES[combined$arm]))
+# Order so Direct is drawn left of Total.
+combined$estimand <- factor(combined$estimand,
+                            levels = c("Direct (index deaths only)", "Total (incl. averted chains)"))
+
+# Headline table: median % averted per scenario x efficacy x estimand.
+summ <- aggregate(pct ~ scenario_lbl + efficacy_lbl + estimand, data = combined,
+                  FUN = function(x) round(median(x, na.rm = TRUE), 1))
+print(summ[order(summ$scenario_lbl, summ$efficacy_lbl, summ$estimand), ], row.names = FALSE)
 
 
 # ---------------------------------------------------------------------------
-# 6. PLOT: distribution of % HCW deaths averted, by scenario and efficacy
+# 6. PLOT: Direct vs Total side by side, by scenario and efficacy
 # ---------------------------------------------------------------------------
-ggplot(averted[!is.na(averted$pct_hcw_averted), ],
-       aes(scenario_lbl, pct_hcw_averted, fill = efficacy_lbl)) +
+# Two panels (Direct | Total); within each, scenario on x, efficacy by fill. The
+# vertical step from the Direct panel to the Total panel is the onward-chain gain.
+ggplot(combined[!is.na(combined$pct), ],
+       aes(scenario_lbl, pct, fill = efficacy_lbl)) +
   geom_boxplot(outlier.size = 0.5, position = position_dodge(0.8), width = 0.7) +
+  facet_wrap(~ estimand) +
   labs(x = NULL, y = "HCW deaths averted (%)", fill = "Obeldesivir",
-       title = "Obeldesivir impact on HCW deaths, by scenario and efficacy",
-       subtitle = sprintf("TOTAL effect (with vs without OBV, difference of arm means); %d posterior draws x %d reps per arm",
+       title = "Obeldesivir impact on HCW deaths: direct vs total effect",
+       subtitle = sprintf("Direct = index deaths only; Total = incl. averted onward chains. %d posterior draws x %d reps per arm",
                           N_SETS, N_REPS)) +
   theme_bw()
