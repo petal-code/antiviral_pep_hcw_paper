@@ -175,7 +175,7 @@ read_scenario_matrix <- function(matrix_path) {
   }
 
   required_cols <- c(
-    "scenario", "scenario_label", "relative_day", "prob_hosp", "delay_hosp",
+    "scenario", "relative_day", "prob_hosp", "delay_hosp",
     "prob_unsafe_funeral_comm", "prob_unsafe_funeral_hosp",
     "prob_unsafe_funeral_etu", "prop_etu",
     "ipc_helper"   # drives the time-varying PPE coverage lever (ppe_coverage_hcw)
