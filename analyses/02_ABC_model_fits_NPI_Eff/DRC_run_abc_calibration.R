@@ -48,7 +48,7 @@ NPI_SPEC <- list(
   etu_efficacy = list(min = 0.50, max = 0.95)    # PLACEHOLDER
 )
 
-MODEL_OVERRIDES <- list(check_final_size = 10000)
+MODEL_OVERRIDES <- list(check_final_size = 12500)
 
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
 ABC_OUTPUT_LABEL <- "NPIeff"
@@ -62,7 +62,7 @@ if (!dir.exists(FINAL_OUTPUTS_DIR)) {
 # bootstrap_abc_worker() fills them from DEFAULT_SCALAR_INPUTS.
 ABC_CONFIG <- list(
   takeoff_death_threshold = 100,
-  n_reps                  = 150,
+  n_reps                  = 3, #150,
   seeding_cases           = 25,
   setup_R0_n              = 100000L,
   setup_R0_seed           = 42L,
@@ -71,7 +71,7 @@ ABC_CONFIG <- list(
 
 ABC_SETTINGS <- list(
   method              = "Delmoral",
-  nb_simul            = 690,
+  nb_simul            = 10, #690,
   alpha               = 0.5,
   tolerance_target    = 0.2,
   M                   = 1,
@@ -256,9 +256,9 @@ par(mfrow = c(1, 1))
 # -----------------------------------------------------------------------------
 # 9. PROGRESS / RECONSTRUCTION FROM DISK
 # -----------------------------------------------------------------------------
-# abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target)
-# print(abc_compare_steps(ABC_OUTPUT_DIR))
-# result <- reconstruct_abc_result(ABC_OUTPUT_DIR)
+abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target)
+print(abc_compare_steps(ABC_OUTPUT_DIR))
+result <- reconstruct_abc_result(ABC_OUTPUT_DIR)
 
 
 # -----------------------------------------------------------------------------
