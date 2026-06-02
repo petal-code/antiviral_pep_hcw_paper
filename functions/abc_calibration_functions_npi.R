@@ -7,6 +7,14 @@
 # (NO HCW-risk scalar). Because etu_efficacy is fitted, D and F are recomputed
 # per particle from cached compute_R0_invariants().
 #
+# WHICH SUMMARIES ARE FITTED is configurable via abc_config$summary_stats (any
+# subset of "takeoff" + AVAILABLE_ABC_METRICS, default = the historical four).
+# The replicate loop + summary selection are shared with the in-process model via
+# run_abc_particle() in the common file, so the same code fits the four-number
+# summary OR an extended set (e.g. adding time_to_peak / peak_height) -- set
+# summary_stats (and, optionally, peak_bin_width / peak_time_origin) in the run
+# script's ABC_CONFIG and match observed_summaries' length/order.
+#
 # Approach-specific functions ONLY. The generic helpers live in
 # abc_calibration_functions_common.R.
 #
@@ -108,45 +116,28 @@ fiber_abc_model <- function(theta,
                             n_replicates = 30,
                             seeding_cases = 25,
                             takeoff_death_threshold = 100,
-                            include_n_cases = FALSE) {
-
-  R0           <- theta[1]
-  prop_funeral <- theta[2]
-  npi_scaler   <- theta[3]
+                            summary_stats = DEFAULT_SUMMARY_STATS,
+                            bin_width     = DEFAULT_PEAK_BIN_WIDTH,
+                            time_origin   = DEFAULT_PEAK_TIME_ORIGIN) {
 
   args <- build_abc_model_args(
-    R0 = R0, prop_funeral = prop_funeral, npi_scaler = npi_scaler,
+    R0 = theta[1], prop_funeral = theta[2], npi_scaler = theta[3],
     base = base, tv = tv, invariants = invariants, npi_spec = npi_spec,
     general_hospital_quarantine_efficacy = general_hospital_quarantine_efficacy,
     safe_funeral_efficacy = safe_funeral_efficacy,
     seeding_cases = seeding_cases
   )
 
-  reps <- vapply(
-    seq_len(n_replicates),
-    function(i) run_one_abc_replicate(args),
-    numeric(4)
+  # Aggregation over replicates + selection of the fitted summaries is shared
+  # with the parallel path via run_abc_particle() (functions/.../common.R).
+  run_abc_particle(
+    args,
+    n_reps                  = n_replicates,
+    takeoff_death_threshold = takeoff_death_threshold,
+    summary_stats           = summary_stats,
+    bin_width               = bin_width,
+    time_origin             = time_origin
   )
-  rownames(reps) <- c("n_cases", "n_deaths", "n_hcw_deaths", "duration")
-
-  took_off     <- reps["n_deaths", ] >= takeoff_death_threshold
-  takeoff_frac <- mean(took_off)
-
-  if (!any(took_off)) {
-    out <- c(takeoff = 0, n_deaths = 0, n_hcw_deaths = 0, duration = 0)
-    if (include_n_cases) out <- c(out, n_cases = 0)
-    return(out)
-  }
-
-  out <- c(takeoff      = takeoff_frac,
-           n_deaths     = mean(reps["n_deaths",     took_off]),
-           n_hcw_deaths = mean(reps["n_hcw_deaths", took_off]),
-           duration     = mean(reps["duration",     took_off]))
-
-  if (include_n_cases) {
-    out <- c(out, n_cases = mean(reps["n_cases", took_off]))
-  }
-  out
 }
 
 
@@ -181,7 +172,12 @@ bootstrap_abc_worker <- function(setup_path,
     npi_spec                = DEFAULT_NPI_SPEC,
     general_hospital_quarantine_efficacy =
       DEFAULT_SCALAR_INPUTS$general_hospital_quarantine_efficacy,
-    safe_funeral_efficacy   = DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy
+    safe_funeral_efficacy   = DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy,
+    # Which summaries to fit (default = historical four) + weekly-curve binning
+    # for the optional time_to_peak / peak_height summaries.
+    summary_stats           = DEFAULT_SUMMARY_STATS,
+    peak_bin_width          = DEFAULT_PEAK_BIN_WIDTH,
+    peak_time_origin        = DEFAULT_PEAK_TIME_ORIGIN
   )
   abc_config <- utils::modifyList(default_config, abc_config)
 
@@ -265,20 +261,14 @@ fiber_abc_model_parallel <- function(theta_with_seed) {
     seeding_cases   = cfg_run$seeding_cases
   )
 
-  reps <- vapply(seq_len(cfg_run$n_reps), function(i) {
-    out <- do.call(branching_process_main, args)
-    abc_summarise(out)
-  }, numeric(4))
-  rownames(reps) <- c("n_cases", "n_deaths", "n_hcw_deaths", "duration")
-
-  took_off <- reps["n_deaths", ] >= cfg_run$takeoff_death_threshold
-  if (!any(took_off)) {
-    return(c(takeoff = 0, n_deaths = 0, n_hcw_deaths = 0, duration = 0))
-  }
-  c(takeoff      = mean(took_off),
-    n_deaths     = mean(reps["n_deaths",     took_off]),
-    n_hcw_deaths = mean(reps["n_hcw_deaths", took_off]),
-    duration     = mean(reps["duration",     took_off]))
+  run_abc_particle(
+    args,
+    n_reps                  = cfg_run$n_reps,
+    takeoff_death_threshold = cfg_run$takeoff_death_threshold,
+    summary_stats           = cfg_run$summary_stats,
+    bin_width               = cfg_run$peak_bin_width,
+    time_origin             = cfg_run$peak_time_origin
+  )
 }
 
 
@@ -295,7 +285,9 @@ prior_predictive_check <- function(n_draws,
                                    n_replicates = 30,
                                    seeding_cases = 25,
                                    takeoff_death_threshold = 100,
-                                   include_n_cases = TRUE) {
+                                   summary_stats = c(DEFAULT_SUMMARY_STATS, "n_cases"),
+                                   bin_width = DEFAULT_PEAK_BIN_WIDTH,
+                                   time_origin = DEFAULT_PEAK_TIME_ORIGIN) {
 
   sample_one <- function(spec, n) {
     dist   <- spec[1]
@@ -323,7 +315,9 @@ prior_predictive_check <- function(n_draws,
       n_replicates = n_replicates,
       seeding_cases = seeding_cases,
       takeoff_death_threshold = takeoff_death_threshold,
-      include_n_cases = include_n_cases
+      summary_stats = summary_stats,
+      bin_width = bin_width,
+      time_origin = time_origin
     )
   }
 

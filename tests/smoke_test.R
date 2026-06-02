@@ -163,6 +163,8 @@ expected_fns <- c(
   "build_time_varying_args", "make_curve", "check_model_function_version",
   "map_abc_params_to_model", "build_abc_model_args", "make_abc_output_dir",
   "with_abc_output_dir", "reconstruct_abc_result", "abc_summarise",
+  "weekly_incidence_counts", "peak_stats_from_death_days", "aggregate_abc_reps",
+  "run_abc_particle",
   "find_latest_abc_run_dir", "read_abc_posterior_step", "downsample_posterior",
   "derive_model_parameters", "find_latest_file", "list_files_matching",
   "simulate_one", "bin_counts", "q_summary",
@@ -549,25 +551,29 @@ if (!has_fiber) {
   test("NPI: worker self-bootstrap + fiber_abc_model_parallel() returns a 4-stat summary",
        { o <- run_worker("abc_calibration_functions_npi.R", c(1.5, 0.3, 0));
          is.numeric(o) && all(c("n_deaths", "n_hcw_deaths", "duration") %in% names(o)) })
+  test("NPI: summary_stats config -> fiber_abc_model_parallel() returns the requested 6 stats",
+       { o <- run_worker("abc_calibration_functions_npi.R", c(1.5, 0.3, 0),
+                         extra_cfg = list(
+                           summary_stats = c("takeoff", "n_deaths", "n_hcw_deaths",
+                                             "duration", "time_to_peak", "peak_height"),
+                           peak_bin_width = 7L, peak_time_origin = "first_death"));
+         is.numeric(o) && length(o) == 6L &&
+           all(c("takeoff", "n_deaths", "n_hcw_deaths", "duration",
+                 "time_to_peak", "peak_height") %in% names(o)) })
 }
 
 
 # ----------------------------------------------------------------------------
-section("13. NPI-peak extended scheme (time_to_peak + peak_height)")
+section("13. Configurable summary statistics (time_to_peak + peak_height)")
 # ----------------------------------------------------------------------------
-# The extended NPI scheme adds two weekly-death-curve summaries on top of the
-# four scalars. It reuses the NPI file's build_abc_model_args() (sourced in
-# section 11), so source the peak file here, then exercise the pure-R curve
-# helpers (no fiber) and, if fiber is present, the per-run summary and the PSOCK
-# worker self-bootstrap returning a 6-stat vector.
-test("source functions/abc_calibration_functions_npi_peak.R",
-     { source(file.path(FN, "abc_calibration_functions_npi_peak.R")); TRUE })
-test("peak functions + binning defaults are defined",
+# The weekly-death-curve summaries are part of the SHARED machinery now: the peak
+# helpers + abc_summarise()/run_abc_particle() live in the common file (sourced
+# in section 1), and a scheme opts in by naming them in summary_stats (exercised
+# for the NPI parallel model in section 12). Here: the pure-R curve helpers +
+# aggregation, then (fiber) abc_summarise() with the peak metrics.
+test("summary-stat + binning constants are defined",
      exists("DEFAULT_PEAK_BIN_WIDTH") && exists("DEFAULT_PEAK_TIME_ORIGIN") &&
-       all(vapply(c("weekly_incidence_counts", "peak_stats_from_death_days",
-                    "abc_summarise_peak", "fiber_abc_model_parallel_peak",
-                    "bootstrap_abc_worker_peak"),
-                  exists, logical(1), mode = "function")))
+       exists("DEFAULT_SUMMARY_STATS") && exists("AVAILABLE_ABC_METRICS"))
 test("weekly_incidence_counts() bins death days into weeks",
      identical(weekly_incidence_counts(c(0, 3, 6, 7, 8, 20), 7), c(3L, 2L, 1L)))
 test("weekly_incidence_counts() returns integer(0) for no events",
@@ -584,47 +590,41 @@ test("peak_stats_from_death_days(): outbreak_start origin = peak-week midpoint",
 test("peak_stats_from_death_days(): no deaths -> (0, 0)",
      approx_eq(unname(peak_stats_from_death_days(integer(0), NA_real_)), c(0, 0)))
 
-if (has_fiber && !is.null(mpf)) {
-  test("NPI-peak: abc_summarise_peak() returns the 6 canonical stats",
-       { invf <- compute_R0_invariants(mpf$args, n = 5000, seed = 1);
-         a <- build_abc_model_args(R0 = 1.5, prop_funeral = 0.3, npi_scaler = 0,
-                                   base = mpf$base_args, tv = mpf$tv_args,
-                                   invariants = invf, npi_spec = DEFAULT_NPI_SPEC,
-                                   general_hospital_quarantine_efficacy = 0.30,
-                                   safe_funeral_efficacy = 0.90, seeding_cases = 5);
-         set.seed(1); s <- abc_summarise_peak(do.call(branching_process_main, a));
-         is.numeric(s) && length(s) == 6L &&
-           all(c("n_cases", "n_deaths", "n_hcw_deaths", "duration",
-                 "time_to_peak", "peak_height") %in% names(s)) })
+# aggregate_abc_reps(): takeoff fraction + per-metric means over taken-off reps.
+test("aggregate_abc_reps() selects + aggregates the requested summary_stats",
+     { reps <- rbind(n_deaths     = c(200, 0, 300),
+                     time_to_peak = c( 14, 0,  28),
+                     peak_height  = c( 50, 0,  70));
+       took <- reps["n_deaths", ] >= 100;            # c(TRUE, FALSE, TRUE)
+       o <- aggregate_abc_reps(reps, took,
+                               c("takeoff", "n_deaths", "time_to_peak", "peak_height"));
+       approx_eq(unname(o), c(2/3, 250, 21, 60)) &&
+         identical(names(o), c("takeoff", "n_deaths", "time_to_peak", "peak_height")) })
+test("aggregate_abc_reps(): no replicate took off -> all zeros",
+     { reps <- rbind(n_deaths = c(1, 2), peak_height = c(3, 4));
+       o <- aggregate_abc_reps(reps, c(FALSE, FALSE), c("takeoff", "n_deaths", "peak_height"));
+       approx_eq(unname(o), c(0, 0, 0)) })
 
-  run_worker_peak <- function(theta3, extra_cfg = list()) {
-    for (v in c(".fiber_abc_ready", "base_args", "tv_args_model", "R0_invariants",
-                "D_direct_multiplier", "F_funeral_multiplier", ".abc_config",
-                ".npi_spec", ".fixed_general_hosp", ".fixed_safe_funeral")) {
-      if (exists(v, envir = globalenv())) rm(list = v, envir = globalenv())
-    }
-    source(file.path(FN, "abc_calibration_functions_npi_peak.R"))
-    save_abc_config(list(
-      setup_path      = file.path(FN, "setup_model_parameters.R"),
-      functions_path  = file.path(FN, "abc_calibration_functions_npi_peak.R"),
-      r0_path         = file.path(FN, "calculate_model_approx_r0.R"),
-      scenario_csv    = csv,
-      scenario_id     = "Worst_WestAfrica",
-      abc_config      = utils::modifyList(
-        list(n_reps = 3L, seeding_cases = 5L, takeoff_death_threshold = 1L,
-             setup_R0_n = 3000L), extra_cfg),
-      model_overrides = list(check_final_size = 2000L)
-    ))
-    fiber_abc_model_parallel_peak(c(1, theta3))   # c(seed, R0, prop_funeral, npi_scaler)
+if (has_fiber && !is.null(mpf)) {
+  build_npi <- function() {
+    invf <- compute_R0_invariants(mpf$args, n = 5000, seed = 1)
+    build_abc_model_args(R0 = 1.5, prop_funeral = 0.3, npi_scaler = 0,
+                         base = mpf$base_args, tv = mpf$tv_args,
+                         invariants = invf, npi_spec = DEFAULT_NPI_SPEC,
+                         general_hospital_quarantine_efficacy = 0.30,
+                         safe_funeral_efficacy = 0.90, seeding_cases = 5)
   }
-  test("NPI-peak: worker self-bootstrap + fiber_abc_model_parallel_peak() returns a 6-stat summary",
-       { o <- run_worker_peak(c(1.5, 0.3, 0));
-         is.numeric(o) && length(o) == 6L &&
-           all(c("n_deaths", "n_hcw_deaths", "duration",
-                 "time_to_peak", "peak_height") %in% names(o)) })
+  test("abc_summarise(metrics=) returns the requested 6 metrics on a real run",
+       { set.seed(1);
+         m <- c("n_cases", "n_deaths", "n_hcw_deaths", "duration", "time_to_peak", "peak_height");
+         s <- abc_summarise(do.call(branching_process_main, build_npi()), metrics = m);
+         is.numeric(s) && identical(names(s), m) })
+  test("abc_summarise() default still returns exactly the historical four",
+       { set.seed(1); s <- abc_summarise(do.call(branching_process_main, build_npi()));
+         identical(names(s), c("n_cases", "n_deaths", "n_hcw_deaths", "duration")) })
 } else {
-  skip("NPI-peak abc_summarise_peak() on a real run", "fiber not installed")
-  skip("NPI-peak worker self-bootstrap + fiber_abc_model_parallel_peak()", "fiber not installed")
+  skip("abc_summarise(metrics=) on a real run", "fiber not installed")
+  skip("abc_summarise() default four on a real run", "fiber not installed")
 }
 
 
