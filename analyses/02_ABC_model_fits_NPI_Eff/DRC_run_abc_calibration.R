@@ -224,8 +224,27 @@ result_filename <- paste0(
   if (nzchar(ABC_OUTPUT_LABEL)) paste0("_", ABC_OUTPUT_LABEL) else "",
   "_", result_stamp, ".rds"
 )
+# Store the npi_spec (+ priors / fixed efficacies / targets) WITH the fit so the
+# result is self-describing: a fitted npi_scaler is uninterpretable without the
+# [min, max] intervals it indexes. Embed in the result object AND drop a
+# source-able sidecar next to each .rds (see functions/abc_calibration_functions_npi.R).
+run_metadata <- make_npi_run_metadata(
+  npi_spec           = NPI_SPEC,
+  scenario_id        = SCENARIO_ID,
+  priors             = priors,
+  observed_summaries = observed_summaries,
+  general_hospital_quarantine_efficacy =
+    DEFAULT_SCALAR_INPUTS$general_hospital_quarantine_efficacy,
+  safe_funeral_efficacy = DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy,
+  extra = list(result_filename = result_filename,
+               abc_settings = ABC_SETTINGS, abc_config = ABC_CONFIG)
+)
+result <- attach_npi_run_metadata(result, run_metadata)
+
 saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))
 saveRDS(result, file = file.path(FINAL_OUTPUTS_DIR, result_filename))
+write_npi_run_metadata(run_metadata, file.path(ABC_OUTPUT_DIR, result_filename))
+write_npi_run_metadata(run_metadata, file.path(FINAL_OUTPUTS_DIR, result_filename))
 
 
 # -----------------------------------------------------------------------------

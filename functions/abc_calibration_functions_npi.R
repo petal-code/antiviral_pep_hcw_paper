@@ -19,6 +19,9 @@
 #   bootstrap_abc_worker()           : per-worker setup (base/tv/invariants/effs)
 #   fiber_abc_model_parallel()       : the function ABC_sequential() calls
 #   prior_predictive_check()         : draw from priors, run the non-parallel model
+#   make_npi_run_metadata()          : serialisable record of npi_spec + settings
+#   attach_npi_run_metadata()        : embed that record in the ABC result object
+#   write_npi_run_metadata()         : write a .txt (source-able) + .json sidecar
 #
 # Requires setup_model_parameters.R, calculate_model_approx_r0.R, and
 # abc_calibration_functions_common.R sourced first, and library(fiber).
@@ -351,6 +354,87 @@ prior_predictive_check <- function(n_draws,
 
   sims <- do.call(rbind, sims_list)
   cbind(draws, as.data.frame(sims))
+}
+
+
+# -----------------------------------------------------------------------------
+# RUN PROVENANCE: store the npi_spec (and other settings) WITH the fit output.
+# -----------------------------------------------------------------------------
+# A fitted npi_scaler is meaningless without the [min, max] interval it indexes
+# (npi_efficacy_from_scaler() needs npi_spec to recover ppe/etu efficacies). That
+# spec lived only in the (mutable) run script and an ephemeral save_abc_config()
+# tempfile, so a finished .rds could not be interpreted on its own. These three
+# helpers fix that: build a serialisable record, attach it to the ABC result so
+# the .rds is self-describing, and write a human-readable + source()-able sidecar
+# next to it.
+
+# Build a structured, serialisable record of everything needed to interpret a
+# fitted npi_scaler downstream -- chiefly npi_spec, plus the fixed efficacies,
+# priors, observed targets and scenario id for completeness. `extra` lets callers
+# bolt on anything else (e.g. result_filename, git sha).
+make_npi_run_metadata <- function(npi_spec,
+                                  scenario_id = NULL,
+                                  priors = NULL,
+                                  observed_summaries = NULL,
+                                  general_hospital_quarantine_efficacy = NULL,
+                                  safe_funeral_efficacy = NULL,
+                                  param_names = c("R0", "prop_funeral", "npi_scaler"),
+                                  extra = list()) {
+  c(list(
+    npi_spec           = npi_spec,
+    scenario_id        = scenario_id,
+    param_names        = param_names,
+    priors             = priors,
+    observed_summaries = observed_summaries,
+    fixed_efficacies   = list(
+      general_hospital_quarantine_efficacy = general_hospital_quarantine_efficacy,
+      safe_funeral_efficacy                = safe_funeral_efficacy
+    ),
+    created_at         = format(Sys.time(), "%Y-%m-%d %H:%M:%S %z")
+  ), extra)
+}
+
+# Attach the metadata to an ABC_sequential() result so the .rds is self-describing.
+# Stores a top-level $npi_spec (the cheap read path downstream code uses) plus the
+# full $run_metadata record. Adding named elements does not disturb $param /
+# $weights / $stats consumers.
+attach_npi_run_metadata <- function(result, metadata) {
+  result$npi_spec     <- metadata$npi_spec
+  result$run_metadata <- metadata
+  result
+}
+
+# Write a sidecar next to a result .rds. Always writes "<stem>_metadata.txt",
+# which is both human-readable AND source()-able (it assigns `npi_run_metadata`),
+# so a fit whose .rds predates metadata embedding can still be documented and
+# read back. Also writes a .json copy when jsonlite is available. Returns the
+# path(s) written.
+write_npi_run_metadata <- function(metadata, rds_path) {
+  stopifnot(is.character(rds_path), length(rds_path) == 1L)
+  stem     <- sub("\\.rds$", "", rds_path, ignore.case = TRUE)
+  txt_path <- paste0(stem, "_metadata.txt")
+
+  con <- file(txt_path, open = "wt")
+  on.exit(close(con), add = TRUE)
+  writeLines(c(
+    "# Auto-generated NPI-efficacy ABC run metadata.",
+    "# source() this file to load the list `npi_run_metadata`.",
+    "# npi_spec maps npi_scaler in [-1, 1] -> efficacy:",
+    "#   efficacy = midpoint + npi_scaler * (max - min) / 2  (per fitted efficacy).",
+    "# Required by any downstream analysis that reconstructs efficacies from the fit.",
+    ""
+  ), con)
+  cat("npi_run_metadata <- ", file = con)
+  dput(metadata, file = con)
+
+  paths <- txt_path
+  if (requireNamespace("jsonlite", quietly = TRUE)) {
+    json_path <- paste0(stem, "_metadata.json")
+    jsonlite::write_json(metadata, json_path, auto_unbox = TRUE,
+                         pretty = TRUE, null = "null")
+    paths <- c(paths, json_path)
+  }
+  invisible(paths)
 }
 
 
