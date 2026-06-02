@@ -177,10 +177,17 @@ priors <- list(
 # -----------------------------------------------------------------------------
 # 6. PER-RUN OUTPUT DIRECTORY + WORKER CONFIG
 # -----------------------------------------------------------------------------
+# Tag every per-run output (directory + result RDS) with the two settings that
+# drive a run's cost and resolution -- n_reps (replicates per particle) and
+# nb_simul (particles per SMC step) -- so runs are self-describing on disk, e.g.
+# NBREPS_50_NBSIMUL_220 appended to the end of the directory / file name.
+RUN_TAG <- sprintf("NBREPS_%d_NBSIMUL_%d", ABC_CONFIG$n_reps, ABC_SETTINGS$nb_simul)
+
 ABC_OUTPUT_DIR <- make_abc_output_dir(
   base_dir    = ABC_OUTPUT_BASE,
   scenario_id = SCENARIO_ID,
-  label       = ABC_OUTPUT_LABEL
+  label       = ABC_OUTPUT_LABEL,
+  suffix      = RUN_TAG
 )
 message("ABC outputs will be written to: ", ABC_OUTPUT_DIR)
 
@@ -219,10 +226,12 @@ end_time <- Sys.time()
 print(end_time - start_time)
 
 result_stamp <- format(start_time, "%Y%m%d_%H%M%S")
+# RUN_TAG (NBREPS_X_NBSIMUL_Y) goes AFTER the timestamp so the name still sorts
+# chronologically via find_latest_file(by = "name").
 result_filename <- paste0(
   "fiber_ABC_SMC_", SCENARIO_ID,
   if (nzchar(ABC_OUTPUT_LABEL)) paste0("_", ABC_OUTPUT_LABEL) else "",
-  "_", result_stamp, ".rds"
+  "_", result_stamp, "_", RUN_TAG, ".rds"
 )
 saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))
 saveRDS(result, file = file.path(FINAL_OUTPUTS_DIR, result_filename))
