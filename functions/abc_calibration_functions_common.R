@@ -17,7 +17,11 @@
 #
 # The disk-inspection trio take `param_names` (default = the HCW-risk triple);
 # callers with a different parameterisation pass their own, e.g.
-# c("R0", "prop_funeral", "npi_scaler"). Requires fiber to be loaded.
+# c("R0", "prop_funeral", "npi_scaler"). They also take `stat_names` (default =
+# the four canonical summaries takeoff/n_deaths/n_hcw_deaths/duration); a scheme
+# that fits extra summaries (e.g. the NPI-peak scheme's time_to_peak/peak_height)
+# passes the full vector so the on-disk columns are labelled correctly. Requires
+# fiber to be loaded.
 # -----------------------------------------------------------------------------
 
 abc_summarise <- function(out) {
@@ -125,7 +129,8 @@ with_abc_output_dir <- function(output_dir, expr) {
 
 abc_progress <- function(dir = getwd(),
                          tolerance_target = 1.0,
-                         param_names = c("R0", "prop_funeral", "hcw_risk_scalar")) {
+                         param_names = c("R0", "prop_funeral", "hcw_risk_scalar"),
+                         stat_names  = c("takeoff", "n_deaths", "n_hcw_deaths", "duration")) {
 
   step_num     <- function(f) as.integer(sub(".*_step([0-9]+)$", "\\1", f))
   sort_by_step <- function(f) f[order(step_num(f))]
@@ -172,8 +177,7 @@ abc_progress <- function(dir = getwd(),
   }
 
   last_out <- read.table(out_files[length(out_files)], header = FALSE)
-  colnames(last_out) <- c("weight", param_names,
-                          "takeoff", "n_deaths", "n_hcw_deaths", "duration")
+  colnames(last_out) <- c("weight", param_names, stat_names)
   cat(sprintf("\nLatest particle cloud (step %d):\n",
               step_num(out_files)[length(out_files)]))
   for (nm in param_names) {
@@ -189,7 +193,8 @@ abc_progress <- function(dir = getwd(),
 
 
 abc_compare_steps <- function(dir = getwd(),
-                              param_names = c("R0", "prop_funeral", "hcw_risk_scalar")) {
+                              param_names = c("R0", "prop_funeral", "hcw_risk_scalar"),
+                              stat_names  = c("takeoff", "n_deaths", "n_hcw_deaths", "duration")) {
 
   step_num     <- function(f) as.integer(sub(".*_step([0-9]+)$", "\\1", f))
   sort_by_step <- function(f) f[order(step_num(f))]
@@ -222,8 +227,7 @@ abc_compare_steps <- function(dir = getwd(),
   for (f in out_files) {
     s  <- step_num(f)
     df <- read.table(f, header = FALSE)
-    colnames(df) <- c("weight", param_names,
-                      "takeoff", "n_deaths", "n_hcw_deaths", "duration")
+    colnames(df) <- c("weight", param_names, stat_names)
     w <- df$weight / sum(df$weight)
 
     cum_s     <- if (as.character(s) %in% names(cum_lookup)) cum_lookup[[as.character(s)]] else NA_real_
@@ -238,10 +242,13 @@ abc_compare_steps <- function(dir = getwd(),
       sims_this_step = sims_step,
       cum_sims       = cum_s,
       ESS            = round(1 / sum(w^2), 1),
-      mean_takeoff   = round(sum(w * df$takeoff), 3),
-      mean_deaths    = round(sum(w * df$n_deaths)),
-      mean_hcw       = round(sum(w * df$n_hcw_deaths)),
-      mean_duration  = round(sum(w * df$duration)),
+      # The four canonical summaries are reported when present; an extended
+      # stat_names (e.g. the NPI-peak scheme's time_to_peak / peak_height) simply
+      # is not summarised here -- inspect those via reconstruct_abc_result().
+      mean_takeoff   = if ("takeoff"      %in% stat_names) round(sum(w * df$takeoff), 3) else NA_real_,
+      mean_deaths    = if ("n_deaths"     %in% stat_names) round(sum(w * df$n_deaths))     else NA_real_,
+      mean_hcw       = if ("n_hcw_deaths" %in% stat_names) round(sum(w * df$n_hcw_deaths)) else NA_real_,
+      mean_duration  = if ("duration"     %in% stat_names) round(sum(w * df$duration))     else NA_real_,
       stringsAsFactors = FALSE
     )
 
