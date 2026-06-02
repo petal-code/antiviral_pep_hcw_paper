@@ -75,6 +75,7 @@ save_abc_config <- function(config, file = tempfile(fileext = ".rds")) {
 make_abc_output_dir <- function(base_dir,
                                 scenario_id,
                                 label = NULL,
+                                suffix = NULL,
                                 subdir = "abc_outputs",
                                 timestamp = TRUE) {
   if (missing(base_dir) || is.null(base_dir) || !nzchar(base_dir)) {
@@ -91,13 +92,19 @@ make_abc_output_dir <- function(base_dir,
   if (!is.null(label) && nzchar(label)) {
     parts <- paste(parts, label, sep = "_")
   }
+  # `suffix` is appended last so any run-identifying tag (e.g. the
+  # NBREPS_X_NBSIMUL_Y settings tag) lands at the very END of the directory
+  # name, after the timestamp and label.
+  if (!is.null(suffix) && nzchar(suffix)) {
+    parts <- paste(parts, suffix, sep = "_")
+  }
 
   out <- file.path(base_dir, subdir, parts)
-  suffix <- 0L
+  dedup_suffix <- 0L
   candidate <- out
   while (dir.exists(candidate)) {
-    suffix <- suffix + 1L
-    candidate <- paste0(out, "_", sprintf("%02d", suffix))
+    dedup_suffix <- dedup_suffix + 1L
+    candidate <- paste0(out, "_", sprintf("%02d", dedup_suffix))
   }
   out <- candidate
 
