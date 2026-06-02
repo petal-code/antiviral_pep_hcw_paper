@@ -6,8 +6,14 @@
 # abc_calibration_functions_npi.R (and by their run scripts and PSOCK workers).
 #
 # Contents:
-#   abc_summarise()          : per-replicate summary (n_cases/deaths/hcw/duration)
+#   AVAILABLE_ABC_METRICS    : per-replicate metrics abc_summarise() can compute
+#   DEFAULT_SUMMARY_STATS    : default FITTED summary set (takeoff + 3 means)
+#   weekly_incidence_counts() : event day-indices -> fixed-width (weekly) counts
+#   peak_stats_from_death_days(): weekly death curve -> (time_to_peak, peak_height)
+#   abc_summarise()          : per-replicate summary of a configurable metric set
 #   run_one_abc_replicate()  : do.call(branching_process_main) + abc_summarise()
+#   aggregate_abc_reps()     : per-replicate metric matrix -> fitted summary vector
+#   run_abc_particle()       : n_reps replicates -> aggregated fitted summary vector
 #   save_abc_config()        : serialise worker config; advertise via FIBER_ABC_CONFIG
 #   make_abc_output_dir()    : fresh timestamped per-run output directory
 #   with_abc_output_dir()    : run an expression with cwd set to that directory
@@ -15,46 +21,185 @@
 #   abc_compare_steps()      : weighted summary across completed steps
 #   reconstruct_abc_result() : rebuild an ABC_sequential()-style result from disk
 #
+# WHICH SUMMARIES ARE FITTED is configurable, not hard-coded: a scheme passes a
+# `summary_stats` vector (any subset of "takeoff" + AVAILABLE_ABC_METRICS) and
+# run_abc_particle() returns exactly those, in that order, so the same functions
+# fit the historical four-number summary OR an extended set (e.g. adding the
+# weekly-death-curve features time_to_peak / peak_height) with no forked code.
+#
 # The disk-inspection trio take `param_names` (default = the HCW-risk triple);
 # callers with a different parameterisation pass their own, e.g.
-# c("R0", "prop_funeral", "npi_scaler"). Requires fiber to be loaded.
+# c("R0", "prop_funeral", "npi_scaler"). They also take `stat_names` (default =
+# the four canonical summaries takeoff/n_deaths/n_hcw_deaths/duration); a scheme
+# that fits extra summaries (e.g. the NPI-peak scheme's time_to_peak/peak_height)
+# passes the full vector so the on-disk columns are labelled correctly. Requires
+# fiber to be loaded.
 # -----------------------------------------------------------------------------
 
-abc_summarise <- function(out) {
+# Per-replicate metrics abc_summarise() can compute from one
+# branching_process_main() run, and the DEFAULT set of FITTED summary statistics
+# a model returns / ABC matches. "takeoff" is the fraction of replicates that
+# exceeded the death threshold (a property of the replicate ensemble, not of a
+# single run), so it is a fittable summary but NOT a per-replicate metric.
+AVAILABLE_ABC_METRICS    <- c("n_cases", "n_deaths", "n_hcw_deaths", "duration",
+                              "time_to_peak", "peak_height")
+DEFAULT_SUMMARY_STATS    <- c("takeoff", "n_deaths", "n_hcw_deaths", "duration")
+DEFAULT_PEAK_BIN_WIDTH   <- 7L            # days per incidence bin (weekly)
+DEFAULT_PEAK_TIME_ORIGIN <- "first_death" # "first_death" or "outbreak_start"
+
+
+# Bin a vector of (0-based) event day-indices into fixed-width bins; returns the
+# integer count in each bin from the first up to the bin holding the latest
+# event. Pure base R. Non-finite days are dropped; negatives clamped to 0.
+weekly_incidence_counts <- function(day_index, bin_width = DEFAULT_PEAK_BIN_WIDTH) {
+  day_index <- day_index[is.finite(day_index)]
+  if (length(day_index) == 0L) return(integer(0))
+  day_index <- as.integer(day_index)
+  day_index[day_index < 0L] <- 0L
+  bins <- (day_index %/% bin_width) + 1L          # 1-based bin index
+  tabulate(bins, nbins = max(bins))
+}
+
+
+# Peak of the (weekly) death-incidence curve for ONE replicate. `death_days` are
+# the floored, 0-based, absolute day-indices of every death; `first_death_day`
+# anchors the "first_death" origin. Returns c(time_to_peak, peak_height) (both 0
+# with no deaths). The peak week is the FIRST week attaining the maximum.
+#   time_origin = "first_death"    -> whole weeks from the first-death week to the
+#                                     peak week (>= 0; anchored like `duration`).
+#   time_origin = "outbreak_start" -> midpoint day of the peak week, from t = 0.
+peak_stats_from_death_days <- function(death_days,
+                                       first_death_day,
+                                       bin_width   = DEFAULT_PEAK_BIN_WIDTH,
+                                       time_origin = DEFAULT_PEAK_TIME_ORIGIN) {
+  weekly <- weekly_incidence_counts(death_days, bin_width)
+  if (length(weekly) == 0L || all(weekly == 0L)) {
+    return(c(time_to_peak = 0, peak_height = 0))
+  }
+  peak_bin    <- which.max(weekly)
+  peak_height <- as.numeric(weekly[peak_bin])
+  time_to_peak <- if (identical(time_origin, "outbreak_start")) {
+    (peak_bin - 0.5) * bin_width
+  } else {
+    fd_bin <- (as.integer(floor(first_death_day)) %/% bin_width) + 1L
+    max((peak_bin - fd_bin) * bin_width, 0)
+  }
+  c(time_to_peak = as.numeric(time_to_peak), peak_height = peak_height)
+}
+
+
+# Per-replicate summary. Computes the requested `metrics` (any subset of
+# AVAILABLE_ABC_METRICS) from one branching_process_main() run and returns them
+# as a named numeric vector in `metrics` order. The default reproduces the
+# historical four-number summary exactly. The weekly-death-curve features
+# (time_to_peak / peak_height) are only computed when requested.
+abc_summarise <- function(out,
+                          metrics     = c("n_cases", "n_deaths", "n_hcw_deaths", "duration"),
+                          bin_width   = DEFAULT_PEAK_BIN_WIDTH,
+                          time_origin = DEFAULT_PEAK_TIME_ORIGIN) {
+  vals <- c(n_cases = 0, n_deaths = 0, n_hcw_deaths = 0, duration = 0,
+            time_to_peak = 0, peak_height = 0)
+
   tdf <- out$tdf
   tdf <- tdf[!is.na(tdf$time_infection_absolute), , drop = FALSE]
-
-  if (nrow(tdf) == 0L) {
-    return(c(n_cases = 0, n_deaths = 0, n_hcw_deaths = 0, duration = 0))
-  }
+  if (nrow(tdf) == 0L) return(vals[metrics])
 
   deaths <- !is.na(tdf$outcome) & tdf$outcome
   hcw    <- !is.na(tdf$class) & tdf$class == "HCW"
 
-  n_cases      <- nrow(tdf)
-  n_deaths     <- sum(deaths)
-  n_hcw_deaths <- sum(deaths & hcw)
+  vals["n_cases"]      <- nrow(tdf)
+  vals["n_deaths"]     <- sum(deaths)
+  vals["n_hcw_deaths"] <- sum(deaths & hcw)
 
-  if (n_deaths == 0L) {
-    duration <- 0
-  } else {
+  if (vals[["n_deaths"]] > 0L) {
+    death_t       <- tdf$time_outcome_absolute[deaths]
+    death_t       <- death_t[!is.na(death_t)]
     # Duration is measured from the first death to the last event, so it tracks
     # the part of the outbreak that would be observable in surveillance data.
-    t_first_death <- min(tdf$time_outcome_absolute[deaths], na.rm = TRUE)
-    t_last_event  <- max(tdf$time_outcome_absolute,         na.rm = TRUE)
-    duration      <- max(t_last_event - t_first_death, 0)
+    t_first_death <- min(death_t)
+    t_last_event  <- max(tdf$time_outcome_absolute, na.rm = TRUE)
+    vals["duration"] <- max(t_last_event - t_first_death, 0)
+
+    if (any(c("time_to_peak", "peak_height") %in% metrics)) {
+      peak <- peak_stats_from_death_days(
+        death_days      = as.integer(floor(death_t)),
+        first_death_day = t_first_death,
+        bin_width       = bin_width,
+        time_origin     = time_origin
+      )
+      vals["time_to_peak"] <- peak[["time_to_peak"]]
+      vals["peak_height"]  <- peak[["peak_height"]]
+    }
   }
 
-  c(n_cases      = n_cases,
-    n_deaths     = n_deaths,
-    n_hcw_deaths = n_hcw_deaths,
-    duration     = duration)
+  vals[metrics]
 }
 
 
-run_one_abc_replicate <- function(args) {
+run_one_abc_replicate <- function(args, ...) {
   out <- do.call(branching_process_main, args)
-  abc_summarise(out)
+  abc_summarise(out, ...)
+}
+
+
+# Aggregate a [metric x replicate] matrix into the FITTED summary vector.
+# `took_off` flags the replicates that exceeded the death threshold;
+# `summary_stats` names the statistics to return (and their order). "takeoff"
+# maps to the take-off fraction; every other name maps to the mean over taken-off
+# replicates (0 when none took off). `reps` must have a row for each non-"takeoff"
+# entry of `summary_stats`.
+aggregate_abc_reps <- function(reps, took_off, summary_stats = DEFAULT_SUMMARY_STATS) {
+  any_off <- any(took_off)
+  out <- vapply(summary_stats, function(s) {
+    if (identical(s, "takeoff")) return(mean(took_off))
+    if (!any_off) return(0)
+    mean(reps[s, took_off])
+  }, numeric(1))
+  names(out) <- summary_stats
+  out
+}
+
+
+# Run ONE ABC particle: `n_reps` stochastic replicates of `args`, summarise each
+# on the metrics needed for `summary_stats`, then aggregate to the fitted summary
+# vector. Shared by the scheme-specific parallel/serial model functions, which
+# differ only in how they build `args`. NULL config values fall back to defaults.
+run_abc_particle <- function(args,
+                             n_reps,
+                             takeoff_death_threshold,
+                             summary_stats = NULL,
+                             bin_width     = NULL,
+                             time_origin   = NULL) {
+  if (is.null(summary_stats)) summary_stats <- DEFAULT_SUMMARY_STATS
+  if (is.null(bin_width))     bin_width     <- DEFAULT_PEAK_BIN_WIDTH
+  if (is.null(time_origin))   time_origin   <- DEFAULT_PEAK_TIME_ORIGIN
+
+  unknown <- setdiff(summary_stats, c("takeoff", AVAILABLE_ABC_METRICS))
+  if (length(unknown) > 0L) {
+    stop("Unknown summary_stats: ", paste(unknown, collapse = ", "),
+         ". Available: takeoff, ", paste(AVAILABLE_ABC_METRICS, collapse = ", "),
+         ".", call. = FALSE)
+  }
+
+  # Per-replicate metrics needed: the fitted ones (minus the take-off fraction)
+  # plus n_deaths, which is always required to score the take-off threshold.
+  rep_metrics <- union("n_deaths", setdiff(summary_stats, "takeoff"))
+
+  reps <- vapply(seq_len(n_reps), function(i) {
+    out <- do.call(branching_process_main, args)
+    abc_summarise(out, metrics = rep_metrics,
+                  bin_width = bin_width, time_origin = time_origin)
+  }, numeric(length(rep_metrics)))
+  # vapply returns a bare vector when rep_metrics has length 1; make it a matrix
+  # so reps["n_deaths", ] and aggregate_abc_reps() behave uniformly.
+  if (is.null(dim(reps))) {
+    reps <- matrix(reps, nrow = 1L, dimnames = list(rep_metrics, NULL))
+  } else {
+    rownames(reps) <- rep_metrics
+  }
+
+  took_off <- reps["n_deaths", ] >= takeoff_death_threshold
+  aggregate_abc_reps(reps, took_off, summary_stats)
 }
 
 
@@ -125,7 +270,8 @@ with_abc_output_dir <- function(output_dir, expr) {
 
 abc_progress <- function(dir = getwd(),
                          tolerance_target = 1.0,
-                         param_names = c("R0", "prop_funeral", "hcw_risk_scalar")) {
+                         param_names = c("R0", "prop_funeral", "hcw_risk_scalar"),
+                         stat_names  = c("takeoff", "n_deaths", "n_hcw_deaths", "duration")) {
 
   step_num     <- function(f) as.integer(sub(".*_step([0-9]+)$", "\\1", f))
   sort_by_step <- function(f) f[order(step_num(f))]
@@ -172,8 +318,7 @@ abc_progress <- function(dir = getwd(),
   }
 
   last_out <- read.table(out_files[length(out_files)], header = FALSE)
-  colnames(last_out) <- c("weight", param_names,
-                          "takeoff", "n_deaths", "n_hcw_deaths", "duration")
+  colnames(last_out) <- c("weight", param_names, stat_names)
   cat(sprintf("\nLatest particle cloud (step %d):\n",
               step_num(out_files)[length(out_files)]))
   for (nm in param_names) {
@@ -189,7 +334,8 @@ abc_progress <- function(dir = getwd(),
 
 
 abc_compare_steps <- function(dir = getwd(),
-                              param_names = c("R0", "prop_funeral", "hcw_risk_scalar")) {
+                              param_names = c("R0", "prop_funeral", "hcw_risk_scalar"),
+                              stat_names  = c("takeoff", "n_deaths", "n_hcw_deaths", "duration")) {
 
   step_num     <- function(f) as.integer(sub(".*_step([0-9]+)$", "\\1", f))
   sort_by_step <- function(f) f[order(step_num(f))]
@@ -222,8 +368,7 @@ abc_compare_steps <- function(dir = getwd(),
   for (f in out_files) {
     s  <- step_num(f)
     df <- read.table(f, header = FALSE)
-    colnames(df) <- c("weight", param_names,
-                      "takeoff", "n_deaths", "n_hcw_deaths", "duration")
+    colnames(df) <- c("weight", param_names, stat_names)
     w <- df$weight / sum(df$weight)
 
     cum_s     <- if (as.character(s) %in% names(cum_lookup)) cum_lookup[[as.character(s)]] else NA_real_
@@ -238,12 +383,25 @@ abc_compare_steps <- function(dir = getwd(),
       sims_this_step = sims_step,
       cum_sims       = cum_s,
       ESS            = round(1 / sum(w^2), 1),
-      mean_takeoff   = round(sum(w * df$takeoff), 3),
-      mean_deaths    = round(sum(w * df$n_deaths)),
-      mean_hcw       = round(sum(w * df$n_hcw_deaths)),
-      mean_duration  = round(sum(w * df$duration)),
       stringsAsFactors = FALSE
     )
+
+    # Weighted mean of EVERY fitted summary statistic, generic over stat_names so
+    # whatever was fitted is reported (the canonical four, or an extended set with
+    # e.g. time_to_peak / peak_height). The canonical four keep their established
+    # column names + rounding (takeoff to 3 dp, counts/duration to integer); any
+    # other stat gets a mean_<stat> column rounded by magnitude.
+    stat_label <- list(takeoff = list(col = "mean_takeoff",  dp = 3L),
+                       n_deaths = list(col = "mean_deaths",   dp = 0L),
+                       n_hcw_deaths = list(col = "mean_hcw",  dp = 0L),
+                       duration = list(col = "mean_duration", dp = 0L))
+    for (nm in stat_names) {
+      m   <- sum(w * df[[nm]])
+      fmt <- stat_label[[nm]]
+      col <- if (!is.null(fmt)) fmt$col else paste0("mean_", nm)
+      dp  <- if (!is.null(fmt)) fmt$dp  else if (abs(m) < 10) 3L else 0L
+      row[[col]] <- round(m, dp)
+    }
 
     for (nm in param_names) {
       row[[paste0(nm, "_med")]] <- round(wq(df[[nm]], w, 0.500), 3)
