@@ -14,20 +14,18 @@
 #       supplied) break the R0 <-> etu_efficacy size-confound that pure n_deaths
 #       leaves.
 #
-# >>> PEAK TARGETS DELIBERATELY LEFT EMPTY <<<
-#     For this West Africa run the two curve-shape targets, `time_to_peak` and
-#     `peak_height`, are NOT yet filled in -- they sit as commented placeholders
-#     in OBSERVED_NAMED and are absent from the active SUMMARY_STATS, so the run
-#     fits ONLY the three size/duration summaries:
-#         n_deaths, n_hcw_deaths, duration
-#     To fit curve shape, (a) put real numbers on the two placeholders in
-#     OBSERVED_NAMED (peak weekly DEATHS and the days-from-first-death of the peak
-#     week, read off the West Africa weekly DEATH surveillance series) and
-#     (b) append "time_to_peak", "peak_height" to SUMMARY_STATS. Everything else
-#     (section 12 peak posterior-predictive included) then activates automatically.
-#     NOTE: until those targets are supplied, the R0 <-> etu_efficacy size-confound
-#     is NOT broken; consider fixing npi_scaler (drop it from FIT_PARAMS) for a
-#     better-determined fit, or fill the peak targets in.
+# >>> PEAK TARGETS LEFT BLANK FOR YOU TO FILL IN <<<
+#     The two curve-shape summaries, `time_to_peak` and `peak_height`, ARE part of
+#     the fitted set (SUMMARY_STATS), matching DRC_run_abc_calibration_combined.R --
+#     but their OBSERVED values in OBSERVED_NAMED are deliberately left blank
+#     (NA_real_) as a reminder to fill them in. Read them off the West Africa weekly
+#     DEATH surveillance series:
+#         peak_height  = peak weekly DEATHS
+#         time_to_peak = days from first death to that peak week
+#     A guard just before the ABC run (section 7) STOPS with a clear message while
+#     either target is still NA, so an unfilled value can't silently propagate into
+#     ABC_sequential(). (Together these two break the R0 <-> etu_efficacy size-
+#     confound that pure n_deaths leaves.)
 #
 # >>> FULLY CONFIGURABLE <<<  Choose WHICH parameters to fit (FIT_PARAMS) and
 #     WHICH summaries to match (SUMMARY_STATS) by editing the two blocks in
@@ -42,7 +40,7 @@
 #         -> an HCW-risk-style fit parameterised through NPI_SPEC.
 #
 # >>> PLACEHOLDERS <<<  NPI_SPEC bounds, the hcw_risk_scalar prior, and the
-#     (currently empty) observed peak targets are PLACEHOLDER values. UPDATE WITH
+#     still-blank (NA) observed peak targets are PLACEHOLDER values. UPDATE WITH
 #     REAL NUMBERS (peak weekly deaths from the West Africa weekly surveillance
 #     series; literature bounds for the efficacies/HCW exposure) before any
 #     production run.
@@ -92,26 +90,21 @@ FIXED_PARAMS <- list(
 
 # ---- WHICH SUMMARIES TO FIT (edit me) ---------------------------------------
 # Any subset of c("takeoff", "n_cases", "n_deaths", "n_hcw_deaths", "duration",
-# "time_to_peak", "peak_height"). The two curve-shape summaries are deliberately
-# left OUT for now (their observed targets are empty -- see OBSERVED_NAMED). To
-# fit curve shape, fill those targets in and append: "time_to_peak", "peak_height".
-SUMMARY_STATS <- c("n_deaths", "n_hcw_deaths", "duration")
+# "time_to_peak", "peak_height"). Mirrors the DRC combined fit: the two curve-shape
+# summaries are INCLUDED, but their observed targets in OBSERVED_NAMED are left
+# blank (NA) for you to fill in (the section-7 guard stops the run until you do).
+SUMMARY_STATS <- c("n_deaths", "n_hcw_deaths", "duration", "time_to_peak", "peak_height")
 
 # Observed targets, keyed BY NAME (only entries for SUMMARY_STATS are used).
 OBSERVED_NAMED <- c(
   # takeoff      = 1.0,
   n_deaths     = 11325,
   n_hcw_deaths = 513,
-  duration     = 365     # ~ main epidemic phase (Worst_WestAfrica)
-  # ---------------------------------------------------------------------------
-  # >>> DELIBERATELY EMPTY <<<  Curve-shape targets for the West Africa weekly
-  #     DEATH series. Replace the <...> placeholders with real numbers AND add the
-  #     names to SUMMARY_STATS above before fitting peak shape; until then they are
-  #     NOT fitted. (Left as <...> on purpose so an accidental uncomment fails loud
-  #     rather than silently fitting to a missing value.)
-  #   , time_to_peak = <days from first death to the peak DEATH week>
-  #   , peak_height  = <peak weekly DEATHS of the weekly series>
-  # ---------------------------------------------------------------------------
+  duration     = 365,           # ~ main epidemic phase (Worst_WestAfrica)
+  # >>> FILL ME IN <<<  Curve-shape targets, read off the West Africa weekly DEATH
+  # series. Left blank (NA) on purpose; the section-7 guard stops the run until set.
+  time_to_peak = NA_real_,      # <-- FILL IN: days from first death to the peak DEATH week
+  peak_height  = NA_real_       # <-- FILL IN: peak weekly DEATHS
 )
 
 # HCW per-contact exposure base that hcw_risk_scalar multiplies (prob =
@@ -269,9 +262,10 @@ cat(sprintf("  prob_hcw_cond_*_hospital at hcw_risk_scalar = 1: %.3f\n",
 # -----------------------------------------------------------------------------
 # 5. PRIOR PREDICTIVE CHECK (optional, slow) -- useful to size the peak target
 # -----------------------------------------------------------------------------
-# Especially handy here: run it with summary_stats including "peak_height" /
-# "time_to_peak" to see the prior-implied peak weekly deaths, which tells you the
-# right ballpark for the (currently empty) West Africa peak targets.
+# Especially handy here: prep$summary_stats already includes "peak_height" /
+# "time_to_peak", so this prints the prior-implied peak weekly deaths -- which tells
+# you the right ballpark for the still-blank West Africa peak targets. This block
+# runs BEFORE the section-7 guard, so you can size the targets even while NA.
 # set.seed(1)
 # pp <- prior_predictive_check_combined(
 #   n_draws       = 50,
@@ -290,7 +284,7 @@ cat(sprintf("  prob_hcw_cond_*_hospital at hcw_risk_scalar = 1: %.3f\n",
 #   n_replicates  = 5,
 #   seeding_cases = ABC_CONFIG$seeding_cases,
 #   takeoff_death_threshold = ABC_CONFIG$takeoff_death_threshold,
-#   summary_stats = c(prep$summary_stats, "time_to_peak", "peak_height"),
+#   summary_stats = prep$summary_stats,
 #   bin_width     = PEAK_BIN_WIDTH,
 #   time_origin   = PEAK_TIME_ORIGIN
 # )
@@ -331,6 +325,18 @@ save_abc_config(list(
 # -----------------------------------------------------------------------------
 # 7. RUN ABC_SEQUENTIAL (Del Moral et al. 2012 adaptive SMC)
 # -----------------------------------------------------------------------------
+# Fill-in reminder: time_to_peak / peak_height are intentionally left blank (NA)
+# in OBSERVED_NAMED (section 1). Stop here -- with a clear message -- while any
+# fitted target is still NA, so an unfilled value can't propagate into
+# ABC_sequential(). (Sections 4-5 above still run, so you can size the targets with
+# the prior predictive check first.)
+na_targets <- names(observed_summaries)[is.na(observed_summaries)]
+if (length(na_targets) > 0L) {
+  stop("Observed target(s) still blank (NA): ", paste(na_targets, collapse = ", "),
+       ".\n  Fill them in in OBSERVED_NAMED (section 1) before running this script.",
+       call. = FALSE)
+}
+
 start_time <- Sys.time()
 result <- with_abc_output_dir(
   ABC_OUTPUT_DIR,
@@ -425,8 +431,8 @@ for (j in seq_len(ncol(posterior))) {
 par(mfrow = c(1, 1))
 
 # Pairwise scatter to eyeball identifiability ridges (e.g. R0 <-> npi_scaler):
-# a tight diagonal band = a confounded pair. With the peak targets empty this
-# R0 <-> npi_scaler ridge is expected to be pronounced (see header note).
+# a tight diagonal band = a confounded pair. peak_height/time_to_peak are in the
+# fitted set precisely to break the R0 <-> etu_efficacy size-confound.
 if (length(PARAM_NAMES) >= 2L) {
   pairs(posterior, main = "Posterior pairs (look for ridges)",
         col = adjustcolor("steelblue", alpha = 0.4), pch = 16, cex = 0.5)
@@ -579,8 +585,8 @@ print(
 # Recompute time_to_peak / peak_height for each posterior-draw trajectory with the
 # SAME helper the fit used (peak_stats_from_death_days(), common file) and compare
 # to the observed targets. Only the curve summaries actually in SUMMARY_STATS are
-# shown -- so this block is INERT while the West Africa peak targets are empty, and
-# activates automatically once you add them (see header / OBSERVED_NAMED).
+# shown -- here that's time_to_peak and peak_height, the fitted curve summaries
+# (compared against the targets you fill into OBSERVED_NAMED).
 peak_metrics_fitted <- intersect(c("time_to_peak", "peak_height"), prep$summary_stats)
 if (length(peak_metrics_fitted) > 0L) {
   peak_post <- do.call(rbind, lapply(traj_runs, function(r) {
