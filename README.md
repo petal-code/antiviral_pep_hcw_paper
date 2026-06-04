@@ -15,6 +15,13 @@ Code and analysis for [PAPER TITLE].
       `hcw_risk_scalar`).
     - `abc_calibration_functions_npi.R` — the NPI-efficacy scheme (fits a single
       `npi_scaler` over PPE/ETU conditional efficacies).
+  Which summary statistics a fit targets is configurable (not hard-coded):
+  `abc_calibration_functions_common.R` exposes the available per-replicate
+  metrics — including the weekly-death-curve features `time_to_peak` and
+  `peak_height` — and a scheme picks the fitted subset via
+  `ABC_CONFIG$summary_stats` (default = the historical four). See
+  `analyses/02_ABC_model_fits_NPI_Eff/DRC_run_abc_calibration_peak.R` for a run
+  that adds the two peak summaries to the NPI-efficacy fit.
   Plus generic helpers like `io_helpers.R` (`find_latest_file()`). Analyses
   source these files from here rather than keeping their own copies.
 - `data-raw/` — raw, read-only input data.
