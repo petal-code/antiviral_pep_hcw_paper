@@ -121,7 +121,7 @@ DEFAULT_SCALAR_INPUTS <- list(
   # Population / simulation control.
   population = 1000000,
   hcw_per_capita = 0.005,
-  seeding_cases = 5,
+  seeding_cases = 25,
   check_final_size = 30000,
   initial_immune = 0,
   susceptible_deplete = FALSE,
