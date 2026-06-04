@@ -1,12 +1,14 @@
 # =============================================================================
-# 01_analysis_figure_1to3.R
-# Jobs are split by posterior particle — each worker handles a slice of
-# particles and runs all (coverage_scenario x arm x rep) combinations for them.
+# 01_analysis_figure_4.R
 #
-# N_WORKERS must be a divisor of N_PARTICLES (e.g. 1,2,4,5,10,20,25,50,100).
-# Each worker runs: (N_PARTICLES / N_WORKERS) x 3 coverage x arms x 5 reps
+#   Efficacy : 50, 60, 70, 80, 90%  (5 levels)
+#   Coverage : 10, 30, 50, 70, 90%  (5 levels, fixed scalar)
+#   => 25 combinations x 100 particles x 2 scenarios x 5 reps = 25,000 runs
 #
-# No manual settings needed — just set N_WORKERS and source().
+# N_WORKERS must be a divisor of N_PARTICLES (1,2,4,5,10,20,25,50,100).
+# Each worker handles a particle slice x all grid combos x all reps.
+#
+# Output: outputs/simulation_fig4/
 # =============================================================================
 
 library(here)
@@ -36,7 +38,7 @@ N_REPS           <- 2
 SEEDING_CASES    <- 25
 CHECK_FINAL_SIZE <- 200
 RESAMPLE_SEED    <- 42L
-SEED_BASE        <- 20260601L
+SEED_BASE        <- 20260701L   # different from fig1to3 to avoid seed collision
 
 stopifnot(N_PARTICLES %% N_WORKERS == 0L)
 PARTICLES_PER_WORKER <- N_PARTICLES %/% N_WORKERS
@@ -64,34 +66,28 @@ SCENARIOS <- list(
   )
 )
 
-OBV_EFFICACIES <- c(
-  baseline = NA,
-  obv_50   = 0.50,
-  obv_60   = 0.60,
-  obv_70   = 0.70,
-  obv_80   = 0.80,
-  obv_90   = 0.90
-)
+OBV_EFFICACY_GRID <- seq(0.50, 0.90, by = 0.10)
+OBV_COVERAGE_GRID <- seq(0.10, 0.90, by = 0.20)
 
 OBV_ADHERENCE        <- 1.0
 OBV_DPC              <- 1
 OBV_TARGET_CLASS     <- "HCW"
 OBV_TARGET_LOCATIONS <- "hospital"
 
-COVERAGE_SCENARIOS <- c("full", "ramp_high", "ramp_low")
-
-COVERAGE_SPECS <- list(
-  full      = list(type = "scalar", value = 1.0),
-  ramp_high = list(type = "ramp", times  = c(0, 30, 60, 90),
-                   values = c(0.20, 0.47, 0.73, 1.00)),
-  ramp_low  = list(type = "ramp", times  = c(0, 30, 60, 90),
-                   values = c(0.20, 0.30, 0.40, 0.50))
+GRID_DF <- expand.grid(
+  obv_efficacy = OBV_EFFICACY_GRID,
+  obv_coverage = OBV_COVERAGE_GRID,
+  KEEP.OUT.ATTRS = FALSE
 )
+GRID_DF$grid_idx <- seq_len(nrow(GRID_DF))
 
-for (cs in COVERAGE_SCENARIOS) {
-  dir.create(here("outputs", "simulation_fig1to3", cs),
-             recursive = TRUE, showWarnings = FALSE)
-}
+OUT_DIR <- here("outputs", "simulation_fig4")
+dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+
+message(sprintf("Grid: %d efficacy x %d coverage = %d combinations",
+                length(OBV_EFFICACY_GRID), length(OBV_COVERAGE_GRID), nrow(GRID_DF)))
+message(sprintf("Total simulations: %d",
+                nrow(GRID_DF) * N_PARTICLES * length(SCENARIOS) * N_REPS))
 
 check_model_function_version()
 
@@ -172,8 +168,6 @@ names(scenario_setups) <- names(SCENARIOS)
 
 # =============================================================================
 # Build job list: one job = one particle slice
-# N_WORKERS jobs, each handles PARTICLES_PER_WORKER particles
-# x 2 scenarios x 3 coverage x arms x 5 reps
 # =============================================================================
 jobs <- lapply(seq_len(N_WORKERS), function(w) {
   p_from <- (w - 1L) * PARTICLES_PER_WORKER + 1L
@@ -182,9 +176,8 @@ jobs <- lapply(seq_len(N_WORKERS), function(w) {
 })
 
 message(sprintf(
-  "%d workers | %d particles each | %d scenarios x %d coverage x arms x %d reps",
-  N_WORKERS, PARTICLES_PER_WORKER, length(SCENARIOS),
-  length(COVERAGE_SCENARIOS), N_REPS
+  "%d workers | %d particles each | %d scenarios x %d grid combos x %d reps",
+  N_WORKERS, PARTICLES_PER_WORKER, length(SCENARIOS), nrow(GRID_DF), N_REPS
 ))
 
 # =============================================================================
@@ -200,76 +193,60 @@ future_lapply(jobs, function(job) {
       setup  <- scenario_setups[[sc_name]]
       sc_idx <- setup$sc_idx
       
-      for (cs in COVERAGE_SCENARIOS) {
-        spec    <- COVERAGE_SPECS[[cs]]
-        out_dir <- here::here("outputs", "simulation_fig1to3", cs)
+      for (g in seq_len(nrow(GRID_DF))) {
+        eff     <- GRID_DF$obv_efficacy[g]
+        cov     <- GRID_DF$obv_coverage[g]
+        eff_pct <- round(eff * 100)
+        cov_pct <- round(cov * 100)
         
-        obv_coverage <- if (spec$type == "scalar") {
-          spec$value
-        } else {
-          make_time_varying(times = spec$times, values = spec$values)
-        }
-        
-        arms_to_run <- if (cs == "full") {
-          names(OBV_EFFICACIES)
-        } else {
-          names(OBV_EFFICACIES)[names(OBV_EFFICACIES) != "baseline"]
-        }
-        
-        for (arm_name in arms_to_run) {
-          arm_idx <- match(arm_name, names(OBV_EFFICACIES))
+        for (r in seq_len(N_REPS)) {
+          fname    <- sprintf("%s_p%03d_eff%02d_cov%02d_r%d.rds",
+                              sc_name, p, eff_pct, cov_pct, r)
+          out_path <- file.path(OUT_DIR, fname)
+          if (file.exists(out_path)) next
           
-          for (r in seq_len(N_REPS)) {
-            fname    <- sprintf("%s_p%03d_%s_r%d.rds", sc_name, p, arm_name, r)
-            out_path <- file.path(out_dir, fname)
-            if (file.exists(out_path)) next
-            
-            seed <- SEED_BASE +
-              (sc_idx  - 1L) * N_PARTICLES * length(OBV_EFFICACIES) * N_REPS +
-              (p       - 1L) * length(OBV_EFFICACIES) * N_REPS +
-              (arm_idx - 1L) * N_REPS +
-              (r       - 1L)
-            
-            args      <- setup$particle_args[[p]]
-            args$seed <- seed
-            
-            if (!is.na(OBV_EFFICACIES[arm_name])) {
-              args$obv_pep_enabled          <- TRUE
-              args$obv_pep_coverage         <- obv_coverage
-              args$obv_pep_adherence        <- OBV_ADHERENCE
-              args$obv_pep_efficacy         <- OBV_EFFICACIES[arm_name]
-              args$obv_pep_dpc              <- OBV_DPC
-              args$obv_pep_target_class     <- OBV_TARGET_CLASS
-              args$obv_pep_target_locations <- OBV_TARGET_LOCATIONS
-            }
-            
-            out   <- do.call(fiber::branching_process_main, args)
-            tdf   <- out$tdf
-            cases <- tdf[!is.na(tdf$time_infection_absolute), ]
-            
-            is_hcw <- cases$class == "HCW"
-            died   <- !is.na(cases$outcome) & cases$outcome
-            
-            result <- list(
-              scenario          = sc_name,
-              particle_id       = p,
-              arm               = arm_name,
-              rep               = r,
-              coverage_scenario = cs,
-              R0                = setup$theta$R0[p],
-              prop_funeral      = setup$theta$prop_funeral[p],
-              third_param       = setup$theta[[names(setup$theta)[3]]][p],
-              tdf               = cases,
-              n_infections      = nrow(cases),
-              n_hcw_infections  = sum(is_hcw),
-              n_deaths          = sum(died),
-              n_hcw_deaths      = sum(died & is_hcw),
-              duration          = max(cases$time_outcome_absolute, na.rm = TRUE),
-              num_treated       = out$sim_info$obv_pep_num_treated
-            )
-            
-            saveRDS(result, out_path)
-          }
+          seed <- SEED_BASE +
+            (sc_idx - 1L) * N_PARTICLES * nrow(GRID_DF) * N_REPS +
+            (p      - 1L) * nrow(GRID_DF) * N_REPS +
+            (g      - 1L) * N_REPS +
+            (r      - 1L)
+          
+          args                          <- setup$particle_args[[p]]
+          args$seed                     <- seed
+          args$obv_pep_enabled          <- TRUE
+          args$obv_pep_coverage         <- cov
+          args$obv_pep_adherence        <- OBV_ADHERENCE
+          args$obv_pep_efficacy         <- eff
+          args$obv_pep_dpc              <- OBV_DPC
+          args$obv_pep_target_class     <- OBV_TARGET_CLASS
+          args$obv_pep_target_locations <- OBV_TARGET_LOCATIONS
+          
+          out   <- do.call(fiber::branching_process_main, args)
+          tdf   <- out$tdf
+          cases <- tdf[!is.na(tdf$time_infection_absolute), ]
+          
+          is_hcw <- cases$class == "HCW"
+          died   <- !is.na(cases$outcome) & cases$outcome
+          
+          result <- list(
+            scenario         = sc_name,
+            particle_id      = p,
+            obv_efficacy     = eff,
+            obv_coverage     = cov,
+            rep              = r,
+            R0               = setup$theta$R0[p],
+            prop_funeral     = setup$theta$prop_funeral[p],
+            third_param      = setup$theta[[names(setup$theta)[3]]][p],
+            tdf              = cases,
+            n_infections     = nrow(cases),
+            n_hcw_infections = sum(is_hcw),
+            n_deaths         = sum(died),
+            n_hcw_deaths     = sum(died & is_hcw),
+            duration         = max(cases$time_outcome_absolute, na.rm = TRUE),
+            num_treated      = out$sim_info$obv_pep_num_treated
+          )
+          
+          saveRDS(result, out_path)
         }
       }
     }
@@ -281,12 +258,11 @@ future_lapply(jobs, function(job) {
 },
 future.globals = list(
   scenario_setups      = scenario_setups,
-  COVERAGE_SCENARIOS   = COVERAGE_SCENARIOS,
-  COVERAGE_SPECS       = COVERAGE_SPECS,
+  GRID_DF              = GRID_DF,
+  OUT_DIR              = OUT_DIR,
   N_PARTICLES          = N_PARTICLES,
   N_REPS               = N_REPS,
   SEED_BASE            = SEED_BASE,
-  OBV_EFFICACIES       = OBV_EFFICACIES,
   OBV_ADHERENCE        = OBV_ADHERENCE,
   OBV_DPC              = OBV_DPC,
   OBV_TARGET_CLASS     = OBV_TARGET_CLASS,
@@ -298,8 +274,6 @@ future.seed     = TRUE)
 plan(sequential)
 
 elapsed <- proc.time() - t_start
-n_files <- sum(sapply(COVERAGE_SCENARIOS, function(cs)
-  length(list.files(here("outputs", "simulation_fig1to3", cs),
-                    pattern = "\\.rds$"))))
+n_files <- length(list.files(OUT_DIR, pattern = "\\.rds$"))
 message(sprintf("Done in %.1f minutes. Total files: %d",
                 elapsed["elapsed"] / 60, n_files))
