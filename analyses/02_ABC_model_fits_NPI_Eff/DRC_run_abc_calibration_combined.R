@@ -56,7 +56,7 @@ FIT_PARAMS <- c("R0", "prop_funeral", "npi_scaler", "hcw_risk_scalar")
 # Priors for the fitted parameters, keyed BY NAME (only entries for FIT_PARAMS
 # are used; order here does not matter -- prepare_combined_run() reorders).
 PRIORS_NAMED <- list(
-  R0              = c("unif", 1.25, 1.65),
+  R0              = c("unif", 1.15, 1.65),
   prop_funeral    = c("unif", 0.10, 0.40),
   npi_scaler      = c("unif", -1.0, 1.0),   # s = 0 -> central efficacies
   hcw_risk_scalar = c("unif",  1.0, 1.8)    # >>> PLACEHOLDER <<< prob_hcw 0.25 -> 0.25..0.45
@@ -75,16 +75,16 @@ FIXED_PARAMS <- list(
 # ---- WHICH SUMMARIES TO FIT (edit me) ---------------------------------------
 # Any subset of c("takeoff", "n_cases", "n_deaths", "n_hcw_deaths", "duration",
 # "time_to_peak", "peak_height"). Default drops takeoff and adds peak_height.
-SUMMARY_STATS <- c("n_deaths", "n_hcw_deaths", "duration", "peak_height")
+SUMMARY_STATS <- c("n_deaths", "n_hcw_deaths", "duration", "peak_height", "time_to_peak")
 
 # Observed targets, keyed BY NAME (only entries for SUMMARY_STATS are used).
 OBSERVED_NAMED <- c(
-  takeoff      = 1.0,
+  # takeoff      = 1.0,
   n_deaths     = 2299,
   n_hcw_deaths = 79,     # https://afenet-journal.org/10-37432-jieph-d-25-00072/
   duration     = 450,    # ~ Aug 2018 - Nov 2019 main phase
-  time_to_peak = 250,    # >>> PLACEHOLDER <<< days to peak DEATH week (origin = PEAK_TIME_ORIGIN)
-  peak_height  = 75      # >>> PLACEHOLDER <<< peak weekly deaths (deaths / week)
+  time_to_peak = 275,    # approx end April/beginning May 2019: see here: https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic
+  peak_height  = 95      # again, see above
 )
 
 # HCW per-contact exposure base that hcw_risk_scalar multiplies (prob =
@@ -113,9 +113,9 @@ if (!dir.exists(FINAL_OUTPUTS_DIR)) {
 
 ABC_SETTINGS <- list(
   method              = "Delmoral",
-  nb_simul            = 600,    # 4 params -> consider 600-800; quick test ~200
+  nb_simul            = 590,    # 4 params -> consider 600-800; quick test ~200
   alpha               = 0.5,
-  tolerance_target    = 0.2,
+  tolerance_target    = 0.35,
   M                   = 1,
   use_seed            = TRUE,
   verbose             = TRUE
@@ -404,6 +404,7 @@ if (length(PARAM_NAMES) >= 2L) {
 # Pass the fitted PARAM_NAMES + SUMMARY_STATS so the disk-inspection helpers label
 # (and summarise) the right columns -- this also fixes the stale "hcw_risk_scalar"
 # default labelling from the original NPI runs.
+ABC_OUTPUT_DIR <- "C:/Users/PETAL_WS_2/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_NPI_Eff/abc_outputs/Middle_DRC_ConflictSmoothed_PlusPlus_20260603_222544_Combined_NP4_NS5_NBREPS_100_NBSIMUL_590"
 abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target,
              param_names = PARAM_NAMES, stat_names = prep$summary_stats)
 print(abc_compare_steps(ABC_OUTPUT_DIR, param_names = PARAM_NAMES,
