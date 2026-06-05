@@ -278,7 +278,8 @@ make_particle_df <- function(run_df) {
 #                       used for the bar+CI panel in figure 1
 # =============================================================================
 build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections",
-                                                "infections"),
+                                                "infections", "deaths",
+                                                "hcw_deaths_incidence"),
                             bin_width = 28,
                             efficacy_name = "baseline",
                             coverage_name = NULL,
@@ -308,10 +309,12 @@ build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections",
       died <- died & !prevented_full
     }
     
-    times <- if (metric == "hcw_deaths") {
+    times <- if (metric %in% c("hcw_deaths", "hcw_deaths_incidence")) {
       cases$time_outcome_absolute[died & is_hcw]
     } else if (metric == "hcw_infections") {
       cases$time_infection_absolute[is_hcw]
+    } else if (metric == "deaths") {
+      cases$time_outcome_absolute[died]
     } else {
       # All infections (entire population), weekly incidence
       cases$time_infection_absolute
@@ -331,7 +334,7 @@ build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections",
   
   # Mean over reps per particle, then (optionally cumsum), then quantiles.
   # "infections" is weekly incidence -- skip cumsum.
-  is_incidence <- metric == "infections"
+  is_incidence <- metric %in% c("infections", "deaths", "hcw_deaths_incidence")
   
   rows %>%
     group_by(scenario, arm, particle_id, week) %>%
