@@ -37,19 +37,26 @@ make_summ <- function(df, metric, sc) {
 }
 
 make_bar_plot <- function(summ_df, sc, y_label, title) {
-  obv_colors <- setNames(ARM_COLORS_OBV, OBV_EFFICACY_LABELS)
+  light_col <- if (sc == "WestAfrica") "#fdd8a0" else "#b2e4d8"
+  base_col  <- SCENARIO_COLORS[sc]
+  dark_col  <- rgb(t(col2rgb(base_col) * 0.7), maxColorValue = 255)
+  # 50–80%: gradient from light to exact scenario color; 90%: one shade darker
+  obv_colors <- setNames(
+    c(colorRampPalette(c(light_col, base_col))(4), dark_col),
+    OBV_EFFICACY_LABELS
+  )
 
   ggplot(summ_df, aes(x = arm_label, y = median, fill = arm_label)) +
-    geom_col(width = 0.6, alpha = 0.85) +
+    geom_col(aes(color = arm_label == "80%"), width = 0.8, alpha = 0.85, linewidth = 0.8) +
+    scale_color_manual(values = c("TRUE" = "black", "FALSE" = NA), guide = "none") +
     geom_errorbar(
-      aes(ymin = lo95, ymax = hi95, color = arm_label),
-      width = 0, linewidth = 0.8
+      aes(ymin = lo95, ymax = hi95),
+      color = "black", width = 0.2, linewidth = 0.8
     ) +
-    geom_point(aes(color = arm_label), size = 2) +
-    scale_fill_manual(values  = obv_colors, guide = "none") +
-    scale_color_manual(values = obv_colors, guide = "none") +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.08)),
-                       limits = c(0, NA)) +   # enforce non-negative y-axis
+    geom_point(color = "black", size = 2) +
+    scale_fill_manual(values = obv_colors, guide = "none") +
+    scale_y_continuous(expand = expansion(mult = c(0, 0)),
+                       limits = c(0, 100)) +
     labs(x = "OBV efficacy", y = y_label,
          title = title,
          subtitle = sprintf("%s | Bar: median | Line: 95%% CI across posterior particles",
@@ -58,28 +65,62 @@ make_bar_plot <- function(summ_df, sc, y_label, title) {
     theme(panel.grid.major.x = element_blank())
 }
 
+
+# panels
+fig2a <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "WestAfrica"),
+                       "WestAfrica", "HCW deaths averted (%)",
+                       "% HCW deaths averted by OBV efficacy")
+
+fig2b <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "WestAfrica"),
+                       "WestAfrica", "HCW days lost averted (%)",
+                       "% HCW days lost averted by OBV efficacy")
+
+fig2c <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "DRC"),
+                       "DRC", "HCW deaths averted (%)",
+                       "% HCW deaths averted by OBV efficacy")
+
+fig2d <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "DRC"),
+                       "DRC", "HCW days lost averted (%)",
+                       "% HCW days lost averted by OBV efficacy")
+
 ggsave(file.path(OUT_DIR, "figure_2_a.png"),
-       make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "WestAfrica"),
-                     "WestAfrica", "HCW deaths averted (%)",
-                     "% HCW deaths averted by OBV efficacy"),
+       fig2a,
        width = 7, height = 5, dpi = 150)
 
 ggsave(file.path(OUT_DIR, "figure_2_b.png"),
-       make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "WestAfrica"),
-                     "WestAfrica", "HCW days lost averted (%)",
-                     "% HCW days lost averted by OBV efficacy"),
+       fig2b,
        width = 7, height = 5, dpi = 150)
 
 ggsave(file.path(OUT_DIR, "figure_2_c.png"),
-       make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "DRC"),
-                     "DRC", "HCW deaths averted (%)",
-                     "% HCW deaths averted by OBV efficacy"),
+       fig2c,
        width = 7, height = 5, dpi = 150)
 
 ggsave(file.path(OUT_DIR, "figure_2_d.png"),
-       make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "DRC"),
-                     "DRC", "HCW days lost averted (%)",
-                     "% HCW days lost averted by OBV efficacy"),
+       fig2d ,
        width = 7, height = 5, dpi = 150)
 
 message("Figure 2 panels saved: a, b, c, d")
+
+# Combine all panels
+make_header <- function(label, angle = 0) {
+  ggplot() +
+    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5,
+             angle = angle) +
+    theme_void()
+}
+
+strip_titles <- function(p) p + theme(plot.title = element_blank(),
+                                       plot.subtitle = element_blank())
+
+fig2_all <- (
+  (make_header("West Africa") | make_header("DRC")) /
+  (strip_titles(fig2a) | strip_titles(fig2c)) /
+  (strip_titles(fig2b) | strip_titles(fig2d))
+) +
+  plot_layout(heights = c(0.08, 1, 1)) +
+  plot_annotation(tag_levels = list(c("", "", "a", "c", "b", "d")))
+
+ggsave(file.path(OUT_DIR, "figure_2_ALL.png"), fig2_all,
+       width = 11, height = 8, dpi = 150, units = "in")
+
+message("Figure 2 combined saved")
