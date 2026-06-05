@@ -52,7 +52,7 @@ ts_hcw_df <- bind_rows(
 make_ts <- function(sc) {
   arms         <- c("baseline", "obv_80")
   sc_color     <- unname(SCENARIO_COLORS[sc])
-  ts_colors    <- setNames(c(sc_color, "grey50"), arms)
+  ts_colors    <- setNames(c("grey50", sc_color), arms)
   ts_linetypes <- c(baseline = "solid", obv_80 = "dashed")
   ts_labels    <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy)")
   
