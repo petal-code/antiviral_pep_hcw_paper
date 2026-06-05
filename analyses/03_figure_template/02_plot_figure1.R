@@ -19,12 +19,14 @@ ts_infections <- build_weekly_ts(results, metric = "infections",
 make_infection_bar <- function(sc) {
   df    <- filter(ts_infections, scenario == sc)
   color <- unname(SCENARIO_COLORS[sc])
+  x_max <- if (sc == "WestAfrica") 365 / 7 else 450 / 7  # days -> weeks
   
   ggplot(df, aes(x = week, y = q50)) +
     geom_col(fill = color, alpha = 0.70, width = 0.8) +
     geom_errorbar(aes(ymin = q025, ymax = q975),
                   width = 0.3, linewidth = 0.5, color = "grey30") +
-    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+    scale_x_continuous(breaks = seq(0, ceiling(x_max / 5) * 5, by = 5),
+                       limits = c(0, x_max),
                        expand = expansion(add = c(0.5, 0.5))) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
     labs(x = "Weeks since outbreak start",
@@ -55,6 +57,7 @@ make_ts <- function(sc) {
   ts_colors    <- setNames(c(sc_color, "grey50"), arms)
   ts_linetypes <- c(baseline = "solid", obv_80 = "dashed")
   ts_labels    <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy)")
+  x_max        <- if (sc == "WestAfrica") 365 / 7 else 450 / 7
   
   df <- filter(ts_hcw_df, scenario == sc) %>%
     mutate(arm = factor(arm, levels = arms))
@@ -66,7 +69,8 @@ make_ts <- function(sc) {
     scale_color_manual(values = ts_colors, labels = ts_labels, name = NULL) +
     scale_fill_manual( values = ts_colors, labels = ts_labels, name = NULL) +
     scale_linetype_manual(values = ts_linetypes, labels = ts_labels, name = NULL) +
-    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+    scale_x_continuous(breaks = seq(0, ceiling(x_max / 5) * 5, by = 5),
+                       limits = c(0, x_max),
                        expand = expansion(add = c(0.5, 0.5))) +
     labs(x = "Weeks since outbreak start",
          y = "Cumulative HCW deaths") +
