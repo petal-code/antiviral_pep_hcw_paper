@@ -147,7 +147,7 @@ ABC_SETTINGS <- list(
 
 # Replicate count / take-off threshold etc. travel to each worker via ABC_CONFIG
 # (assembled in section 3, after the function files are sourced).
-N_REPS                  <- 80L   # per-particle stochastic replicates (quick test ~30)
+N_REPS                  <- 70L   # per-particle stochastic replicates (quick test ~30)
 SEEDING_CASES           <- 25L
 TAKEOFF_DEATH_THRESHOLD <- 100L
 SETUP_R0_N              <- 100000L
@@ -447,12 +447,13 @@ if (length(PARAM_NAMES) >= 2L) {
 # directory and uncomment. Pass the fitted PARAM_NAMES + SUMMARY_STATS so the disk-
 # inspection helpers label (and summarise) the right columns.
 # ABC_OUTPUT_DIR <- file.path(ABC_OUTPUT_BASE, "abc_outputs", "<completed run directory>")
-# abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target,
-#              param_names = PARAM_NAMES, stat_names = prep$summary_stats)
-# print(abc_compare_steps(ABC_OUTPUT_DIR, param_names = PARAM_NAMES,
-#                         stat_names = prep$summary_stats))
-# result <- reconstruct_abc_result(ABC_OUTPUT_DIR, param_names = PARAM_NAMES,
-#                                  stat_names = prep$summary_stats)
+ABC_OUTPUT_DIR <- "C:/Users/cwhittaker/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_NPI_Eff/abc_outputs/Worst_WestAfrica_20260604_174540_Combined_NP4_NS5_NBREPS_70_NBSIMUL_460/"
+abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target,
+             param_names = PARAM_NAMES, stat_names = prep$summary_stats)
+print(abc_compare_steps(ABC_OUTPUT_DIR, param_names = PARAM_NAMES,
+                        stat_names = prep$summary_stats))
+result <- reconstruct_abc_result(ABC_OUTPUT_DIR, param_names = PARAM_NAMES,
+                                 stat_names = prep$summary_stats)
 
 
 # -----------------------------------------------------------------------------
