@@ -129,7 +129,7 @@ TAKEOFF_DEATH_THRESHOLD <- 100L
 SETUP_R0_N              <- 100000L
 SETUP_R0_SEED           <- 42L
 
-N_CLUSTER <- if (grepl("PETAL", Sys.info()[["user"]], ignore.case = TRUE)) {
+N_CLUSTER <- if (parallel::detectCores() > 120) {
   min(120, parallel::detectCores() - 10)
 } else {
   min(10, parallel::detectCores() - 4)

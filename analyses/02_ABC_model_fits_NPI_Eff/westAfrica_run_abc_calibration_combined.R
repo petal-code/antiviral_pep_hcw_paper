@@ -72,10 +72,10 @@ FIT_PARAMS <- c("R0", "prop_funeral", "npi_scaler", "hcw_risk_scalar")
 # R0 / prop_funeral inherited from the West Africa NPI-efficacy fit
 # (westAfrica_run_abc_calibration.R).
 PRIORS_NAMED <- list(
-  R0              = c("unif", 1.25, 1.55),
+  R0              = c("unif", 1.15, 1.65),
   prop_funeral    = c("unif", 0.10, 0.40),
-  npi_scaler      = c("unif", -1.0, 1.0),   # s = 0 -> central efficacies
-  hcw_risk_scalar = c("unif",  1.0, 1.8)    # >>> PLACEHOLDER <<< prob_hcw 0.25 -> 0.25..0.45
+  npi_scaler      = c("unif", -1.0, 1.0),   
+  hcw_risk_scalar = c("unif",  1.0, 1.8)
 )
 
 # Fixed values for any parameter NOT in FIT_PARAMS (missing ones fall back to
@@ -100,11 +100,9 @@ OBSERVED_NAMED <- c(
   # takeoff      = 1.0,
   n_deaths     = 11325,
   n_hcw_deaths = 513,
-  duration     = 365,           # ~ main epidemic phase (Worst_WestAfrica)
-  # >>> FILL ME IN <<<  Curve-shape targets, read off the West Africa weekly DEATH
-  # series. Left blank (NA) on purpose; the section-7 guard stops the run until set.
-  time_to_peak = NA_real_,      # <-- FILL IN: days from first death to the peak DEATH week
-  peak_height  = NA_real_       # <-- FILL IN: peak weekly DEATHS
+  duration     = 365,
+  time_to_peak = 164,
+  peak_height  = 599
 )
 
 # HCW per-contact exposure base that hcw_risk_scalar multiplies (prob =
@@ -125,7 +123,7 @@ NPI_SPEC <- list(
 
 # West Africa was a far larger outbreak than the DRC; keep the larger final-size
 # guard from the West Africa NPI-efficacy fit.
-MODEL_OVERRIDES <- list(check_final_size = 30000)
+MODEL_OVERRIDES <- list(check_final_size = 35000)
 
 ABC_OUTPUT_BASE  <- ANALYSIS_DIR
 ABC_OUTPUT_LABEL <- "Combined"   # distinct from "NPIeff" / "NPIeffPeak"
@@ -137,9 +135,9 @@ if (!dir.exists(FINAL_OUTPUTS_DIR)) {
 
 ABC_SETTINGS <- list(
   method              = "Delmoral",
-  nb_simul            = 590,    # 4 params -> consider 600-800; quick test ~200
+  nb_simul            = 460,    # 4 params -> consider 600-800; quick test ~200
   alpha               = 0.5,
-  tolerance_target    = 0.35,
+  tolerance_target    = 0.5,
   M                   = 1,
   use_seed            = TRUE,
   verbose             = TRUE
@@ -147,13 +145,13 @@ ABC_SETTINGS <- list(
 
 # Replicate count / take-off threshold etc. travel to each worker via ABC_CONFIG
 # (assembled in section 3, after the function files are sourced).
-N_REPS                  <- 100L   # per-particle stochastic replicates (quick test ~30)
+N_REPS                  <- 80L   # per-particle stochastic replicates (quick test ~30)
 SEEDING_CASES           <- 25L
 TAKEOFF_DEATH_THRESHOLD <- 100L
 SETUP_R0_N              <- 100000L
 SETUP_R0_SEED           <- 42L
 
-N_CLUSTER <- if (grepl("PETAL", Sys.info()[["user"]], ignore.case = TRUE)) {
+N_CLUSTER <- if (parallel::detectCores() > 120) {
   min(120, parallel::detectCores() - 10)
 } else {
   min(10, parallel::detectCores() - 4)
