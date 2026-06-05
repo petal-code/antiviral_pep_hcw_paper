@@ -73,10 +73,17 @@ hist_ymax <- max(sapply(c("WestAfrica", "DRC"), function(sc) {
 }))
 ts_ymax <- max(ts_df$q975)
 
+<<<<<<< HEAD
 fig1a <- make_hist("WestAfrica") #+ coord_cartesian(ylim = c(0, hist_ymax * 1.05))
 fig1b <- make_ts("WestAfrica")   #+ coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
 fig1c <- make_hist("DRC")        #+ coord_cartesian(ylim = c(0, hist_ymax * 1.05))
 fig1d <- make_ts("DRC")          #+ coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
+=======
+fig1a <- make_hist("WestAfrica") + coord_cartesian(ylim = c(0, hist_ymax * 1.05))
+fig1b <- make_ts("WestAfrica")   + coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
+fig1c <- make_hist("DRC")        + coord_cartesian(ylim = c(0, hist_ymax * 1.05))
+fig1d <- make_ts("DRC")          + coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
+>>>>>>> 4eff822522e4aeaa301df2fc1a6254745a1f50fa
 
 ggsave(file.path(OUT_DIR, "figure_1_a.png"), fig1a,
        width = 7, height = 5, dpi = 150)
