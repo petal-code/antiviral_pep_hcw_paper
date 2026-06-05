@@ -55,7 +55,7 @@ SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
 COMMON_PATH    <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R")
 FUNCTIONS_PATH <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_hcwRisk.R")
 R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
-SCENARIO_CSV   <- here::here("data-processed", "final_four_scenario_values.csv")
+SCENARIO_CSV   <- here::here("data-processed", "final_six_scenario_values_original_approach")
 SCENARIO_ID    <- "Worst_WestAfrica"
 
 # Any scalar-parameter overrides to layer on top of DEFAULT_SCALAR_INPUTS.
