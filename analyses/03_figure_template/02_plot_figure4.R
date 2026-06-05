@@ -1,70 +1,94 @@
 # =============================================================================
 # 02_plot_figure4.R
+# Efficacy x coverage heatmap -- fully post-hoc, no separate simulation needed
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
 
-OUT_DIR  <- here("figures")
-GRID_DIR <- here("outputs", "simulation_fig4")
+OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-# =============================================================================
-# Load grid results
-# =============================================================================
-message("Loading grid results...")
-files <- list.files(GRID_DIR, pattern = "\\.rds$", full.names = TRUE)
-if (length(files) == 0) stop("No RDS files found in: ", GRID_DIR)
-message(sprintf("  %d files found", length(files)))
-results <- lapply(files, readRDS)
+# Coverage grid for figure 4: five scalar levels (not the ramp curves)
+COVERAGE_GRID <- c(0.10, 0.30, 0.50, 0.70, 0.90)
 
 # =============================================================================
-# Flatten to data frame
+# Load baseline results
 # =============================================================================
-grid_df <- do.call(rbind, lapply(results, function(x) {
-  days_lost <- compute_hcw_days_lost(x$tdf, x$duration)
-  data.frame(
-    scenario      = x$scenario,
-    particle_id   = x$particle_id,
-    obv_efficacy  = x$obv_efficacy,
-    obv_coverage  = x$obv_coverage,
-    rep           = x$rep,
-    n_hcw_deaths  = x$n_hcw_deaths,
-    hcw_days_lost = days_lost,
-    stringsAsFactors = FALSE
-  )
+message("Loading baseline results...")
+results <- load_results()
+
+# =============================================================================
+# Build efficacy x coverage grid post-hoc
+#
+# For figure 4 the coverage axis uses fixed scalar values (not ramp curves),
+# so we construct scalar coverage specs on the fly.
+# =============================================================================
+message("Applying post-hoc OBV across efficacy x coverage grid...")
+
+efficacy_grid <- OBV_EFFICACY_VALUES   # named vector: obv_50..obv_90
+
+# Baseline rows
+baseline_rows <- build_run_df_obv(results, "baseline")
+
+grid_rows <- do.call(rbind, lapply(names(efficacy_grid), function(eff_name) {
+  eff <- efficacy_grid[[eff_name]]
+  do.call(rbind, lapply(COVERAGE_GRID, function(cov) {
+    # Build a flat (scalar) coverage spec for this coverage level
+    cov_spec <- list(times = c(0, 1), values = c(cov, cov))
+    cov_label <- sprintf("cov%02d", round(cov * 100))
+    
+    do.call(rbind, lapply(results, function(x) {
+      run_seed  <- x$particle_id * 1000L + x$rep
+      obv       <- apply_obv_posthoc(x$tdf, eff, cov_spec, seed = run_seed)
+      
+      # Use prevented_flag returned directly from apply_obv_posthoc so that
+      # the prevented individuals are consistent with the prevented count.
+      days_lost <- compute_hcw_days_lost(x$tdf, x$duration,
+                                         obv_received = obv$obv_received,
+                                         prevented    = obv$prevented_flag)
+      
+      data.frame(
+        scenario           = x$scenario,
+        particle_id        = x$particle_id,
+        rep                = x$rep,
+        arm                = eff_name,
+        coverage_scenario  = cov_label,
+        obv_efficacy       = eff,
+        obv_coverage       = cov,
+        n_infections       = x$n_infections,
+        n_hcw_deaths       = x$n_hcw_deaths - obv$prevented_hcw,
+        counterfactual_hcw = x$n_hcw_deaths,
+        prevented_hcw      = obv$prevented_hcw,
+        hcw_days_lost      = days_lost,
+        stringsAsFactors   = FALSE
+      )
+    }))
+  }))
 }))
 
 # =============================================================================
-# Attach baseline from simulation_fig1to3/full
+# Aggregate to particle level (burden-weighted % averted)
 # =============================================================================
-message("Loading baseline...")
-base_df <- build_run_df(load_results("full")) %>%
-  filter(arm == "baseline") %>%
+base_particle <- baseline_rows %>%
   group_by(scenario, particle_id) %>%
-  summarise(
-    baseline_hcw_deaths = mean(n_hcw_deaths),
-    baseline_days_lost  = mean(hcw_days_lost),
-    .groups = "drop"
-  )
+  summarise(baseline_days_lost = mean(hcw_days_lost), .groups = "drop")
 
-# =============================================================================
-# Aggregate: mean over reps per particle, then median over particles
-# =============================================================================
-heatmap_df <- grid_df %>%
+heatmap_df <- grid_rows %>%
   group_by(scenario, particle_id, obv_efficacy, obv_coverage) %>%
   summarise(
-    n_hcw_deaths  = mean(n_hcw_deaths),
-    hcw_days_lost = mean(hcw_days_lost),
+    prevented_hcw      = sum(prevented_hcw),
+    counterfactual_hcw = sum(counterfactual_hcw),
+    hcw_days_lost      = mean(hcw_days_lost),
     .groups = "drop"
   ) %>%
-  left_join(base_df, by = c("scenario", "particle_id")) %>%
+  left_join(base_particle, by = c("scenario", "particle_id")) %>%
   mutate(
     pct_hcw_deaths_averted = ifelse(
-      baseline_hcw_deaths > 0,
-      100 * (baseline_hcw_deaths - n_hcw_deaths) / baseline_hcw_deaths,
+      counterfactual_hcw > 0,
+      100 * prevented_hcw / counterfactual_hcw,
       NA_real_
     ),
     pct_days_lost_averted = ifelse(
-      baseline_days_lost > 0,
+      !is.na(baseline_days_lost) & baseline_days_lost > 0,
       100 * (baseline_days_lost - hcw_days_lost) / baseline_days_lost,
       NA_real_
     )
@@ -77,9 +101,9 @@ heatmap_df <- grid_df %>%
   ) %>%
   mutate(
     coverage_label = factor(paste0(round(obv_coverage * 100), "%"),
-                            levels = paste0(c(10,30,50,70,90), "%")),
+                            levels = paste0(c(10, 30, 50, 70, 90), "%")),
     efficacy_label = factor(paste0(round(obv_efficacy * 100), "%"),
-                            levels = paste0(c(50,60,70,80,90), "%"))
+                            levels = paste0(c(50, 60, 70, 80, 90), "%"))
   )
 
 # =============================================================================
@@ -112,24 +136,24 @@ make_heatmap <- function(sc, metric, fill_label, title) {
 }
 
 # =============================================================================
-# Save four independent panels
+# Save four panels
 # =============================================================================
 panels <- list(
   list(sc = "WestAfrica", metric = "median_deaths_averted",
        fill_label = "Deaths averted (%)",
-       title = "% HCW deaths averted — West Africa",
+       title = "% HCW deaths averted -- West Africa",
        file  = "figure_4_a.png"),
   list(sc = "WestAfrica", metric = "median_days_lost_averted",
        fill_label = "Days lost averted (%)",
-       title = "% HCW days lost averted — West Africa",
+       title = "% HCW days lost averted -- West Africa",
        file  = "figure_4_b.png"),
   list(sc = "DRC", metric = "median_deaths_averted",
        fill_label = "Deaths averted (%)",
-       title = "% HCW deaths averted — DRC",
+       title = "% HCW deaths averted -- DRC",
        file  = "figure_4_c.png"),
   list(sc = "DRC", metric = "median_days_lost_averted",
        fill_label = "Days lost averted (%)",
-       title = "% HCW days lost averted — DRC",
+       title = "% HCW days lost averted -- DRC",
        file  = "figure_4_d.png")
 )
 

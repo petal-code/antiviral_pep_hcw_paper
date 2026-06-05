@@ -5,14 +5,15 @@ source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-results <- load_results("full")
+results <- load_results()
 
 # =============================================================================
-# Panel A/C: Total infections histogram (baseline only)
+# Panel A/C: Total infections histogram (baseline)
 # =============================================================================
-run_df <- flatten_to_df(results)
-hist_df <- run_df %>%
-  filter(arm == "baseline") %>%
+hist_df <- do.call(rbind, lapply(results, function(x) {
+  data.frame(scenario = x$scenario, particle_id = x$particle_id,
+             n_infections = x$n_infections, stringsAsFactors = FALSE)
+})) %>%
   group_by(scenario, particle_id) %>%
   summarise(n_infections = mean(n_infections), .groups = "drop")
 
@@ -23,23 +24,29 @@ make_hist <- function(sc) {
     geom_histogram(bins = 40, fill = color, alpha = 0.75, color = "white") +
     labs(x = "Total infections", y = "Posterior particles",
          title = SCENARIO_LABELS[sc],
-         subtitle = "Baseline — distribution across posterior particles") +
+         subtitle = "Baseline -- distribution across posterior particles") +
     theme_fig()
 }
 
 # =============================================================================
-# Panel B/D: Cumulative HCW deaths time series — baseline vs OBV 80%
+# Panel B/D: Cumulative HCW deaths time series -- baseline vs OBV 80% (full coverage)
 # =============================================================================
-ts_df <- build_weekly_ts(results, metric = "hcw_deaths",
-                         arms = c("baseline", "obv_80"))
-ts_colors <- c(baseline = "#555555", obv_80 = "#2166ac")
-ts_labels <- c(baseline = "Baseline", obv_80 = "OBV 80%")
+ts_baseline <- build_weekly_ts(results, metric = "hcw_deaths",
+                                efficacy_name = "baseline")
+ts_obv80    <- build_weekly_ts(results, metric = "hcw_deaths",
+                                efficacy_name = "obv_80",
+                                coverage_name = "full")
+
+ts_df <- bind_rows(
+  mutate(ts_baseline, arm = "baseline"),
+  mutate(ts_obv80,    arm = "obv_80")
+)
 
 make_ts <- function(sc) {
   arms      <- c("baseline", "obv_80")
   ts_colors <- get_arm_colors(sc, arms)
   ts_labels <- ARM_LABELS[arms]
-  
+
   df <- filter(ts_df, scenario == sc) %>%
     mutate(arm = factor(arm, levels = arms))
   ggplot(df, aes(x = week, color = arm, fill = arm)) +
@@ -51,12 +58,12 @@ make_ts <- function(sc) {
     labs(x = "Days since outbreak start",
          y = "Cumulative HCW deaths",
          title = SCENARIO_LABELS[sc],
-         subtitle = "Baseline vs OBV 80% | Line: median | Bands: 50% / 95% CI") +
+         subtitle = "Baseline vs OBV 80% (full coverage) | Line: median | Bands: 50% / 95% CI") +
     theme_fig()
 }
 
 # =============================================================================
-# Save each panel independently
+# Save panels
 # =============================================================================
 ggsave(file.path(OUT_DIR, "figure_1_a.png"), make_hist("WestAfrica"),
        width = 7, height = 5, dpi = 150)
