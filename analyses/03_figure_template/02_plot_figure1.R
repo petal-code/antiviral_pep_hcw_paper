@@ -68,10 +68,15 @@ make_ts <- function(sc) {
 # =============================================================================
 # Save panels
 # =============================================================================
-fig1a <- make_hist("WestAfrica")
-fig1b <- make_ts("WestAfrica")
-fig1c <- make_hist("DRC")
-fig1d <- make_ts("DRC")
+hist_ymax <- max(sapply(c("WestAfrica", "DRC"), function(sc) {
+  max(hist(filter(hist_df, scenario == sc)$n_infections, breaks = 40, plot = FALSE)$counts)
+}))
+ts_ymax <- max(ts_df$q975)
+
+fig1a <- make_hist("WestAfrica") + coord_cartesian(ylim = c(0, hist_ymax * 1.05))
+fig1b <- make_ts("WestAfrica")   + coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
+fig1c <- make_hist("DRC")        + coord_cartesian(ylim = c(0, hist_ymax * 1.05))
+fig1d <- make_ts("DRC")          + coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
 
 ggsave(file.path(OUT_DIR, "figure_1_a.png"), fig1a,
        width = 7, height = 5, dpi = 150)
