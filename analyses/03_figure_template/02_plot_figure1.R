@@ -1,6 +1,7 @@
 # =============================================================================
 # 02_plot_figure1.R
 # =============================================================================
+library(patchwork)
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -8,40 +9,45 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 results <- load_results()
 
 # =============================================================================
-# Panel A/C: Total infections histogram (baseline)
+# Panel A/C: Weekly infection incidence -- bar (median) + error bar (95% CI)
 # =============================================================================
-hist_df <- do.call(rbind, lapply(results, function(x) {
-  data.frame(scenario = x$scenario, particle_id = x$particle_id,
-             n_infections = x$n_infections, stringsAsFactors = FALSE)
-})) %>%
-  group_by(scenario, particle_id) %>%
-  summarise(n_infections = mean(n_infections), .groups = "drop")
+ts_infections <- build_weekly_ts(results, metric = "infections",
+                                 bin_width = 7,
+                                 efficacy_name = "baseline") %>%
+  mutate(week = week / 7)
 
-make_hist <- function(sc) {
-  df    <- filter(hist_df, scenario == sc)
-  color <- SCENARIO_COLORS[sc]
-  ggplot(df, aes(x = n_infections)) +
-    geom_histogram(bins = 40, fill = color, alpha = 0.75, color = "white") +
-    # labs(x = "Total infections", y = "Posterior particles",
-    #      title = SCENARIO_LABELS[sc],
-    #      subtitle = "Baseline -- distribution across posterior particles") +
-    labs(x = "Total infections (entire population)", y = "Count of simulations") +
+make_infection_bar <- function(sc) {
+  df    <- filter(ts_infections, scenario == sc)
+  color <- unname(SCENARIO_COLORS[sc])
+  
+  ggplot(df, aes(x = week, y = q50)) +
+    geom_col(fill = color, alpha = 0.70, width = 0.8) +
+    geom_errorbar(aes(ymin = q025, ymax = q975),
+                  width = 0.3, linewidth = 0.5, color = "grey30") +
+    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+                       expand = expansion(add = c(0.5, 0.5))) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+    labs(x = "Weeks since outbreak start",
+         y = "Weekly new infections") +
     theme_fig()
 }
 
 # =============================================================================
-# Panel B/D: Cumulative HCW deaths time series -- baseline vs OBV 80% (full coverage)
+# Panel B/D: Cumulative HCW deaths -- baseline vs OBV 80% full coverage
 # =============================================================================
 ts_baseline <- build_weekly_ts(results, metric = "hcw_deaths",
-                                efficacy_name = "baseline")
+                               bin_width = 7,
+                               efficacy_name = "baseline")
 ts_obv80    <- build_weekly_ts(results, metric = "hcw_deaths",
-                                efficacy_name = "obv_80",
-                                coverage_name = "full")
+                               bin_width = 7,
+                               efficacy_name = "obv_80",
+                               coverage_name = "full")
 
-ts_df <- bind_rows(
+ts_hcw_df <- bind_rows(
   mutate(ts_baseline, arm = "baseline"),
   mutate(ts_obv80,    arm = "obv_80")
-)
+) %>%
+  mutate(week = week / 7)
 
 make_ts <- function(sc) {
   arms         <- c("baseline", "obv_80")
@@ -49,9 +55,10 @@ make_ts <- function(sc) {
   ts_colors    <- setNames(c(sc_color, "grey50"), arms)
   ts_linetypes <- c(baseline = "solid", obv_80 = "dashed")
   ts_labels    <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy)")
-
-  df <- filter(ts_df, scenario == sc) %>%
+  
+  df <- filter(ts_hcw_df, scenario == sc) %>%
     mutate(arm = factor(arm, levels = arms))
+  
   ggplot(df, aes(x = week, color = arm, fill = arm)) +
     geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.12, color = NA) +
     geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = 0.25, color = NA) +
@@ -59,24 +66,21 @@ make_ts <- function(sc) {
     scale_color_manual(values = ts_colors, labels = ts_labels, name = NULL) +
     scale_fill_manual( values = ts_colors, labels = ts_labels, name = NULL) +
     scale_linetype_manual(values = ts_linetypes, labels = ts_labels, name = NULL) +
-    labs(x = "Days since outbreak start",
+    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+                       expand = expansion(add = c(0.5, 0.5))) +
+    labs(x = "Weeks since outbreak start",
          y = "Cumulative HCW deaths") +
     theme_fig() +
     theme(legend.key.width = unit(2, "cm"))
 }
 
 # =============================================================================
-# Save panels
+# Save individual panels
 # =============================================================================
-hist_ymax <- max(sapply(c("WestAfrica", "DRC"), function(sc) {
-  max(hist(filter(hist_df, scenario == sc)$n_infections, breaks = 40, plot = FALSE)$counts)
-}))
-ts_ymax <- max(ts_df$q975)
-
-fig1a <- make_hist("WestAfrica") #+ coord_cartesian(ylim = c(0, hist_ymax * 1.05))
-fig1b <- make_ts("WestAfrica")   #+ coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
-fig1c <- make_hist("DRC")        #+ coord_cartesian(ylim = c(0, hist_ymax * 1.05))
-fig1d <- make_ts("DRC")          #+ coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
+fig1a <- make_infection_bar("WestAfrica")
+fig1b <- make_ts("WestAfrica")
+fig1c <- make_infection_bar("DRC")
+fig1d <- make_ts("DRC")
 
 ggsave(file.path(OUT_DIR, "figure_1_a.png"), fig1a,
        width = 7, height = 5, dpi = 150)
@@ -87,20 +91,21 @@ ggsave(file.path(OUT_DIR, "figure_1_c.png"), fig1c,
 ggsave(file.path(OUT_DIR, "figure_1_d.png"), fig1d,
        width = 7, height = 5, dpi = 150)
 
-message("Figure 1 panels saved: a, b, c, d")
-
-# Combine into one figure
+# =============================================================================
+# Combined figure layouts
+# =============================================================================
 make_header <- function(label) {
   ggplot() +
-    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5) +
-    theme_void() +
-    theme(plot.tag = element_blank())
+    annotate("text", x = 0.5, y = 0.5, label = label,
+             fontface = "bold", size = 5) +
+    theme_void()
 }
 
+# Side-by-side layout
 fig1_all <- (
   (make_header("West Africa") | make_header("DRC")) /
-  (fig1a | fig1c) /
-  (fig1b | fig1d)
+    (fig1a | fig1c) /
+    (fig1b | fig1d)
 ) +
   plot_layout(heights = c(0.12, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
@@ -108,9 +113,10 @@ fig1_all <- (
 ggsave(file.path(OUT_DIR, "figure_1_ALL.png"), fig1_all,
        width = 11, height = 6.5, dpi = 150, units = "in")
 
+# Stacked layout
 fig1_all_v2 <- (
   make_header("West Africa") / fig1a / fig1b /
-  make_header("DRC") / fig1c / fig1d
+    make_header("DRC")         / fig1c / fig1d
 ) +
   plot_layout(heights = c(0.12, 1, 2, 0.12, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "a ", "b ", "", "c ", "d ")))
