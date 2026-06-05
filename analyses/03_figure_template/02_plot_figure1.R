@@ -17,14 +17,16 @@ ts_infections <- build_weekly_ts(results, metric = "infections",
   mutate(week = week / 7)
 
 make_infection_bar <- function(sc) {
-  df    <- filter(ts_infections, scenario == sc)
+  df <- filter(ts_infections, scenario == sc)
   color <- unname(SCENARIO_COLORS[sc])
+  x_max <- if (sc == "WestAfrica") 365 / 7 else 450 / 7 # days -> weeks
   
   ggplot(df, aes(x = week, y = q50)) +
     geom_col(fill = color, alpha = 0.70, width = 0.8) +
     geom_errorbar(aes(ymin = q025, ymax = q975),
                   width = 0.3, linewidth = 0.5, color = "grey30") +
-    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+    scale_x_continuous(breaks = seq(0, ceiling(x_max / 5) * 5, by = 5),
+                       limits = c(0, x_max),
                        expand = expansion(add = c(0.5, 0.5))) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
     labs(x = "Weeks since outbreak start",
@@ -50,23 +52,25 @@ ts_hcw_df <- bind_rows(
   mutate(week = week / 7)
 
 make_ts <- function(sc) {
-  arms         <- c("baseline", "obv_80")
-  sc_color     <- unname(SCENARIO_COLORS[sc])
-  ts_colors    <- setNames(c("grey50", sc_color), arms)
+  arms <- c("baseline", "obv_80")
+  sc_color <- unname(SCENARIO_COLORS[sc])
+  ts_colors <- setNames(c(sc_color, "grey50"), arms)
   ts_linetypes <- c(baseline = "solid", obv_80 = "dashed")
-  ts_labels    <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy)")
+  ts_labels <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy)")
+  x_max <- if (sc == "WestAfrica") 365 / 7 else 450 / 7
   
   df <- filter(ts_hcw_df, scenario == sc) %>%
     mutate(arm = factor(arm, levels = arms))
   
   ggplot(df, aes(x = week, color = arm, fill = arm)) +
     geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.12, color = NA) +
-    geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = 0.25, color = NA) +
+    geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.25, color = NA) +
     geom_line(aes(y = q50, linetype = arm), linewidth = 1.0) +
     scale_color_manual(values = ts_colors, labels = ts_labels, name = NULL) +
     scale_fill_manual( values = ts_colors, labels = ts_labels, name = NULL) +
     scale_linetype_manual(values = ts_linetypes, labels = ts_labels, name = NULL) +
-    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+    scale_x_continuous(breaks = seq(0, ceiling(x_max / 5) * 5, by = 5),
+                       limits = c(0, x_max),
                        expand = expansion(add = c(0.5, 0.5))) +
     labs(x = "Weeks since outbreak start",
          y = "Cumulative HCW deaths") +
@@ -162,21 +166,36 @@ ggsave(file.path(OUT_DIR, "figure_1_ALL_deaths.png"), fig_allpop,
        width = 11, height = 6.5, dpi = 150, units = "in")
 
 # =============================================================================
-# Variant: Weekly HCW death incidence in panels a/c
+# Variant: Weekly HCW death incidence in panels a/c -- grouped bars w/ OBV
 # =============================================================================
-ts_hcw_inc <- build_weekly_ts(results, metric = "hcw_deaths_incidence",
-                              bin_width = 7,
-                              efficacy_name = "baseline") %>%
-  mutate(week = week / 7)
+ts_hcw_inc_base  <- build_weekly_ts(results, metric = "hcw_deaths_incidence",
+                                    bin_width = 7,
+                                    efficacy_name = "baseline") %>%
+  mutate(week = week / 7, arm = "baseline")
+
+ts_hcw_inc_obv80 <- build_weekly_ts(results, metric = "hcw_deaths_incidence",
+                                    bin_width = 7,
+                                    efficacy_name = "obv_80",
+                                    coverage_name = "full") %>%
+  mutate(week = week / 7, arm = "obv_80")
+
+ts_hcw_inc <- bind_rows(ts_hcw_inc_base, ts_hcw_inc_obv80) %>%
+  mutate(arm = factor(arm, levels = c("baseline", "obv_80")))
 
 make_hcw_death_bar <- function(sc) {
-  df    <- filter(ts_hcw_inc, scenario == sc)
-  color <- unname(SCENARIO_COLORS[sc])
+  arms     <- c("baseline", "obv_80")
+  sc_color <- unname(SCENARIO_COLORS[sc])
+  bar_colors <- setNames(c("grey50", sc_color), arms)
+  bar_labels <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy)")
   
-  ggplot(df, aes(x = week, y = q50)) +
-    geom_col(fill = color, alpha = 0.70, width = 0.8) +
+  df <- filter(ts_hcw_inc, scenario == sc)
+  
+  ggplot(df, aes(x = week, y = q50, fill = arm)) +
+    geom_col(alpha = 0.70, width = 0.7, position = position_dodge(width = 0.8)) +
     geom_errorbar(aes(ymin = q025, ymax = q975),
-                  width = 0.3, linewidth = 0.5, color = "grey30") +
+                  width = 0.2, linewidth = 0.4, color = "grey30",
+                  position = position_dodge(width = 0.8)) +
+    scale_fill_manual(values = bar_colors, labels = bar_labels, name = NULL) +
     scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
                        expand = expansion(add = c(0.5, 0.5))) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
@@ -194,6 +213,36 @@ fig_hcw <- (
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
 
 ggsave(file.path(OUT_DIR, "figure_1_ALL_HCW-deaths.png"), fig_hcw,
+       width = 11, height = 6.5, dpi = 150, units = "in")
+
+# =============================================================================
+# Variant: Weekly HCW death incidence (baseline only, single bar) in panels a/c
+# =============================================================================
+make_hcw_death_bar_baseline <- function(sc) {
+  df    <- filter(ts_hcw_inc_base, scenario == sc)
+  color <- unname(SCENARIO_COLORS[sc])
+  
+  ggplot(df, aes(x = week, y = q50)) +
+    geom_col(fill = color, alpha = 0.70, width = 0.8) +
+    geom_errorbar(aes(ymin = q025, ymax = q975),
+                  width = 0.3, linewidth = 0.5, color = "grey30") +
+    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+                       expand = expansion(add = c(0.5, 0.5))) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+    labs(x = "Weeks since outbreak start",
+         y = "Incident HCW deaths") +
+    theme_fig()
+}
+
+fig_hcw_baseline <- (
+  (make_header("West Africa") | make_header("DRC")) /
+    (make_hcw_death_bar_baseline("WestAfrica") | make_hcw_death_bar_baseline("DRC")) /
+    (make_ts("WestAfrica")                     | make_ts("DRC"))
+) +
+  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
+
+ggsave(file.path(OUT_DIR, "figure_1_ALL_HCW-deaths_baseline.png"), fig_hcw_baseline,
        width = 11, height = 6.5, dpi = 150, units = "in")
 
 message("Figure 1 variants saved")
