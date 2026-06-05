@@ -12,6 +12,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(here)
+library(patchwork)
 
 # =============================================================================
 # Constants
@@ -21,8 +22,8 @@ SCENARIO_LABELS <- c(
   DRC        = "DRC (Middle, PlusPlus)"
 )
 SCENARIO_COLORS <- c(
-  WestAfrica = "#d73097",
-  DRC        = "#2166ac"
+  WestAfrica = "#d95f02",
+  DRC        = "#1b9e77"
 )
 OBV_EFFICACY_LEVELS <- c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
 OBV_EFFICACY_LABELS <- c("50%", "60%", "70%", "80%", "90%")
@@ -391,7 +392,8 @@ build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections"),
 # Shared ggplot theme
 # =============================================================================
 theme_fig <- function(base_size = 12) {
-  theme_bw(base_size = base_size) +
+  # theme_bw(base_size = base_size) +
+  theme_classic(base_size = base_size) +
     theme(
       plot.title       = element_text(face = "bold", size = base_size + 1),
       plot.subtitle    = element_text(color = "grey40", size = base_size - 2),
