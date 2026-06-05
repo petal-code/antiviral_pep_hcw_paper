@@ -40,7 +40,7 @@ SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
 COMMON_PATH    <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R")
 FUNCTIONS_PATH <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_npi.R")
 R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
-SCENARIO_CSV   <- here::here("data-processed", "final_four_scenario_values.csv")
+SCENARIO_CSV   <- here::here("data-processed", "final_six_scenario_values_original_approach.csv")
 SCENARIO_ID    <- "Worst_WestAfrica"
 
 # The fixed (not fitted) efficacies general_hospital_quarantine_efficacy and
