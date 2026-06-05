@@ -22,9 +22,10 @@ make_hist <- function(sc) {
   color <- SCENARIO_COLORS[sc]
   ggplot(df, aes(x = n_infections)) +
     geom_histogram(bins = 40, fill = color, alpha = 0.75, color = "white") +
-    labs(x = "Total infections", y = "Posterior particles",
-         title = SCENARIO_LABELS[sc],
-         subtitle = "Baseline -- distribution across posterior particles") +
+    # labs(x = "Total infections", y = "Posterior particles",
+    #      title = SCENARIO_LABELS[sc],
+    #      subtitle = "Baseline -- distribution across posterior particles") +
+    labs(x = "Total infections (entire population)", y = "Count of simulations") +
     theme_fig()
 }
 
@@ -43,35 +44,78 @@ ts_df <- bind_rows(
 )
 
 make_ts <- function(sc) {
-  arms      <- c("baseline", "obv_80")
-  ts_colors <- get_arm_colors(sc, arms)
-  ts_labels <- ARM_LABELS[arms]
+  arms         <- c("baseline", "obv_80")
+  sc_color     <- unname(SCENARIO_COLORS[sc])
+  ts_colors    <- setNames(c(sc_color, "grey50"), arms)
+  ts_linetypes <- c(baseline = "solid", obv_80 = "dashed")
+  ts_labels    <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy)")
 
   df <- filter(ts_df, scenario == sc) %>%
     mutate(arm = factor(arm, levels = arms))
   ggplot(df, aes(x = week, color = arm, fill = arm)) +
     geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.12, color = NA) +
     geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = 0.25, color = NA) +
-    geom_line(aes(y = q50), linewidth = 1.0) +
+    geom_line(aes(y = q50, linetype = arm), linewidth = 1.0) +
     scale_color_manual(values = ts_colors, labels = ts_labels, name = NULL) +
     scale_fill_manual( values = ts_colors, labels = ts_labels, name = NULL) +
+    scale_linetype_manual(values = ts_linetypes, labels = ts_labels, name = NULL) +
     labs(x = "Days since outbreak start",
-         y = "Cumulative HCW deaths",
-         title = SCENARIO_LABELS[sc],
-         subtitle = "Baseline vs OBV 80% (full coverage) | Line: median | Bands: 50% / 95% CI") +
-    theme_fig()
+         y = "Cumulative HCW deaths") +
+    theme_fig() +
+    theme(legend.key.width = unit(2, "cm"))
 }
 
 # =============================================================================
 # Save panels
 # =============================================================================
-ggsave(file.path(OUT_DIR, "figure_1_a.png"), make_hist("WestAfrica"),
+hist_ymax <- max(sapply(c("WestAfrica", "DRC"), function(sc) {
+  max(hist(filter(hist_df, scenario == sc)$n_infections, breaks = 40, plot = FALSE)$counts)
+}))
+ts_ymax <- max(ts_df$q975)
+
+fig1a <- make_hist("WestAfrica") #+ coord_cartesian(ylim = c(0, hist_ymax * 1.05))
+fig1b <- make_ts("WestAfrica")   #+ coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
+fig1c <- make_hist("DRC")        #+ coord_cartesian(ylim = c(0, hist_ymax * 1.05))
+fig1d <- make_ts("DRC")          #+ coord_cartesian(ylim = c(0, ts_ymax   * 1.05))
+
+ggsave(file.path(OUT_DIR, "figure_1_a.png"), fig1a,
        width = 7, height = 5, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_1_b.png"), make_ts("WestAfrica"),
+ggsave(file.path(OUT_DIR, "figure_1_b.png"), fig1b,
        width = 7, height = 5, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_1_c.png"), make_hist("DRC"),
+ggsave(file.path(OUT_DIR, "figure_1_c.png"), fig1c,
        width = 7, height = 5, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_1_d.png"), make_ts("DRC"),
+ggsave(file.path(OUT_DIR, "figure_1_d.png"), fig1d,
        width = 7, height = 5, dpi = 150)
 
 message("Figure 1 panels saved: a, b, c, d")
+
+# Combine into one figure
+make_header <- function(label) {
+  ggplot() +
+    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5) +
+    theme_void() +
+    theme(plot.tag = element_blank())
+}
+
+fig1_all <- (
+  (make_header("West Africa") | make_header("DRC")) /
+  (fig1a | fig1c) /
+  (fig1b | fig1d)
+) +
+  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
+
+ggsave(file.path(OUT_DIR, "figure_1_ALL.png"), fig1_all,
+       width = 11, height = 6.5, dpi = 150, units = "in")
+
+fig1_all_v2 <- (
+  make_header("West Africa") / fig1a / fig1b /
+  make_header("DRC") / fig1c / fig1d
+) +
+  plot_layout(heights = c(0.12, 1, 2, 0.12, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "a ", "b ", "", "c ", "d ")))
+
+ggsave(file.path(OUT_DIR, "figure_1_ALL_v2.png"), fig1_all_v2,
+       width = 6.5, height = 11, dpi = 150, units = "in")
+
+message("Figure 1 saved")
