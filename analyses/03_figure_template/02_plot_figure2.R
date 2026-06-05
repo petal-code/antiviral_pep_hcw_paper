@@ -1,15 +1,22 @@
 # =============================================================================
 # 02_plot_figure2.R
+# OBV efficacy comparison at full coverage -- post-hoc applied to baseline runs
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-results <- load_results("full")
-run_df  <- build_run_df(results)
-pdf     <- make_particle_df(run_df)
+results <- load_results()
 
-obv_df <- pdf %>%
+# Build baseline + all efficacy arms at full coverage in a single pass
+run_df <- do.call(rbind, c(
+  list(build_run_df_obv(results, "baseline")),
+  lapply(OBV_EFFICACY_LEVELS, function(eff) {
+    build_run_df_obv(results, eff, "full")
+  })
+))
+
+pdf <- make_particle_df(run_df) %>%
   filter(arm %in% OBV_EFFICACY_LEVELS) %>%
   mutate(
     arm_label      = factor(OBV_EFFICACY_LABELS[match(arm, OBV_EFFICACY_LEVELS)],
@@ -31,7 +38,7 @@ make_summ <- function(df, metric, sc) {
 
 make_bar_plot <- function(summ_df, sc, y_label, title) {
   obv_colors <- setNames(ARM_COLORS_OBV, OBV_EFFICACY_LABELS)
-  
+
   ggplot(summ_df, aes(x = arm_label, y = median, fill = arm_label)) +
     geom_col(width = 0.6, alpha = 0.85) +
     geom_errorbar(
@@ -41,7 +48,8 @@ make_bar_plot <- function(summ_df, sc, y_label, title) {
     geom_point(aes(color = arm_label), size = 2) +
     scale_fill_manual(values  = obv_colors, guide = "none") +
     scale_color_manual(values = obv_colors, guide = "none") +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.08)),
+                       limits = c(0, NA)) +   # enforce non-negative y-axis
     labs(x = "OBV efficacy", y = y_label,
          title = title,
          subtitle = sprintf("%s | Bar: median | Line: 95%% CI across posterior particles",
@@ -51,25 +59,25 @@ make_bar_plot <- function(summ_df, sc, y_label, title) {
 }
 
 ggsave(file.path(OUT_DIR, "figure_2_a.png"),
-       make_bar_plot(make_summ(obv_df, "pct_hcw_deaths_averted", "WestAfrica"),
+       make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "WestAfrica"),
                      "WestAfrica", "HCW deaths averted (%)",
                      "% HCW deaths averted by OBV efficacy"),
        width = 7, height = 5, dpi = 150)
 
 ggsave(file.path(OUT_DIR, "figure_2_b.png"),
-       make_bar_plot(make_summ(obv_df, "pct_days_lost_averted", "WestAfrica"),
+       make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "WestAfrica"),
                      "WestAfrica", "HCW days lost averted (%)",
                      "% HCW days lost averted by OBV efficacy"),
        width = 7, height = 5, dpi = 150)
 
 ggsave(file.path(OUT_DIR, "figure_2_c.png"),
-       make_bar_plot(make_summ(obv_df, "pct_hcw_deaths_averted", "DRC"),
+       make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "DRC"),
                      "DRC", "HCW deaths averted (%)",
                      "% HCW deaths averted by OBV efficacy"),
        width = 7, height = 5, dpi = 150)
 
 ggsave(file.path(OUT_DIR, "figure_2_d.png"),
-       make_bar_plot(make_summ(obv_df, "pct_days_lost_averted", "DRC"),
+       make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "DRC"),
                      "DRC", "HCW days lost averted (%)",
                      "% HCW days lost averted by OBV efficacy"),
        width = 7, height = 5, dpi = 150)
