@@ -104,6 +104,8 @@ OBSERVED_NAMED <- c(
   time_to_peak = 164,
   peak_height  = 599
 )
+# time to peak and peak height from: https://en.wikipedia.org/wiki/West_African_Ebola_virus_epidemic_timeline_of_reported_cases_and_deaths
+# 12th October deaths peak, starting from 1st May "start" (approx) yields 164 days in (again approx, as that's the end of the reporting period for those deaths)
 
 # HCW per-contact exposure base that hcw_risk_scalar multiplies (prob =
 # min(base * scalar, 1)). 0.25 reproduces DEFAULT_SCALAR_INPUTS.
