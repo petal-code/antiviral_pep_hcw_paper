@@ -28,7 +28,7 @@ make_infection_bar <- function(sc) {
                        expand = expansion(add = c(0.5, 0.5))) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
     labs(x = "Weeks since outbreak start",
-         y = "Weekly new infections") +
+         y = "Incident infections (all)") +
     theme_fig()
 }
 
@@ -110,18 +110,90 @@ fig1_all <- (
   plot_layout(heights = c(0.12, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
 
-ggsave(file.path(OUT_DIR, "figure_1_ALL.png"), fig1_all,
+ggsave(file.path(OUT_DIR, "figure_1_ALL_infections.png"), fig1_all,
        width = 11, height = 6.5, dpi = 150, units = "in")
 
 # Stacked layout
-fig1_all_v2 <- (
-  make_header("West Africa") / fig1a / fig1b /
-    make_header("DRC")         / fig1c / fig1d
-) +
-  plot_layout(heights = c(0.12, 1, 2, 0.12, 1, 2)) +
-  plot_annotation(tag_levels = list(c("", "a ", "b ", "", "c ", "d ")))
-
-ggsave(file.path(OUT_DIR, "figure_1_ALL_v2.png"), fig1_all_v2,
-       width = 6.5, height = 11, dpi = 150, units = "in")
+# fig1_all_v2 <- (
+#   make_header("West Africa") / fig1a / fig1b /
+#     make_header("DRC")         / fig1c / fig1d
+# ) +
+#   plot_layout(heights = c(0.12, 1, 2, 0.12, 1, 2)) +
+#   plot_annotation(tag_levels = list(c("", "a ", "b ", "", "c ", "d ")))
+# 
+# ggsave(file.path(OUT_DIR, "figure_1_ALL_v2.png"), fig1_all_v2,
+#        width = 6.5, height = 11, dpi = 150, units = "in")
 
 message("Figure 1 saved")
+
+# =============================================================================
+# Variant: Weekly all-population death incidence in panels a/c
+# =============================================================================
+ts_deaths_allpop <- build_weekly_ts(results, metric = "deaths",
+                                    bin_width = 7,
+                                    efficacy_name = "baseline") %>%
+  mutate(week = week / 7)
+
+make_death_bar <- function(sc) {
+  df    <- filter(ts_deaths_allpop, scenario == sc)
+  color <- unname(SCENARIO_COLORS[sc])
+
+  ggplot(df, aes(x = week, y = q50)) +
+    geom_col(fill = color, alpha = 0.70, width = 0.8) +
+    geom_errorbar(aes(ymin = q025, ymax = q975),
+                  width = 0.3, linewidth = 0.5, color = "grey30") +
+    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+                       expand = expansion(add = c(0.5, 0.5))) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+    labs(x = "Weeks since outbreak start",
+         y = "Incident deaths (all)") +
+    theme_fig()
+}
+
+fig_allpop <- (
+  (make_header("West Africa") | make_header("DRC")) /
+    (make_death_bar("WestAfrica") | make_death_bar("DRC")) /
+    (make_ts("WestAfrica")        | make_ts("DRC"))
+) +
+  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
+
+ggsave(file.path(OUT_DIR, "figure_1_ALL_deaths.png"), fig_allpop,
+       width = 11, height = 6.5, dpi = 150, units = "in")
+
+# =============================================================================
+# Variant: Weekly HCW death incidence in panels a/c
+# =============================================================================
+ts_hcw_inc <- build_weekly_ts(results, metric = "hcw_deaths_incidence",
+                              bin_width = 7,
+                              efficacy_name = "baseline") %>%
+  mutate(week = week / 7)
+
+make_hcw_death_bar <- function(sc) {
+  df    <- filter(ts_hcw_inc, scenario == sc)
+  color <- unname(SCENARIO_COLORS[sc])
+
+  ggplot(df, aes(x = week, y = q50)) +
+    geom_col(fill = color, alpha = 0.70, width = 0.8) +
+    geom_errorbar(aes(ymin = q025, ymax = q975),
+                  width = 0.3, linewidth = 0.5, color = "grey30") +
+    scale_x_continuous(breaks = seq(0, 35, by = 5), limits = c(0, 35),
+                       expand = expansion(add = c(0.5, 0.5))) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+    labs(x = "Weeks since outbreak start",
+         y = "Incident HCW deaths") +
+    theme_fig()
+}
+
+fig_hcw <- (
+  (make_header("West Africa") | make_header("DRC")) /
+    (make_hcw_death_bar("WestAfrica") | make_hcw_death_bar("DRC")) /
+    (make_ts("WestAfrica")            | make_ts("DRC"))
+) +
+  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
+
+ggsave(file.path(OUT_DIR, "figure_1_ALL_HCW-deaths.png"), fig_hcw,
+       width = 11, height = 6.5, dpi = 150, units = "in")
+
+message("Figure 1 variants saved")
