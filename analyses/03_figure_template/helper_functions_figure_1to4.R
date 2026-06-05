@@ -99,11 +99,10 @@ coverage_at_time <- function(t, times, values) {
 #      to determine whether the death was prevented
 #
 # Returns a list:
-#   prevented_hcw  - number of deaths prevented by OBV in this run
-#   counterfactual_hcw - total HCW deaths that would have occurred without OBV
-#                        (= original deaths; same as baseline since OBV does
-#                         not change transmission, only individual outcomes)
-#   obv_received   - logical vector over HCW rows indicating OBV receipt
+#   prevented_hcw      - number of deaths prevented by OBV in this run
+#   counterfactual_hcw - total HCW deaths without OBV (= original deaths)
+#   obv_received       - logical vector over HCW rows indicating OBV receipt
+#   prevented_flag     - logical vector; use this for days-lost calculation
 # =============================================================================
 apply_obv_posthoc <- function(cases, efficacy, coverage_spec, seed = NULL) {
   if (!is.null(seed)) set.seed(seed)
@@ -113,7 +112,7 @@ apply_obv_posthoc <- function(cases, efficacy, coverage_spec, seed = NULL) {
   
   if (n == 0) {
     return(list(prevented_hcw = 0L, counterfactual_hcw = 0L,
-                obv_received = logical(0)))
+                obv_received = logical(0), prevented_flag = logical(0)))
   }
   
   died <- !is.na(hcw$outcome) & hcw$outcome
@@ -131,17 +130,17 @@ apply_obv_posthoc <- function(cases, efficacy, coverage_spec, seed = NULL) {
   
   list(
     prevented_hcw      = sum(prevented_flag),
-    counterfactual_hcw = sum(died),   # unchanged from baseline
+    counterfactual_hcw = sum(died),
     obv_received       = obv_received,
-    prevented_flag     = prevented_flag   # full logical vector; use this for days-lost calc
+    prevented_flag     = prevented_flag   # use this directly; do NOT re-draw
   )
 }
 
 # =============================================================================
 # Compute HCW days lost for a single run, with optional post-hoc OBV receipt
 #
-# obv_received: logical vector aligned to HCW rows of cases (from apply_obv_posthoc),
-#               or NULL for no-OBV (baseline) computation.
+# obv_received: logical vector aligned to HCW rows (from apply_obv_posthoc),
+#               or NULL for baseline.
 # prevented:    logical vector -- which HCW deaths were prevented by OBV.
 #               If NULL, no deaths are prevented (baseline).
 # =============================================================================
@@ -162,8 +161,8 @@ compute_hcw_days_lost <- function(cases, duration,
   died <- !is.na(hcw$outcome) & hcw$outcome
   
   # OBV receipt and prevention default to FALSE if not supplied (baseline case)
-  received  <- if (!is.null(obv_received)) obv_received else rep(FALSE, nrow(hcw))
-  prevented_death <- if (!is.null(prevented)) prevented else rep(FALSE, nrow(hcw))
+  received        <- if (!is.null(obv_received)) obv_received else rep(FALSE, nrow(hcw))
+  prevented_death <- if (!is.null(prevented))    prevented    else rep(FALSE, nrow(hcw))
   
   # Effective alive/dead status after OBV intervention
   died_after_obv <- died & !prevented_death
@@ -180,8 +179,7 @@ compute_hcw_days_lost <- function(cases, duration,
     duration
   )
   
-  # Survived with OBV (either would have died but prevented, or survived naturally):
-  # earlier return to work
+  # Survived with OBV: earlier return to work
   surv_obv <- !died_after_obv & received
   absence_end[surv_obv] <- hcw$time_outcome_absolute[surv_obv] + obv_return_days
   
@@ -191,10 +189,6 @@ compute_hcw_days_lost <- function(cases, duration,
 
 # =============================================================================
 # Build per-run summary data frame for a given OBV scenario
-#
-# efficacy_name: one of OBV_EFFICACY_LEVELS, or "baseline"
-# coverage_name: one of COVERAGE_LEVELS, or NULL for baseline
-# seed_offset:   integer added to particle/rep index for reproducible sampling
 # =============================================================================
 build_run_df_obv <- function(results,
                              efficacy_name = "baseline",
@@ -207,7 +201,6 @@ build_run_df_obv <- function(results,
   
   do.call(rbind, lapply(results, function(x) {
     if (is_baseline) {
-      # No OBV -- use raw counts from simulation
       days_lost     <- compute_hcw_days_lost(x$tdf, x$duration)
       prevented_hcw <- 0L
     } else {
@@ -215,9 +208,7 @@ build_run_df_obv <- function(results,
       run_seed <- seed_offset + x$particle_id * 1000L + x$rep
       obv      <- apply_obv_posthoc(x$tdf, efficacy, cov_spec, seed = run_seed)
       
-      # Use the prevented_flag returned directly -- do NOT re-draw runif here,
-      # as that would produce a different set of prevented individuals than
-      # the count in obv$prevented_hcw, causing days-lost to be inconsistent.
+      # Use prevented_flag directly -- do NOT re-draw runif
       days_lost     <- compute_hcw_days_lost(x$tdf, x$duration,
                                              obv_received = obv$obv_received,
                                              prevented    = obv$prevented_flag)
@@ -225,30 +216,25 @@ build_run_df_obv <- function(results,
     }
     
     data.frame(
-      scenario          = x$scenario,
-      particle_id       = x$particle_id,
-      rep               = x$rep,
-      arm               = efficacy_name,
-      coverage_scenario = if (is_baseline) "baseline" else coverage_name,
-      n_infections      = x$n_infections,
-      n_hcw_deaths      = x$n_hcw_deaths - prevented_hcw,
+      scenario           = x$scenario,
+      particle_id        = x$particle_id,
+      rep                = x$rep,
+      arm                = efficacy_name,
+      coverage_scenario  = if (is_baseline) "baseline" else coverage_name,
+      n_infections       = x$n_infections,
+      n_hcw_deaths       = x$n_hcw_deaths - prevented_hcw,
       counterfactual_hcw = x$n_hcw_deaths,
-      prevented_hcw     = prevented_hcw,
-      hcw_days_lost     = days_lost,
-      stringsAsFactors  = FALSE
+      prevented_hcw      = prevented_hcw,
+      hcw_days_lost      = days_lost,
+      stringsAsFactors   = FALSE
     )
   }))
 }
 
 # =============================================================================
-# Aggregate: mean over reps per particle, then attach counterfactual for % averted
-#
-# Follows the burden-weighted approach from the reference implementation:
-#   pct_averted = 100 * sum(prevented) / sum(counterfactual)  per particle
-# This guarantees values in [0, 100] with no negative effectiveness.
+# Aggregate to particle level (burden-weighted % averted)
 # =============================================================================
 make_particle_df <- function(run_df) {
-  # Sum prevented and counterfactual over reps (burden-weighted denominator)
   pdf <- run_df %>%
     group_by(scenario, particle_id, arm, coverage_scenario) %>%
     summarise(
@@ -267,11 +253,9 @@ make_particle_df <- function(run_df) {
       )
     )
   
-  # Baseline days-lost for % days-lost-averted calculation
   base_days <- pdf %>%
     filter(arm == "baseline") %>%
-    select(scenario, particle_id,
-           baseline_days_lost = hcw_days_lost)
+    select(scenario, particle_id, baseline_days_lost = hcw_days_lost)
   
   pdf %>%
     left_join(base_days, by = c("scenario", "particle_id")) %>%
@@ -285,35 +269,16 @@ make_particle_df <- function(run_df) {
 }
 
 # =============================================================================
-# Build particle_df for all efficacy x coverage combinations (Figure 3 / 4)
+# Weekly time series for a metric.
+#
+# metric:
+#   "hcw_deaths"     -- cumulative HCW deaths over time
+#   "hcw_infections" -- cumulative HCW infections over time
+#   "infections"     -- weekly incidence (all cases, NOT cumulative);
+#                       used for the bar+CI panel in figure 1
 # =============================================================================
-make_particle_df_grid <- function(results,
-                                  efficacy_levels = OBV_EFFICACY_LEVELS,
-                                  coverage_levels = COVERAGE_LEVELS,
-                                  seed_offset     = 0L) {
-  rows <- vector("list",
-                 length(efficacy_levels) * length(coverage_levels) + 1L)
-  idx <- 1L
-  
-  # Baseline row
-  rows[[idx]] <- build_run_df_obv(results, "baseline")
-  idx <- idx + 1L
-  
-  for (eff in efficacy_levels) {
-    for (cov in coverage_levels) {
-      rows[[idx]] <- build_run_df_obv(results, eff, cov,
-                                      seed_offset = seed_offset)
-      idx <- idx + 1L
-    }
-  }
-  
-  make_particle_df(do.call(rbind, rows))
-}
-
-# =============================================================================
-# Weekly cumulative time series for a metric (HCW deaths or infections)
-# =============================================================================
-build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections"),
+build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections",
+                                                "infections"),
                             bin_width = 28,
                             efficacy_name = "baseline",
                             coverage_name = NULL,
@@ -335,26 +300,21 @@ build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections"),
     died   <- !is.na(cases$outcome) & cases$outcome
     
     if (!is_baseline) {
-      run_seed  <- seed_offset + x$particle_id * 1000L + x$rep
-      obv       <- apply_obv_posthoc(cases, efficacy, cov_spec, seed = run_seed)
-      hcw_rows  <- which(is_hcw)
-      # Mark prevented deaths so they are excluded from the time series
-      prevented_idx <- hcw_rows[obv$prevented_hcw > 0]   # approximate: use count
-      # Full prevention vector for time-series exclusion
-      hcw_died_idx  <- which(is_hcw & died)
-      set.seed(run_seed + 1L)
-      n_prevent <- obv$prevented_hcw
-      if (n_prevent > 0 && length(hcw_died_idx) >= n_prevent) {
-        prevented_full <- logical(nrow(cases))
-        prevented_full[sample(hcw_died_idx, n_prevent)] <- TRUE
-        died <- died & !prevented_full
-      }
+      run_seed <- seed_offset + x$particle_id * 1000L + x$rep
+      obv      <- apply_obv_posthoc(cases, efficacy, cov_spec, seed = run_seed)
+      # Exclude prevented deaths from the HCW death time series
+      prevented_full <- logical(nrow(cases))
+      prevented_full[which(is_hcw)] <- obv$prevented_flag
+      died <- died & !prevented_full
     }
     
     times <- if (metric == "hcw_deaths") {
       cases$time_outcome_absolute[died & is_hcw]
-    } else {
+    } else if (metric == "hcw_infections") {
       cases$time_infection_absolute[is_hcw]
+    } else {
+      # All infections (entire population), weekly incidence
+      cases$time_infection_absolute
     }
     counts <- hist(times[!is.na(times)], breaks = breaks, plot = FALSE)$counts
     
@@ -369,13 +329,16 @@ build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections"),
     )
   }))
   
-  # Mean over reps, then quantiles over particles, then cumsum
+  # Mean over reps per particle, then (optionally cumsum), then quantiles.
+  # "infections" is weekly incidence -- skip cumsum.
+  is_incidence <- metric == "infections"
+  
   rows %>%
     group_by(scenario, arm, particle_id, week) %>%
     summarise(value = mean(value), .groups = "drop") %>%
     arrange(scenario, arm, particle_id, week) %>%
     group_by(scenario, arm, particle_id) %>%
-    mutate(value = cumsum(value)) %>%
+    mutate(value = if (is_incidence) value else cumsum(value)) %>%
     ungroup() %>%
     group_by(scenario, arm, week) %>%
     summarise(
@@ -392,7 +355,6 @@ build_weekly_ts <- function(results, metric = c("hcw_deaths", "hcw_infections"),
 # Shared ggplot theme
 # =============================================================================
 theme_fig <- function(base_size = 12) {
-  # theme_bw(base_size = base_size) +
   theme_classic(base_size = base_size) +
     theme(
       plot.title       = element_text(face = "bold", size = base_size + 1),
