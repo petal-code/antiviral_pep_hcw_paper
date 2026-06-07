@@ -65,9 +65,9 @@ FIT_PARAMS <- c("R0", "prop_funeral", "etu_efficacy", "ppe_efficacy", "hcw_risk_
 PRIORS_NAMED <- list(
   R0              = c("unif",   1.15, 1.65),
   prop_funeral    = c("unif",   0.10, 0.40),
-  etu_efficacy    = c("unif",   0.60, 0.95),   # wide: the size/peak lever
-  ppe_efficacy    = c("normal", 0.70, 0.10),   # INFORMATIVE; clamp to [0,1] in build. Confirm centre/sd vs literature.
-  hcw_risk_scalar = c("unif",   1.00, 3.00)    # bounded: prob_hcw 0.25..0.75 (can't run away)
+  etu_efficacy    = c("unif",   0.60, 0.95),   
+  ppe_efficacy    = c("unif",   0.30, 0.90),   
+  hcw_risk_scalar = c("unif",   1.00, 3.00) 
 )
 
 FIXED_PARAMS <- list(
@@ -84,10 +84,8 @@ OBSERVED_NAMED <- c(
   log_n_deaths     = log(2299),
   log_n_hcw_deaths = log(79),       # https://afenet-journal.org/10-37432-jieph-d-25-00072/
   hcw_fraction     = 79 / 2299,     # = 0.0344
-  # >>> PLACEHOLDER <<< d_p05_p95 = 5-95% span of DEATH DATES (days). NOT 450.
-  #     Recompute: observed_d_p05_p95(weekly_deaths)  -- see section 3.
-  d_p05_p95        = 300,
-  log_peak_height  = log(95)
+  d_p05_p95        = 378,           # https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic - 4th Oct 2018 - 17 Oct 2019 
+  log_peak_height  = log(95)        # see https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic
 )
 
 HCW_BASE_PROB    <- 0.25

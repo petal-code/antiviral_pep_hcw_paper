@@ -68,7 +68,7 @@ PRIORS_NAMED <- list(
   R0              = c("unif",   1.15, 1.65),
   prop_funeral    = c("unif",   0.10, 0.40),
   etu_efficacy    = c("unif",   0.60, 0.95),   # wide: the size/peak lever
-  ppe_efficacy    = c("normal", 0.70, 0.10),   # INFORMATIVE; clamp to [0,1] in build. Confirm centre/sd vs literature.
+  ppe_efficacy    = c("unif", 0.30, 0.90),   # INFORMATIVE; clamp to [0,1] in build. Confirm centre/sd vs literature.
   hcw_risk_scalar = c("unif",   1.00, 3.00)    # bounded: prob_hcw 0.25..0.75 (can't run away)
 )
 
@@ -88,10 +88,9 @@ OBSERVED_NAMED <- c(
   log_n_deaths     = log(11325),
   log_n_hcw_deaths = log(513),
   hcw_fraction     = 513 / 11325,   # = 0.0453
-  # >>> PLACEHOLDER <<< d_p05_p95 = 5-95% span of DEATH DATES (days). NOT 365.
-  #     Recompute: observed_d_p05_p95(weekly_deaths)  -- see section 3.
-  d_p05_p95        = 240,
-  log_peak_height  = log(599)
+  d_p05_p95        = 274, # linear interpolation from ## info from here: https://en.wikipedia.org/wiki/West_African_Ebola_virus_epidemic_timeline_of_reported_cases_and_deaths 
+                          # gives the period 23rd July 2014 - 23 April April 2015
+  log_peak_height  = log(599) ## info from here: https://en.wikipedia.org/wiki/West_African_Ebola_virus_epidemic_timeline_of_reported_cases_and_deaths 
 )
 
 HCW_BASE_PROB    <- 0.25            # prob_hcw_cond_*_hospital = min(base * hcw_risk_scalar, 1)
@@ -163,10 +162,6 @@ priors             <- prep$priors
 observed_summaries <- prep$observed_summaries
 fixed_values       <- prep$fixed_values
 PARAM_NAMES        <- prep$fit_params
-
-# >>> recompute the d_p05_p95 target from the WA weekly DEATH series, e.g.:
-# weekly_deaths_WA <- c(...)                       # deaths per week, in order
-# observed_summaries["d_p05_p95"] <- observed_d_p05_p95(weekly_deaths_WA)
 
 ABC_CONFIG <- list(
   takeoff_death_threshold = TAKEOFF_DEATH_THRESHOLD,
