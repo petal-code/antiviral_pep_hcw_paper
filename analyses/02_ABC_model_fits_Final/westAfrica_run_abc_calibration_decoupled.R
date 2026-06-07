@@ -53,8 +53,8 @@ SCENARIO_ID    <- "Worst_WestAfrica"
 RUN_PROFILE <- "smoke"
 .PROFILES <- list(
   smoke      = list(n_reps =  5L, nb_simul =  60L, tolerance_target = 5.00, n_traj =  20L),
-  check      = list(n_reps = 30L, nb_simul = 500L, tolerance_target = 0.50, n_traj = 100L),
-  production = list(n_reps = 40L, nb_simul = 1000L, tolerance_target = 0.35, n_traj = 200L)
+  check      = list(n_reps = 30L, nb_simul = 590L, tolerance_target = 0.50, n_traj = 200L),
+  production = list(n_reps = 40L, nb_simul = 944L, tolerance_target = 0.35, n_traj = 200L)
 )
 stopifnot(RUN_PROFILE %in% names(.PROFILES))
 .prof <- .PROFILES[[RUN_PROFILE]]
