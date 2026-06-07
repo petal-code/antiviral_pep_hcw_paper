@@ -269,9 +269,14 @@ run_metadata <- make_decoupled_run_metadata(
 )
 result <- attach_decoupled_run_metadata(result, run_metadata)
 
-saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))
+# ABC_OUTPUT_DIR's name already encodes scenario/label/timestamp/tag, so write a
+# SHORT filename inside it to stay under the Windows 260-char MAX_PATH limit (a
+# deep timestamped dir + the long descriptive filename can exceed it -- which
+# fails saveRDS even though the short output_step* files write fine). The
+# descriptive name is kept for the shallow FINAL_OUTPUTS_DIR copy.
+saveRDS(result, file = file.path(ABC_OUTPUT_DIR, "result.rds"))
 saveRDS(result, file = file.path(FINAL_OUTPUTS_DIR, result_filename))
-write_decoupled_run_metadata(run_metadata, file.path(ABC_OUTPUT_DIR, result_filename))
+write_decoupled_run_metadata(run_metadata, file.path(ABC_OUTPUT_DIR, "result.rds"))
 write_decoupled_run_metadata(run_metadata, file.path(FINAL_OUTPUTS_DIR, result_filename))
 
 
