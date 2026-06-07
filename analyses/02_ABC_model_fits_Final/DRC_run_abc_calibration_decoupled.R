@@ -37,7 +37,7 @@
 # -----------------------------------------------------------------------------
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
-ANALYSIS_DIR   <- here::here("analyses", "02_ABC_model_fits_NPI_Eff")
+ANALYSIS_DIR   <- here::here("analyses", "02_ABC_model_fits_Final")
 FUNCTIONS_DIR  <- here::here("functions")
 SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
 COMMON_PATH    <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R")
@@ -97,7 +97,7 @@ MODEL_OVERRIDES <- list(check_final_size = 10000)
 
 ABC_OUTPUT_BASE   <- ANALYSIS_DIR
 ABC_OUTPUT_LABEL  <- "Decoupled"
-FINAL_OUTPUTS_DIR <- here::here("outputs", "02_ABC_model_fits_NPI_Eff")
+FINAL_OUTPUTS_DIR <- here::here("outputs", "02_ABC_model_fits_Final")
 if (!dir.exists(FINAL_OUTPUTS_DIR)) dir.create(FINAL_OUTPUTS_DIR, recursive = TRUE, showWarnings = FALSE)
 
 ABC_SETTINGS <- list(
@@ -156,10 +156,6 @@ priors             <- prep$priors
 observed_summaries <- prep$observed_summaries
 fixed_values       <- prep$fixed_values
 PARAM_NAMES        <- prep$fit_params
-
-# >>> recompute the d_p05_p95 target from the DRC weekly DEATH series, e.g.:
-# weekly_deaths_DRC <- c(...)                      # deaths per week, in order
-# observed_summaries["d_p05_p95"] <- observed_d_p05_p95(weekly_deaths_DRC)
 
 ABC_CONFIG <- list(
   takeoff_death_threshold = TAKEOFF_DEATH_THRESHOLD,
@@ -267,11 +263,10 @@ run_metadata <- make_decoupled_run_metadata(
 )
 result <- attach_decoupled_run_metadata(result, run_metadata)
 
-saveRDS(result, file = file.path(ABC_OUTPUT_DIR, result_filename))
+saveRDS(result, file = file.path(ABC_OUTPUT_DIR, "result.rds"))
 saveRDS(result, file = file.path(FINAL_OUTPUTS_DIR, result_filename))
-write_decoupled_run_metadata(run_metadata, file.path(ABC_OUTPUT_DIR, result_filename))
+write_decoupled_run_metadata(run_metadata, file.path(ABC_OUTPUT_DIR, "result.rds"))
 write_decoupled_run_metadata(run_metadata, file.path(FINAL_OUTPUTS_DIR, result_filename))
-
 
 # -----------------------------------------------------------------------------
 # 8. POSTERIOR INSPECTION (+ implied prob_hcw, + ridge diagnostic)

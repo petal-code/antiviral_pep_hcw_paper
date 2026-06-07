@@ -37,7 +37,7 @@
 # -----------------------------------------------------------------------------
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
-ANALYSIS_DIR   <- here::here("analyses", "02_ABC_model_fits_NPI_Eff")
+ANALYSIS_DIR   <- here::here("analyses", "02_ABC_model_fits_Final")
 FUNCTIONS_DIR  <- here::here("functions")
 SETUP_PATH     <- file.path(FUNCTIONS_DIR, "setup_model_parameters.R")
 COMMON_PATH    <- file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R")
@@ -103,7 +103,7 @@ MODEL_OVERRIDES <- list(check_final_size = 45000)
 
 ABC_OUTPUT_BASE   <- ANALYSIS_DIR
 ABC_OUTPUT_LABEL  <- "Decoupled"
-FINAL_OUTPUTS_DIR <- here::here("outputs", "02_ABC_model_fits_NPI_Eff")
+FINAL_OUTPUTS_DIR <- here::here("outputs", "02_ABC_model_fits_Final")
 if (!dir.exists(FINAL_OUTPUTS_DIR)) dir.create(FINAL_OUTPUTS_DIR, recursive = TRUE, showWarnings = FALSE)
 
 ABC_SETTINGS <- list(
