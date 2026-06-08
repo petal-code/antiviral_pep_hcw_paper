@@ -382,7 +382,7 @@ build_weekly_ts <- function(results,
 #
 # Shared ggplot theme for all figures.
 # =============================================================================
-theme_fig <- function(base_size = 12) {
+theme_fig <- function(base_size = 10) {
   theme_classic(base_size = base_size) +
     theme(
       legend.position = "top"

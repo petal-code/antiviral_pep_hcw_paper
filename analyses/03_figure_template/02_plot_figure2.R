@@ -63,7 +63,7 @@ make_bar_plot <- function(summ_df, sc, y_label) {
 # Combine panels ----
 make_header <- function(label, angle = 0) {
   ggplot() +
-    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5, angle = angle) +
+    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5, angle = angle) +
     theme_void()
 }
 
@@ -81,6 +81,6 @@ fig2_all <- (
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
 ggsave(file.path(OUT_DIR, "figure_2.png"), fig2_all,
-       width = 11, height = 8, dpi = 400, units = "in")
+       width = 10, height = 6.5, dpi = 400, units = "in")
 
 message("Figure 2 saved")

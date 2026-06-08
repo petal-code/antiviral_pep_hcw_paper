@@ -121,7 +121,7 @@ make_heatmap <- function(sc, metric, fill_label, subtitle = NULL) {
 # Combine panels ----
 make_header <- function(label) {
   ggplot() +
-    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5) +
+    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
     theme_void()
 }
 
@@ -137,7 +137,7 @@ fig4_all <- ((make_header("West Africa archetype") | make_header("DRC archetype"
 
 ggsave(
   file.path(OUT_DIR, "figure_4.png"),
-  fig4_all, width = 11, height = 6.5, dpi = 400, units = "in"
+  fig4_all, width = 10, height = 6.5, dpi = 400, units = "in"
 )
 
 message("Figure 4 saved")
