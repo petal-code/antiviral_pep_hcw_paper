@@ -158,19 +158,7 @@ make_header <- function(label) {
     theme_void()
 }
 
-# Version 1: weekly infections + cumulative HCW deaths
-fig1_v1 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
-              ((make_infection_bar("WestAfrica") | make_infection_bar("DRC")) + plot_layout(axis_titles = "collect")) /
-              ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
-  plot_layout(heights = c(0.12, 1, 2)) +
-  plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
-
-ggsave(
-  file.path(OUT_DIR, "figure_1_all-infections-baseline-only.png"),
-  fig1_v1, width = 11, height = 6.5, dpi = 150, units = "in"
-)
-
-# Version 2: weekly deaths + cumulative HCW deaths
+# Version 1: weekly deaths + cumulative HCW deaths --- likely will use this variant as the main fig
 fig1_v2 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_death_bar("WestAfrica") | make_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
@@ -180,6 +168,18 @@ fig1_v2 <- ((make_header("West Africa archetype") | make_header("DRC archetype")
 ggsave(
   file.path(OUT_DIR, "figure_1_all-deaths-baseline-only.png"),
   fig1_v2, width = 11, height = 6.5, dpi = 150, units = "in"
+)
+
+# Version 2: weekly infections + cumulative HCW deaths
+fig1_v1 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
+              ((make_infection_bar("WestAfrica") | make_infection_bar("DRC")) + plot_layout(axis_titles = "collect")) /
+              ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
+  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
+
+ggsave(
+  file.path(OUT_DIR, "figure_1_all-infections-baseline-only.png"),
+  fig1_v1, width = 11, height = 6.5, dpi = 150, units = "in"
 )
 
 # Version 3: weekly HCW deaths (baseline only) + cumulative HCW deaths
