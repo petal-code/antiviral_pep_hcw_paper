@@ -30,8 +30,8 @@ make_infection_bar <- function(sc) {
   df    <- filter(ts_infections_allpop, scenario == sc, week <= x_max)
 
   ggplot(df, aes(x = week, y = q50)) +
-    geom_col(fill = "grey50", width = 0.8) +
-    geom_errorbar(aes(ymin = q025, ymax = q975), width = 0.25, linewidth = 0.5) +
+    geom_col(fill = "grey50", width = 0.8, alpha = 0.5) +
+    geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident infections (all)") +
     theme_fig()
@@ -51,8 +51,8 @@ make_death_bar <- function(sc) {
   df    <- filter(ts_deaths_allpop, scenario == sc, week <= x_max)
 
   ggplot(df, aes(x = week, y = q50)) +
-    geom_col(fill = "grey50", width = 0.8) +
-    geom_errorbar(aes(ymin = q025, ymax = q975), width = 0.25, linewidth = 0.5) +
+    geom_col(fill = "grey50", width = 0.8, alpha = 0.5) +
+    geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident deaths (all)") +
     theme_fig()
@@ -72,8 +72,8 @@ make_hcw_death_bar_baseline <- function(sc) {
   df    <- filter(ts_hcw_deaths_base, scenario == sc, week <= x_max)
 
   ggplot(df, aes(x = week, y = q50)) +
-    geom_col(fill = "grey50", width = 0.8) +
-    geom_errorbar(aes(ymin = q025, ymax = q975), width = 0.25, linewidth = 0.5) +
+    geom_col(fill = "grey50", width = 0.8, alpha = 0.5) +
+    geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident HCW deaths") +
     theme_fig()
@@ -101,9 +101,9 @@ make_hcw_death_bar <- function(sc) {
   df         <- filter(ts_hcw_inc, scenario == sc, week <= x_max)
 
   ggplot(df, aes(x = week, y = q50, fill = arm)) +
-    geom_col(width = 0.5, position = position_dodge(width = 0.5)) +
+    geom_col(width = 0.5, position = position_dodge(width = 0.5), alpha = 0.5) +
     geom_errorbar(
-      aes(ymin = q025, ymax = q975),
+      aes(ymin = q25, ymax = q75),
       width = 0.25, linewidth = 0.25,
       position = position_dodge(width = 0.5)
     ) +
@@ -138,7 +138,6 @@ make_ts <- function(sc) {
     mutate(arm = factor(arm, levels = arms))
 
   ggplot(df, aes(x = week, color = arm, fill = arm)) +
-    geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.1, color = NA) +
     geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.25, color = NA) +
     geom_line(aes(y = q50, linetype = arm), linewidth = 1) +
     scale_color_manual(values = ts_colors, labels = ts_labels, name = NULL) +
@@ -162,7 +161,7 @@ make_header <- function(label) {
 fig1_v2 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_death_bar("WestAfrica") | make_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
-  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_layout(heights = c(0.2, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
 ggsave(
@@ -174,7 +173,7 @@ ggsave(
 fig1_v1 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_infection_bar("WestAfrica") | make_infection_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
-  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_layout(heights = c(0.2, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
 ggsave(
@@ -187,7 +186,7 @@ fig1_v3 <- (
   (make_header("West Africa archetype") | make_header("DRC archetype")) /
     ((make_hcw_death_bar_baseline("WestAfrica") | make_hcw_death_bar_baseline("DRC")) + plot_layout(axis_titles = "collect")) /
     ((make_ts("WestAfrica") | make_ts("DRC"))) + plot_layout(axis_titles = "collect")) +
-  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_layout(heights = c(0.2, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
 ggsave(
@@ -199,7 +198,7 @@ ggsave(
 fig1_v4 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_hcw_death_bar("WestAfrica") | make_hcw_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
-  plot_layout(heights = c(0.12, 1, 2)) +
+  plot_layout(heights = c(0.2, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
 
 ggsave(
