@@ -170,7 +170,7 @@ fig1_v2 <- ((make_header("West Africa archetype") | make_header("DRC archetype")
 
 ggsave(
   file.path(OUT_DIR, "figure_1_all-deaths-baseline-only.png"),
-  fig1_v2, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig1_v2, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 # Version 2: weekly infections + cumulative HCW deaths
@@ -182,7 +182,7 @@ fig1_v1 <- ((make_header("West Africa archetype") | make_header("DRC archetype")
 
 ggsave(
   file.path(OUT_DIR, "figure_1_all-infections-baseline-only.png"),
-  fig1_v1, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig1_v1, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 # Version 3: weekly HCW deaths (baseline only) + cumulative HCW deaths
@@ -195,7 +195,7 @@ fig1_v3 <- (
 
 ggsave(
   file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-only.png"),
-  fig1_v3, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig1_v3, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 # Version 4: weekly HCW deaths (with/without OBV) + cumulative HCW deaths
@@ -207,7 +207,7 @@ fig1_v4 <- ((make_header("West Africa archetype") | make_header("DRC archetype")
 
 ggsave(
   file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-obv.png"),
-  fig1_v4, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig1_v4, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 # No-errorbar variants ----
@@ -219,7 +219,7 @@ fig1_v2_ne <- ((make_header("West Africa archetype") | make_header("DRC archetyp
 
 ggsave(
   file.path(OUT_DIR, "figure_1_all-deaths-baseline-only_no-errorbars.png"),
-  fig1_v2_ne, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig1_v2_ne, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 fig1_v1_ne <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
@@ -230,7 +230,7 @@ fig1_v1_ne <- ((make_header("West Africa archetype") | make_header("DRC archetyp
 
 ggsave(
   file.path(OUT_DIR, "figure_1_all-infections-baseline-only_no-errorbars.png"),
-  fig1_v1_ne, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig1_v1_ne, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 fig1_v3_ne <- (
@@ -242,7 +242,7 @@ fig1_v3_ne <- (
 
 ggsave(
   file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-only_no-errorbars.png"),
-  fig1_v3_ne, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig1_v3_ne, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 fig1_v4_ne <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
@@ -253,7 +253,7 @@ fig1_v4_ne <- ((make_header("West Africa archetype") | make_header("DRC archetyp
 
 ggsave(
   file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-obv_no-errorbars.png"),
-  fig1_v4_ne, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig1_v4_ne, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 message("Figure 1 variants saved")

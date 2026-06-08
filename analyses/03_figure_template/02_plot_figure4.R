@@ -137,7 +137,7 @@ fig4_all <- ((make_header("West Africa archetype") | make_header("DRC archetype"
 
 ggsave(
   file.path(OUT_DIR, "figure_4.png"),
-  fig4_all, width = 11, height = 6.5, dpi = 150, units = "in"
+  fig4_all, width = 11, height = 6.5, dpi = 400, units = "in"
 )
 
 message("Figure 4 saved")

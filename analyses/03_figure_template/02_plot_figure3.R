@@ -111,7 +111,7 @@ figure_3_deaths <- (
 
 ggsave(
   file.path(OUT_DIR, "figure_3_deaths-averted.png"),
-  figure_3_deaths, width = 11, height = 6.5, dpi = 150
+  figure_3_deaths, width = 11, height = 6.5, dpi = 400
 )
 
 # Version 2 - days averted only
@@ -126,7 +126,7 @@ figure_3_days_lost <- (
 
 ggsave(
   file.path(OUT_DIR, "figure_3_days-averted.png"),
-  figure_3_days_lost, width = 11, height = 6.5, dpi = 150
+  figure_3_days_lost, width = 11, height = 6.5, dpi = 400
 )
 
 message("Figure 3 variants saved")
