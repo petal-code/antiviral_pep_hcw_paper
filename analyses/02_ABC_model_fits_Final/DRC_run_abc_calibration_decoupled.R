@@ -53,8 +53,8 @@ SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed_PlusPlus"
 RUN_PROFILE <- "check"
 .PROFILES <- list(
   smoke      = list(n_reps =  5L, nb_simul =  60L, tolerance_target = 5.00, n_traj =  20L),
-  check      = list(n_reps = 30L, nb_simul = 590L, tolerance_target = 0.50, n_traj = 200L),
-  production = list(n_reps = 40L, nb_simul = 944L, tolerance_target = 0.35, n_traj = 200L)
+  check      = list(n_reps = 30L, nb_simul = 590L, tolerance_target = 0.5, n_traj = 200L),
+  production = list(n_reps = 40L, nb_simul = 708L, tolerance_target = 1.1, n_traj = 200L)
 )
 stopifnot(RUN_PROFILE %in% names(.PROFILES))
 .prof <- .PROFILES[[RUN_PROFILE]]
@@ -75,8 +75,8 @@ FIXED_PARAMS <- list(
 )
 
 # ---- WHICH SUMMARIES TO FIT -------------------------------------------------
-SUMMARY_STATS <- c("log_n_deaths", "log_n_hcw_deaths", "hcw_fraction",
-                   "d_p05_p95", "log_peak_height")
+SUMMARY_STATS <- c("log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height")
+                  #  "d_p05_p95", )
 
 # Observed targets, ON THE FITTED SCALE (log the counts), keyed BY NAME.
 #   raw DRC targets: n_deaths = 2299, n_hcw_deaths = 79, peak_height = 95.
@@ -84,7 +84,7 @@ OBSERVED_NAMED <- c(
   log_n_deaths     = log(2299),
   log_n_hcw_deaths = log(79),       # https://afenet-journal.org/10-37432-jieph-d-25-00072/
   hcw_fraction     = 79 / 2299,     # = 0.0344
-  d_p05_p95        = 378,           # https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic - 4th Oct 2018 - 17 Oct 2019 
+  # d_p05_p95        = 378,           # https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic - 4th Oct 2018 - 17 Oct 2019 
   log_peak_height  = log(95)        # see https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic
 )
 
@@ -301,6 +301,7 @@ if (all(c("ppe_efficacy", "hcw_risk_scalar") %in% PARAM_NAMES)) {
 # -----------------------------------------------------------------------------
 # 9. PROGRESS / RECONSTRUCTION FROM DISK
 # -----------------------------------------------------------------------------
+ABC_OUTPUT_DIR <- "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_Final/abc_outputs/ Middle_DRC_ConflictSmoothed_PlusPlus_20260607_215621_Decoupled_check_NP5_NS4_NBREPS_30_NBSIMUL_590"
 abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target,
              param_names = PARAM_NAMES, stat_names = prep$summary_stats)
 print(abc_compare_steps(ABC_OUTPUT_DIR, param_names = PARAM_NAMES, stat_names = prep$summary_stats))
@@ -327,8 +328,21 @@ for (s in names(observed_summaries)) {
   abline(v = quantile(x, c(0.025, 0.5, 0.975)), col = "darkblue", lty = c(2, 1, 2), lwd = c(1, 2, 1))
   abline(v = observed_summaries[s], col = "red", lwd = 2.5)
 }
-par(mfrow = c(1, 1))
 
+# Single-panel summary: simulated / observed for every fitted summary statistic.
+par(mfrow = c(1, 1))
+plot(NA, xlim = c(0.5, n_stat + 0.5), ylim = c(0, 1.5),
+     xaxt = "n", xlab = "", ylab = "Simulated / Observed",
+     main = "Posterior-predictive fit ratio")
+axis(1, at = seq_len(n_stat), labels = names(observed_summaries), las = 2, cex.axis = 0.8)
+abline(h = 1, lty = 2, col = "red")
+for (i in seq_len(n_stat)) {
+  s  <- names(observed_summaries)[i]
+  x  <- sim_stats_post[[s]] / observed_summaries[s]
+  qs <- quantile(x, c(0.025, 0.5, 0.975))
+  segments(i, qs[1], i, qs[3], lwd = 2, col = "darkblue")
+  points(i, qs[2], pch = 16, cex = 1.5, col = "darkblue")
+}
 
 # -----------------------------------------------------------------------------
 # 11. POSTERIOR TRAJECTORY CHECKS
@@ -394,3 +408,55 @@ print(ggplot(band, aes(week, med)) +
         labs(x = "Time since outbreak start (days)", y = "Count per week",
              title = sprintf("Posterior median + 95%% CrI: %s", SCENARIO_ID)) +
         theme_bw())
+
+# -----------------------------------------------------------------------------
+# 12. OUTBREAK DURATION FROM SIMULATED TRAJECTORIES
+# -----------------------------------------------------------------------------
+# Per-trajectory outbreak duration, recomputed from the SAME posterior-draw
+# trajectories as section 11 (`traj_runs`) -- no new model runs. Measured from
+# DEATH dates (the scale this scheme's timing summary is defined on; swap
+# r$death_days -> r$case_days for a case-based span). Two complementary measures:
+#   * d_p05_p95 : day span between the 5th and 95th percentile of death dates --
+#                 the tail-robust timing summary this scheme fits. Directly
+#                 comparable to the observed target (~378 d; Kivu 4 Oct 2018 -
+#                 17 Oct 2019). Recompute the observed value via observed_d_p05_p95().
+#   * dur_full  : first-death to last-death span -- the classic, tail-sensitive
+#                 "duration", reported for context (no single observed target).
+# Trajectories with no deaths give NA; a single death gives a span of 0.
+dur_post <- do.call(rbind, lapply(traj_runs, function(r) {
+  d <- r$death_days[is.finite(r$death_days)]
+  if (length(d) == 0L) {
+    return(data.frame(n_deaths = 0L, dur_full = NA_real_, d_p05_p95 = NA_real_))
+  }
+  qs <- quantile(d, c(0.05, 0.95), names = FALSE)
+  data.frame(n_deaths  = length(d),
+             dur_full  = max(d) - min(d),
+             d_p05_p95 = qs[2] - qs[1])
+}))
+
+obs_dur <- c(
+  dur_full  = NA_real_,    # no single observed "duration" target in this scheme
+  d_p05_p95 = if ("d_p05_p95" %in% names(observed_summaries)) {
+    observed_summaries[["d_p05_p95"]]
+  } else 378    # placeholder: Kivu 4 Oct 2018 - 17 Oct 2019
+)
+
+cat("\nOutbreak duration posterior predictive (median / 95% CrI, days):\n")
+for (s in c("dur_full", "d_p05_p95")) {
+  qs <- quantile(dur_post[[s]], c(0.025, 0.5, 0.975), na.rm = TRUE)
+  obs_txt <- if (is.finite(obs_dur[s])) sprintf("   (observed %.1f)", obs_dur[s]) else ""
+  cat(sprintf("  %-11s %.1f / [%.1f, %.1f]%s\n",
+              paste0(s, ":"), qs[2], qs[1], qs[3], obs_txt))
+}
+
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+for (s in c("dur_full", "d_p05_p95")) {
+  x  <- dur_post[[s]][is.finite(dur_post[[s]])]
+  qs <- quantile(x, probs = c(0.025, 0.5, 0.975))
+  hist(x, breaks = 12, main = paste0("Trajectory ", s), xlab = paste0(s, " (days)"),
+       col = adjustcolor("steelblue", 0.6), border = "white")
+  abline(v = qs, col = "darkblue", lty = c(2, 1, 2), lwd = c(1, 2, 1))
+  if (is.finite(obs_dur[s])) abline(v = obs_dur[s], col = "red", lwd = 2.5)
+}
+par(mfrow = c(1, 1))
+
