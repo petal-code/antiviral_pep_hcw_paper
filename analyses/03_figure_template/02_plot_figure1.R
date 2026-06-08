@@ -159,7 +159,7 @@ make_header <- function(label) {
 }
 
 # Version 1: weekly infections + cumulative HCW deaths
-fig1_v1 <- ((make_header("West Africa") | make_header("DRC")) /
+fig1_v1 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_infection_bar("WestAfrica") | make_infection_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
   plot_layout(heights = c(0.12, 1, 2)) +
@@ -171,7 +171,7 @@ ggsave(
 )
 
 # Version 2: weekly deaths + cumulative HCW deaths
-fig1_v2 <- ((make_header("West Africa") | make_header("DRC")) /
+fig1_v2 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_death_bar("WestAfrica") | make_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
   plot_layout(heights = c(0.12, 1, 2)) +
@@ -184,7 +184,7 @@ ggsave(
 
 # Version 3: weekly HCW deaths (baseline only) + cumulative HCW deaths
 fig1_v3 <- (
-  (make_header("West Africa") | make_header("DRC")) /
+  (make_header("West Africa archetype") | make_header("DRC archetype")) /
     ((make_hcw_death_bar_baseline("WestAfrica") | make_hcw_death_bar_baseline("DRC")) + plot_layout(axis_titles = "collect")) /
     ((make_ts("WestAfrica") | make_ts("DRC"))) + plot_layout(axis_titles = "collect")) +
   plot_layout(heights = c(0.12, 1, 2)) +
@@ -196,7 +196,7 @@ ggsave(
 )
 
 # Version 4: weekly HCW deaths (with/without OBV) + cumulative HCW deaths
-fig1_v4 <- ((make_header("West Africa") | make_header("DRC")) /
+fig1_v4 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_hcw_death_bar("WestAfrica") | make_hcw_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
   plot_layout(heights = c(0.12, 1, 2)) +

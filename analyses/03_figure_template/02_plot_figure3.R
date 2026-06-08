@@ -72,7 +72,7 @@ make_box_plot <- function(cs, metric, y_label) {
                  outlier.size = 0.5, width = 0.6, color = "black",
                  position = position_dodge(0.75)) +
     scale_fill_manual(values = fill_vals, breaks = legend_breaks,
-                      labels = c("West Africa", "DRC"), name = NULL) +
+                      labels = c("West Africa archetype", "DRC archetype"), name = NULL) +
     scale_linewidth_manual(values = c("TRUE" = 1.0, "FALSE" = 0.4), guide = "none") +
     scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     labs(x = "OBV efficacy", y = y_label) +

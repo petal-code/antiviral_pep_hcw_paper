@@ -128,7 +128,7 @@ fig4b <- make_heatmap("DRC",        "median_deaths_averted",    "Deaths averted"
 fig4c <- make_heatmap("WestAfrica", "median_days_lost_averted", "Days lost averted", palette = "YlGnBu")
 fig4d <- make_heatmap("DRC",        "median_days_lost_averted", "Days lost averted", palette = "YlGnBu")
 
-fig4_all <- ((make_header("West Africa") | make_header("DRC")) /
+fig4_all <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
                ((fig4a + fig4b + fig4c + fig4d) + plot_layout(nrow = 2, axis_titles = "collect"))) +
   plot_layout(guides = "collect", heights = c(0.08, 1)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
