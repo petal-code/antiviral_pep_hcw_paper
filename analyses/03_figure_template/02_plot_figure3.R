@@ -8,6 +8,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 results <- load_results()
 
+# Build panels ----
 # Coverage scenario curves (panels a-c)
 make_coverage_plot <- function(cs) {
   spec  <- COVERAGE_SPECS[[cs]]
@@ -78,6 +79,7 @@ make_box_plot <- function(cs, metric, y_label) {
     theme_fig()
 }
 
+# Combine panels ----
 make_col_header <- function(label) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
@@ -100,6 +102,7 @@ p_g <- make_box_plot(COVERAGE_LEVELS[1], "pct_days_lost_averted", "HCW days lost
 p_h <- make_box_plot(COVERAGE_LEVELS[2], "pct_days_lost_averted", "HCW days lost averted")
 p_i <- make_box_plot(COVERAGE_LEVELS[3], "pct_days_lost_averted", "HCW days lost averted")
 
+# Version 1 - deaths averted only
 figure_3_deaths <- (
   (h1 | h2 | h3) /
   ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
@@ -114,6 +117,7 @@ ggsave(
   figure_3_deaths, width = 15, height = 11, dpi = 150
 )
 
+# Version 2 - days averted only
 figure_3_days_lost <- (
   (h1 | h2 | h3) /
   ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
@@ -128,6 +132,7 @@ ggsave(
   figure_3_days_lost, width = 15, height = 11, dpi = 150
 )
 
+# Version 3 - deaths and days averted
 figure_3_all <- (
   (h1 | h2 | h3) /
   ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /

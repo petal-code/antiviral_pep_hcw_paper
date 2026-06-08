@@ -8,6 +8,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 results <- load_results()
 
+# Build panels ----
 run_df <- do.call(rbind, c(
   list(build_run_df_obv(results, "baseline")),
   lapply(OBV_EFFICACY_LEVELS, function(eff) {
@@ -40,7 +41,7 @@ make_bar_plot <- function(summ_df, sc, y_label) {
   base_col   <- SCENARIO_COLORS[sc]
   dark_col   <- rgb(t(col2rgb(base_col) * 0.7), maxColorValue = 255)
   obv_colors <- setNames(
-    c(colorRampPalette(c(light_col, base_col))(4), dark_col),
+    c(colorRampPalette(c(light_col, base_col))(4), dark_col), # make sure 80% (baseline) is same hue as fig 1
     OBV_EFFICACY_LABELS
   )
 
@@ -59,6 +60,7 @@ make_bar_plot <- function(summ_df, sc, y_label) {
     theme_fig()
 }
 
+# Combine panels ----
 make_header <- function(label, angle = 0) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5, angle = angle) +

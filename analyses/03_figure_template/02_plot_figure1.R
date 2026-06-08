@@ -14,7 +14,9 @@ results <- load_results()
 
 x_max_weeks <- function(sc) if (sc == "WestAfrica") 365 / 7 else 450 / 7
 
-# Weekly infections in entire population -- without OBV
+
+# Build panels ----
+# Weekly infections in entire population -- without OBV (v1 top panels)
 ts_infections_allpop <- build_weekly_ts(
   results,
   metric = "infections",
@@ -35,14 +37,14 @@ make_infection_bar <- function(sc) {
     theme_fig()
 }
 
-# Weekly deaths in entire population -- without OBV
+# Weekly deaths in entire population -- without OBV (v2 top panels)
 ts_deaths_allpop <- build_weekly_ts(
   results,
   metric = "deaths",
   bin_width = 7,
   efficacy_name = "baseline"
 ) %>%
-  mutate(week = week / 7)
+  mutate(week = week / 7) # days -> weeks
 
 make_death_bar <- function(sc) {
   x_max <- x_max_weeks(sc)
@@ -56,14 +58,14 @@ make_death_bar <- function(sc) {
     theme_fig()
 }
 
-# Weekly HCW deaths -- without OBV
+# Weekly HCW deaths -- without OBV (v3 top panels)
 ts_hcw_deaths_base <- build_weekly_ts(
   results,
   metric = "hcw_deaths_incidence",
   bin_width = 7,
   efficacy_name = "baseline"
 ) %>%
-  mutate(week = week / 7, arm = "baseline")
+  mutate(week = week / 7, arm = "baseline") # days -> weeks
 
 make_hcw_death_bar_baseline <- function(sc) {
   x_max <- x_max_weeks(sc)
@@ -77,7 +79,7 @@ make_hcw_death_bar_baseline <- function(sc) {
     theme_fig()
 }
 
-# Weekly HCW deaths -- with and without OBV
+# Weekly HCW deaths -- with and without OBV (v4 top panels)
 ts_hcw_deaths_obv80 <- build_weekly_ts(
   results,
   metric = "hcw_deaths_incidence",
@@ -85,7 +87,7 @@ ts_hcw_deaths_obv80 <- build_weekly_ts(
   efficacy_name = "obv_80",
   coverage_name = "full"
 ) %>%
-  mutate(week = week / 7, arm = "obv_80")
+  mutate(week = week / 7, arm = "obv_80") # days -> weeks
 
 ts_hcw_inc <- bind_rows(ts_hcw_deaths_base, ts_hcw_deaths_obv80) %>%
   mutate(arm = factor(arm, levels = c("baseline", "obv_80")))
@@ -111,7 +113,7 @@ make_hcw_death_bar <- function(sc) {
     theme_fig()
 }
 
-# Cumulative HCW deaths -- with and without OBV
+# Cumulative HCW deaths -- with and without OBV (bottom panels, all version)
 ts_baseline <- build_weekly_ts(
   results, metric = "hcw_deaths", bin_width = 7, efficacy_name = "baseline"
 )
@@ -123,7 +125,7 @@ ts_hcw_df <- bind_rows(
   mutate(ts_baseline, arm = "baseline"),
   mutate(ts_obv80,    arm = "obv_80")
 ) %>%
-  mutate(week = week / 7)
+  mutate(week = week / 7) # days -> weeks
 
 make_ts <- function(sc) {
   arms         <- c("baseline", "obv_80")
@@ -148,6 +150,7 @@ make_ts <- function(sc) {
     theme(legend.key.width = unit(1, "cm"))
 }
 
+# Combine panels ----
 # Column headers
 make_header <- function(label) {
   ggplot() +
