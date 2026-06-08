@@ -3,7 +3,6 @@
 # Efficacy x coverage heatmap -- fully post-hoc, no separate simulation needed
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
-
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -109,16 +108,16 @@ heatmap_df <- grid_rows %>%
 # =============================================================================
 # Heatmap plot function
 # =============================================================================
-make_heatmap <- function(sc, metric, fill_label, title) {
+make_heatmap <- function(sc, metric, fill_label, title, palette = "YlOrRd") {
   df <- filter(heatmap_df, scenario == sc)
-  
+
   ggplot(df, aes(x = coverage_label, y = efficacy_label,
                  fill = .data[[metric]])) +
     geom_tile(color = "white", linewidth = 0.5) +
     geom_text(aes(label = sprintf("%.0f%%", .data[[metric]])),
               size = 4, fontface = "bold", color = "grey20") +
     scale_fill_distiller(
-      palette   = "YlOrRd",
+      palette   = palette,
       direction = 1,
       name      = fill_label,
       limits    = c(0, 100),
@@ -138,28 +137,48 @@ make_heatmap <- function(sc, metric, fill_label, title) {
 # =============================================================================
 # Save four panels
 # =============================================================================
-panels <- list(
-  list(sc = "WestAfrica", metric = "median_deaths_averted",
-       fill_label = "Deaths averted (%)",
-       title = "% HCW deaths averted -- West Africa",
-       file  = "figure_4_a.png"),
-  list(sc = "WestAfrica", metric = "median_days_lost_averted",
-       fill_label = "Days lost averted (%)",
-       title = "% HCW days lost averted -- West Africa",
-       file  = "figure_4_b.png"),
-  list(sc = "DRC", metric = "median_deaths_averted",
-       fill_label = "Deaths averted (%)",
-       title = "% HCW deaths averted -- DRC",
-       file  = "figure_4_c.png"),
-  list(sc = "DRC", metric = "median_days_lost_averted",
-       fill_label = "Days lost averted (%)",
-       title = "% HCW days lost averted -- DRC",
-       file  = "figure_4_d.png")
-)
+fig4a <- make_heatmap("WestAfrica", "median_deaths_averted",
+                      "Deaths averted (%)", "% HCW deaths averted -- West Africa",
+                      palette = "YlOrRd")
+fig4b <- make_heatmap("WestAfrica", "median_days_lost_averted",
+                      "Days lost averted (%)", "% HCW days lost averted -- West Africa",
+                      palette = "YlGnBu")
+fig4c <- make_heatmap("DRC", "median_deaths_averted",
+                      "Deaths averted (%)", "% HCW deaths averted -- DRC",
+                      palette = "YlOrRd")
+fig4d <- make_heatmap("DRC", "median_days_lost_averted",
+                      "Days lost averted (%)", "% HCW days lost averted -- DRC",
+                      palette = "YlGnBu")
 
-for (panel in panels) {
-  ggsave(file.path(OUT_DIR, panel$file),
-         make_heatmap(panel$sc, panel$metric, panel$fill_label, panel$title),
-         width = 7, height = 6, dpi = 150)
-  message(sprintf("Saved: %s", panel$file))
+ggsave(file.path(OUT_DIR, "figure_4_a.png"), fig4a, width = 7, height = 6, dpi = 150)
+ggsave(file.path(OUT_DIR, "figure_4_b.png"), fig4b, width = 7, height = 6, dpi = 150)
+ggsave(file.path(OUT_DIR, "figure_4_c.png"), fig4c, width = 7, height = 6, dpi = 150)
+ggsave(file.path(OUT_DIR, "figure_4_d.png"), fig4d, width = 7, height = 6, dpi = 150)
+
+message("Figure 4 individual panels saved")
+
+# =============================================================================
+# Composite Figure 4
+# =============================================================================
+make_header <- function(label) {
+  ggplot() +
+    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5) +
+    theme_void()
 }
+
+strip_titles <- function(p) p + theme(plot.title    = element_blank(),
+                                       plot.subtitle = element_blank(),
+                                       plot.caption  = element_blank())
+
+fig4_all <- (
+  (make_header("West Africa") | make_header("DRC")) /
+  (strip_titles(fig4a)        | strip_titles(fig4c)) /
+  (strip_titles(fig4b)        | strip_titles(fig4d))
+) +
+  plot_layout(guides = "collect", heights = c(0.08, 1, 1)) +
+  plot_annotation(tag_levels = list(c("", "", "a", "c", "b", "d")))
+
+ggsave(file.path(OUT_DIR, "figure_4_ALL.png"), fig4_all,
+       width = 14, height = 10, dpi = 150, units = "in")
+
+message("Figure 4 composite saved")
