@@ -73,7 +73,7 @@ fig2c <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted",  "WestAfrica"), "
 fig2d <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted",  "DRC"),        "DRC",         "HCW days lost averted")
 
 fig2_all <- (
-  (make_header("West Africa") | make_header("DRC")) /
+  (make_header("West Africa archetype") | make_header("DRC archetype")) /
   ((fig2a | fig2b) + plot_layout(axis_titles = "collect")) /
   ((fig2c | fig2d) + plot_layout(axis_titles = "collect"))
 ) +
