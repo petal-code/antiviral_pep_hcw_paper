@@ -81,6 +81,6 @@ fig2_all <- (
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
 ggsave(file.path(OUT_DIR, "figure_2.png"), fig2_all,
-       width = 11, height = 8, dpi = 150, units = "in")
+       width = 11, height = 8, dpi = 400, units = "in")
 
 message("Figure 2 saved")
