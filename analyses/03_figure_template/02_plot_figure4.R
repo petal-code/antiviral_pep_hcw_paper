@@ -94,8 +94,9 @@ heatmap_df <- grid_rows %>%
     efficacy_label = factor(paste0(round(obv_efficacy * 100), "%"), levels = paste0(c(50, 60, 70, 80, 90), "%"))
   )
 
-make_heatmap <- function(sc, metric, fill_label, palette = "YlOrRd") {
-  df <- filter(heatmap_df, scenario == sc)
+make_heatmap <- function(sc, metric, fill_label, subtitle = NULL) {
+  df        <- filter(heatmap_df, scenario == sc)
+  sc_color  <- SCENARIO_COLORS[[sc]]
 
   ggplot(df, aes(x = coverage_label, y = efficacy_label, fill = .data[[metric]])) +
     geom_tile(color = "white", linewidth = 0.5) +
@@ -103,17 +104,18 @@ make_heatmap <- function(sc, metric, fill_label, palette = "YlOrRd") {
       aes(label = sprintf("%.0f%%", .data[[metric]])),
       size = 4, fontface = "bold", color = "grey20"
     ) +
-    scale_fill_distiller(
-      palette   = palette,
-      direction = 1,
-      name      = fill_label,
-      limits    = c(0, 100),
-      labels    = function(x) paste0(x, "%"),
-      na.value  = "grey90"
+    scale_fill_gradient(
+      low      = "white",
+      high     = sc_color,
+      name     = fill_label,
+      limits   = c(0, 100),
+      labels   = function(x) paste0(x, "%"),
+      na.value = "grey90"
     ) +
-    labs(x = "OBV coverage", y = "OBV efficacy") +
+    labs(x = "OBV coverage", y = "OBV efficacy", subtitle = subtitle) +
     theme_fig(base_size = 13) +
-    theme(legend.position = "right", panel.grid = element_blank(), axis.ticks = element_blank())
+    theme(legend.position = "none", panel.grid = element_blank(),
+          axis.line = element_blank())
 }
 
 # Combine panels ----
@@ -123,19 +125,19 @@ make_header <- function(label) {
     theme_void()
 }
 
-fig4a <- make_heatmap("WestAfrica", "median_deaths_averted",    "Deaths averted",   palette = "YlOrRd")
-fig4b <- make_heatmap("DRC",        "median_deaths_averted",    "Deaths averted",   palette = "YlOrRd")
-fig4c <- make_heatmap("WestAfrica", "median_days_lost_averted", "Days lost averted", palette = "YlGnBu")
-fig4d <- make_heatmap("DRC",        "median_days_lost_averted", "Days lost averted", palette = "YlGnBu")
+fig4a <- make_heatmap("WestAfrica", "median_deaths_averted",    "Deaths averted",    subtitle = "% HCW deaths averted")
+fig4b <- make_heatmap("DRC",        "median_deaths_averted",    "Deaths averted",    subtitle = "% HCW deaths averted")
+fig4c <- make_heatmap("WestAfrica", "median_days_lost_averted", "Days lost averted", subtitle = "% HCW days lost averted")
+fig4d <- make_heatmap("DRC",        "median_days_lost_averted", "Days lost averted", subtitle = "% HCW days lost averted")
 
 fig4_all <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
                ((fig4a + fig4b + fig4c + fig4d) + plot_layout(nrow = 2, axis_titles = "collect"))) +
-  plot_layout(guides = "collect", heights = c(0.08, 1)) +
+  plot_layout(guides = "collect", heights = c(0.1, 1)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
 ggsave(
   file.path(OUT_DIR, "figure_4.png"),
-  fig4_all, width = 14, height = 10, dpi = 150, units = "in"
+  fig4_all, width = 11, height = 6.5, dpi = 150, units = "in"
 )
 
 message("Figure 4 saved")
