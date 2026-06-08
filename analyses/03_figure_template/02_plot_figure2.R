@@ -56,32 +56,26 @@ make_bar_plot <- function(summ_df, sc, y_label, title) {
     geom_point(color = "black", size = 2) +
     scale_fill_manual(values = obv_colors, guide = "none") +
     scale_y_continuous(expand = expansion(mult = c(0, 0)),
-                       limits = c(0, 100)) +
-    labs(x = "OBV efficacy", y = y_label,
-         title = title,
-         subtitle = sprintf("%s | Bar: median | Line: 95%% CI across posterior particles",
-                            SCENARIO_LABELS[sc])) +
+                       limits = c(0, 100),
+                       labels = function(x) paste0(x, "%")) +
+    labs(x = "OBV efficacy", y = y_label) +
     theme_fig() +
     theme(panel.grid.major.x = element_blank())
 }
 
 
-# panels
+# Panels
 fig2a <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "WestAfrica"),
-                       "WestAfrica", "HCW deaths averted (%)",
-                       "% HCW deaths averted by OBV efficacy")
+                       "WestAfrica", "HCW deaths averted")
 
-fig2b <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "WestAfrica"),
-                       "WestAfrica", "HCW days lost averted (%)",
-                       "% HCW days lost averted by OBV efficacy")
+fig2c <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "WestAfrica"),
+                       "WestAfrica", "HCW days lost averted")
 
-fig2c <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "DRC"),
-                       "DRC", "HCW deaths averted (%)",
-                       "% HCW deaths averted by OBV efficacy")
+fig2b <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "DRC"),
+                       "DRC", "HCW deaths averted")
 
 fig2d <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "DRC"),
-                       "DRC", "HCW days lost averted (%)",
-                       "% HCW days lost averted by OBV efficacy")
+                       "DRC", "HCW days lost averted")
 
 # Combine all panels
 make_header <- function(label, angle = 0) {
@@ -91,16 +85,13 @@ make_header <- function(label, angle = 0) {
     theme_void()
 }
 
-strip_titles <- function(p) p + theme(plot.title = element_blank(),
-                                       plot.subtitle = element_blank())
-
 fig2_all <- (
   (make_header("West Africa") | make_header("DRC")) /
-  (strip_titles(fig2a) | strip_titles(fig2c)) /
-  (strip_titles(fig2b) | strip_titles(fig2d))
+  ((fig2a| fig2b) + plot_layout(axis_titles = "collect")) /
+  ((fig2c| fig2d) + plot_layout(axis_titles = "collect"))
 ) +
   plot_layout(heights = c(0.08, 1, 1)) +
-  plot_annotation(tag_levels = list(c("", "", "a", "c", "b", "d")))
+  plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
 ggsave(file.path(OUT_DIR, "figure_2.png"), fig2_all,
        width = 11, height = 8, dpi = 150, units = "in")
