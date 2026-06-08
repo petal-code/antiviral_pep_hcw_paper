@@ -1,7 +1,7 @@
 # =============================================================================
 # 02_plot_figure1.R
+# Epi curves of simulated outbreaks
 # =============================================================================
-library(patchwork)
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -86,15 +86,6 @@ fig1b <- make_ts("WestAfrica")
 fig1c <- make_infection_bar("DRC")
 fig1d <- make_ts("DRC")
 
-ggsave(file.path(OUT_DIR, "figure_1_a.png"), fig1a,
-       width = 7, height = 5, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_1_b.png"), fig1b,
-       width = 7, height = 5, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_1_c.png"), fig1c,
-       width = 7, height = 5, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_1_d.png"), fig1d,
-       width = 7, height = 5, dpi = 150)
-
 # =============================================================================
 # Combined figure layouts
 # =============================================================================
@@ -114,7 +105,7 @@ fig1_all <- (
   plot_layout(heights = c(0.12, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
 
-ggsave(file.path(OUT_DIR, "figure_1_ALL_infections.png"), fig1_all,
+ggsave(file.path(OUT_DIR, "figure_1_all-infections-baseline-only.png"), fig1_all,
        width = 11, height = 6.5, dpi = 150, units = "in")
 
 # Stacked layout
@@ -127,8 +118,6 @@ ggsave(file.path(OUT_DIR, "figure_1_ALL_infections.png"), fig1_all,
 # 
 # ggsave(file.path(OUT_DIR, "figure_1_ALL_v2.png"), fig1_all_v2,
 #        width = 6.5, height = 11, dpi = 150, units = "in")
-
-message("Figure 1 saved")
 
 # =============================================================================
 # Variant: Weekly all-population death incidence in panels a/c
@@ -162,7 +151,7 @@ fig_allpop <- (
   plot_layout(heights = c(0.12, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
 
-ggsave(file.path(OUT_DIR, "figure_1_ALL_deaths.png"), fig_allpop,
+ggsave(file.path(OUT_DIR, "figure_1_all-deaths-baseline-only.png"), fig_allpop,
        width = 11, height = 6.5, dpi = 150, units = "in")
 
 # =============================================================================
@@ -212,7 +201,7 @@ fig_hcw <- (
   plot_layout(heights = c(0.12, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
 
-ggsave(file.path(OUT_DIR, "figure_1_ALL_HCW-deaths.png"), fig_hcw,
+ggsave(file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-obv.png"), fig_hcw,
        width = 11, height = 6.5, dpi = 150, units = "in")
 
 # =============================================================================
@@ -242,7 +231,7 @@ fig_hcw_baseline <- (
   plot_layout(heights = c(0.12, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
 
-ggsave(file.path(OUT_DIR, "figure_1_ALL_HCW-deaths_baseline.png"), fig_hcw_baseline,
+ggsave(file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-only.png"), fig_hcw_baseline,
        width = 11, height = 6.5, dpi = 150, units = "in")
 
 message("Figure 1 variants saved")

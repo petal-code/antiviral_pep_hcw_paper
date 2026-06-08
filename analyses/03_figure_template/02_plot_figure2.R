@@ -83,24 +83,6 @@ fig2d <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted", "DRC"),
                        "DRC", "HCW days lost averted (%)",
                        "% HCW days lost averted by OBV efficacy")
 
-ggsave(file.path(OUT_DIR, "figure_2_a.png"),
-       fig2a,
-       width = 7, height = 5, dpi = 150)
-
-ggsave(file.path(OUT_DIR, "figure_2_b.png"),
-       fig2b,
-       width = 7, height = 5, dpi = 150)
-
-ggsave(file.path(OUT_DIR, "figure_2_c.png"),
-       fig2c,
-       width = 7, height = 5, dpi = 150)
-
-ggsave(file.path(OUT_DIR, "figure_2_d.png"),
-       fig2d ,
-       width = 7, height = 5, dpi = 150)
-
-message("Figure 2 panels saved: a, b, c, d")
-
 # Combine all panels
 make_header <- function(label, angle = 0) {
   ggplot() +
@@ -120,7 +102,7 @@ fig2_all <- (
   plot_layout(heights = c(0.08, 1, 1)) +
   plot_annotation(tag_levels = list(c("", "", "a", "c", "b", "d")))
 
-ggsave(file.path(OUT_DIR, "figure_2_ALL.png"), fig2_all,
+ggsave(file.path(OUT_DIR, "figure_2.png"), fig2_all,
        width = 11, height = 8, dpi = 150, units = "in")
 
-message("Figure 2 combined saved")
+message("Figure 2 saved")
