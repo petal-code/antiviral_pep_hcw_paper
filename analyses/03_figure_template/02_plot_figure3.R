@@ -26,13 +26,6 @@ make_coverage_plot <- function(cs) {
     theme_fig()
 }
 
-ggsave(file.path(OUT_DIR, "figure_3_a.png"), make_coverage_plot("full"),
-       width = 5, height = 4, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_3_b.png"), make_coverage_plot("ramp_high"),
-       width = 5, height = 4, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_3_c.png"), make_coverage_plot("ramp_low"),
-       width = 5, height = 4, dpi = 150)
-
 # =============================================================================
 # Build post-hoc OBV data: all efficacy x coverage combinations in one pass
 # =============================================================================
@@ -101,23 +94,21 @@ make_box_plot <- function(cs, metric, y_label) {
 }
 
 # Panels d, e, f -- HCW deaths averted
-for (i in seq_along(COVERAGE_LEVELS)) {
-  cs    <- COVERAGE_LEVELS[i]
-  label <- letters[3 + i]   # d, e, f
-  ggsave(
-    file.path(OUT_DIR, sprintf("figure_3_%s.png", label)),
-    make_box_plot(cs, "pct_hcw_deaths_averted",
-                  "HCW deaths averted (%)"),
-    width = 7, height = 5, dpi = 150
-  )
-}
+# for (i in seq_along(COVERAGE_LEVELS)) {
+#   cs    <- COVERAGE_LEVELS[i]
+#   label <- letters[3 + i]   # d, e, f
+#   ggsave(
+#     file.path(OUT_DIR, sprintf("figure_3_%s.png", label)),
+#     make_box_plot(cs, "pct_hcw_deaths_averted",
+#                   "HCW deaths averted (%)"),
+#     width = 7, height = 5, dpi = 150
+#   )
+# }
 
 # =============================================================================
 # Composite Figure 3: row 1 = coverage curves (a-c), row 2 = HCW deaths (d-f)
 # =============================================================================
-library(patchwork)
-
-make_col_header <- function(label) {
+ake_col_header <- function(label) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
     theme_void()
@@ -154,23 +145,50 @@ figure_3_composite <- (
   theme(legend.position = "bottom")
 
 ggsave(
-  file.path(OUT_DIR, "figure_3_ALL.png"),
+  file.path(OUT_DIR, "figure_3_deaths-averted.png"),
   figure_3_composite,
   width = 15, height = 11, dpi = 150
 )
 
-#message("Composite Figure 3 saved to ", file.path(OUT_DIR, "figure_3_composite.png"))
-# Panels g, h, i -- HCW days lost averted
-for (i in seq_along(COVERAGE_LEVELS)) {
-  cs    <- COVERAGE_LEVELS[i]
-  label <- letters[6 + i]   # g, h, i
-  ggsave(
-    file.path(OUT_DIR, sprintf("figure_3_%s.png", label)),
-    make_box_plot(cs, "pct_days_lost_averted",
-                  "HCW days lost averted (%)"),
-    width = 7, height = 5, dpi = 150
-  )
-}
+# Days lost averted panels
+p_g <- make_box_plot(COVERAGE_LEVELS[1], "pct_days_lost_averted",
+                     "HCW days lost averted (%)")
+p_h <- make_box_plot(COVERAGE_LEVELS[2], "pct_days_lost_averted",
+                     "HCW days lost averted (%)")
+p_i <- make_box_plot(COVERAGE_LEVELS[3], "pct_days_lost_averted",
+                     "HCW days lost averted (%)")
 
+figure_3_days_lost <- (
+  (h1 | h2 | h3) /
+  (no_x(p_a) | no_y(p_b) | no_xy(p_c)) /
+  (no_x(p_g) | no_y(p_h) | no_xy(p_i))
+) +
+  plot_layout(guides = "collect", axes = "collect",
+              heights = c(0.08, 1, 1)) +
+  plot_annotation(tag_levels = list(c("", "", "", "a", "b", "c", "d", "e", "f"))) &
+  theme(legend.position = "bottom")
 
-message("Figure 3 panels saved: a-c (coverage curves), d-f (deaths averted), g-i (days lost averted)")
+ggsave(
+  file.path(OUT_DIR, "figure_3_days-averted.png"),
+  figure_3_days_lost,
+  width = 15, height = 11, dpi = 150
+)
+
+figure_3_all <- (
+  (h1 | h2 | h3) /
+  (no_x(p_a) | no_y(p_b) | no_xy(p_c)) /
+  (no_x(p_d) | no_y(p_e) | no_xy(p_f)) /
+  (no_x(p_g) | no_y(p_h) | no_xy(p_i))
+) +
+  plot_layout(guides = "collect", axes = "collect",
+              heights = c(0.08, 1, 1, 1)) +
+  plot_annotation(tag_levels = list(c("", "", "", "a", "b", "c", "d", "e", "f", "g", "h", "i"))) &
+  theme(legend.position = "bottom")
+
+ggsave(
+  file.path(OUT_DIR, "figure_3_all-averted.png"),
+  figure_3_all,
+  width = 15, height = 15, dpi = 150
+)
+
+message("Figure 3 variants saved")

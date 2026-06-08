@@ -150,13 +150,6 @@ fig4d <- make_heatmap("DRC", "median_days_lost_averted",
                       "Days lost averted (%)", "% HCW days lost averted -- DRC",
                       palette = "YlGnBu")
 
-ggsave(file.path(OUT_DIR, "figure_4_a.png"), fig4a, width = 7, height = 6, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_4_b.png"), fig4b, width = 7, height = 6, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_4_c.png"), fig4c, width = 7, height = 6, dpi = 150)
-ggsave(file.path(OUT_DIR, "figure_4_d.png"), fig4d, width = 7, height = 6, dpi = 150)
-
-message("Figure 4 individual panels saved")
-
 # =============================================================================
 # Composite Figure 4
 # =============================================================================
@@ -178,7 +171,7 @@ fig4_all <- (
   plot_layout(guides = "collect", heights = c(0.08, 1, 1)) +
   plot_annotation(tag_levels = list(c("", "", "a", "c", "b", "d")))
 
-ggsave(file.path(OUT_DIR, "figure_4_ALL.png"), fig4_all,
+ggsave(file.path(OUT_DIR, "figure_4.png"), fig4_all,
        width = 14, height = 10, dpi = 150, units = "in")
 
-message("Figure 4 composite saved")
+message("Figure 4 saved")
