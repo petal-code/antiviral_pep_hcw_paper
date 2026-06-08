@@ -25,16 +25,17 @@ ts_infections_allpop <- build_weekly_ts(
 ) %>%
   mutate(week = week / 7) # days -> weeks
 
-make_infection_bar <- function(sc) {
+make_infection_bar <- function(sc, show_errorbars = TRUE) {
   x_max <- x_max_weeks(sc)
   df    <- filter(ts_infections_allpop, scenario == sc, week <= x_max)
 
-  ggplot(df, aes(x = week, y = q50)) +
+  p <- ggplot(df, aes(x = week, y = q50)) +
     geom_col(fill = "grey50", width = 0.8, alpha = 0.5) +
-    geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident infections (all)") +
     theme_fig()
+  if (show_errorbars) p <- p + geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5)
+  p
 }
 
 # Weekly deaths in entire population -- without OBV (v2 top panels)
@@ -46,16 +47,17 @@ ts_deaths_allpop <- build_weekly_ts(
 ) %>%
   mutate(week = week / 7) # days -> weeks
 
-make_death_bar <- function(sc) {
+make_death_bar <- function(sc, show_errorbars = TRUE) {
   x_max <- x_max_weeks(sc)
   df    <- filter(ts_deaths_allpop, scenario == sc, week <= x_max)
 
-  ggplot(df, aes(x = week, y = q50)) +
+  p <- ggplot(df, aes(x = week, y = q50)) +
     geom_col(fill = "grey50", width = 0.8, alpha = 0.5) +
-    geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident deaths (all)") +
     theme_fig()
+  if (show_errorbars) p <- p + geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5)
+  p
 }
 
 # Weekly HCW deaths -- without OBV (v3 top panels)
@@ -67,16 +69,17 @@ ts_hcw_deaths_base <- build_weekly_ts(
 ) %>%
   mutate(week = week / 7, arm = "baseline") # days -> weeks
 
-make_hcw_death_bar_baseline <- function(sc) {
+make_hcw_death_bar_baseline <- function(sc, show_errorbars = TRUE) {
   x_max <- x_max_weeks(sc)
   df    <- filter(ts_hcw_deaths_base, scenario == sc, week <= x_max)
 
-  ggplot(df, aes(x = week, y = q50)) +
+  p <- ggplot(df, aes(x = week, y = q50)) +
     geom_col(fill = "grey50", width = 0.8, alpha = 0.5) +
-    geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident HCW deaths") +
     theme_fig()
+  if (show_errorbars) p <- p + geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.25, linewidth = 0.5)
+  p
 }
 
 # Weekly HCW deaths -- with and without OBV (v4 top panels)
@@ -92,7 +95,7 @@ ts_hcw_deaths_obv80 <- build_weekly_ts(
 ts_hcw_inc <- bind_rows(ts_hcw_deaths_base, ts_hcw_deaths_obv80) %>%
   mutate(arm = factor(arm, levels = c("baseline", "obv_80")))
 
-make_hcw_death_bar <- function(sc) {
+make_hcw_death_bar <- function(sc, show_errorbars = TRUE) {
   arms       <- c("baseline", "obv_80")
   sc_color   <- unname(SCENARIO_COLORS[sc])
   bar_colors <- setNames(c("grey50", sc_color), arms)
@@ -100,17 +103,18 @@ make_hcw_death_bar <- function(sc) {
   x_max      <- x_max_weeks(sc)
   df         <- filter(ts_hcw_inc, scenario == sc, week <= x_max)
 
-  ggplot(df, aes(x = week, y = q50, fill = arm)) +
+  p <- ggplot(df, aes(x = week, y = q50, fill = arm)) +
     geom_col(width = 0.5, position = position_dodge(width = 0.5), alpha = 0.5) +
-    geom_errorbar(
-      aes(ymin = q25, ymax = q75),
-      width = 0.25, linewidth = 0.25,
-      position = position_dodge(width = 0.5)
-    ) +
     scale_fill_manual(values = bar_colors, labels = bar_labels, name = NULL) +
     scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident HCW deaths") +
     theme_fig()
+  if (show_errorbars) p <- p + geom_errorbar(
+    aes(ymin = q25, ymax = q75),
+    width = 0.25, linewidth = 0.25,
+    position = position_dodge(width = 0.5)
+  )
+  p
 }
 
 # Cumulative HCW deaths -- with and without OBV (bottom panels, all version)
@@ -204,6 +208,52 @@ fig1_v4 <- ((make_header("West Africa archetype") | make_header("DRC archetype")
 ggsave(
   file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-obv.png"),
   fig1_v4, width = 11, height = 6.5, dpi = 150, units = "in"
+)
+
+# No-errorbar variants ----
+fig1_v2_ne <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
+                 ((make_death_bar("WestAfrica", FALSE) | make_death_bar("DRC", FALSE)) + plot_layout(axis_titles = "collect")) /
+                 ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
+  plot_layout(heights = c(0.2, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
+
+ggsave(
+  file.path(OUT_DIR, "figure_1_all-deaths-baseline-only_no-errorbars.png"),
+  fig1_v2_ne, width = 11, height = 6.5, dpi = 150, units = "in"
+)
+
+fig1_v1_ne <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
+                 ((make_infection_bar("WestAfrica", FALSE) | make_infection_bar("DRC", FALSE)) + plot_layout(axis_titles = "collect")) /
+                 ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
+  plot_layout(heights = c(0.2, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
+
+ggsave(
+  file.path(OUT_DIR, "figure_1_all-infections-baseline-only_no-errorbars.png"),
+  fig1_v1_ne, width = 11, height = 6.5, dpi = 150, units = "in"
+)
+
+fig1_v3_ne <- (
+  (make_header("West Africa archetype") | make_header("DRC archetype")) /
+    ((make_hcw_death_bar_baseline("WestAfrica", FALSE) | make_hcw_death_bar_baseline("DRC", FALSE)) + plot_layout(axis_titles = "collect")) /
+    ((make_ts("WestAfrica") | make_ts("DRC"))) + plot_layout(axis_titles = "collect")) +
+  plot_layout(heights = c(0.2, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
+
+ggsave(
+  file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-only_no-errorbars.png"),
+  fig1_v3_ne, width = 11, height = 6.5, dpi = 150, units = "in"
+)
+
+fig1_v4_ne <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
+                 ((make_hcw_death_bar("WestAfrica", FALSE) | make_hcw_death_bar("DRC", FALSE)) + plot_layout(axis_titles = "collect")) /
+                 ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
+  plot_layout(heights = c(0.2, 1, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
+
+ggsave(
+  file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-obv_no-errorbars.png"),
+  fig1_v4_ne, width = 11, height = 6.5, dpi = 150, units = "in"
 )
 
 message("Figure 1 variants saved")
