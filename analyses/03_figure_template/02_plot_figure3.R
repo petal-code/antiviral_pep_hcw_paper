@@ -89,8 +89,7 @@ make_box_plot <- function(cs, metric, y_label) {
     scale_linewidth_manual(values = c("TRUE" = 1.0, "FALSE" = 0.4), guide = "none") +
     scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     labs(x = "OBV efficacy", y = y_label) +
-    theme_fig() +
-    theme(panel.grid.major.x = element_blank())
+    theme_fig()
 }
 
 # =============================================================================
