@@ -132,20 +132,4 @@ ggsave(
   figure_3_days_lost, width = 15, height = 11, dpi = 150
 )
 
-# Version 3 - deaths and days averted
-figure_3_all <- (
-  (h1 | h2 | h3) /
-  ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
-  ((p_d | p_e | p_f) + plot_layout(axis_titles = "collect")) /
-  ((p_g | p_h | p_i) + plot_layout(axis_titles = "collect"))
-) +
-  plot_layout(guides = "collect", axes = "collect", heights = c(0.08, 1, 1, 1)) +
-  plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f ", "g ", "h ", "i "))) &
-  theme(legend.position = "bottom")
-
-ggsave(
-  file.path(OUT_DIR, "figure_3_all-averted.png"),
-  figure_3_all, width = 15, height = 15, dpi = 150
-)
-
 message("Figure 3 variants saved")
