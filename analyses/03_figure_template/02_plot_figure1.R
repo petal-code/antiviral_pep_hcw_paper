@@ -12,38 +12,30 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 results <- load_results()
 
-# =============================================================================
-# Top panels (v1): Weekly infections in entire population -- without OBV
-# =============================================================================
+x_max_weeks <- function(sc) if (sc == "WestAfrica") 365 / 7 else 450 / 7
+
+# Weekly infections in entire population -- without OBV
 ts_infections_allpop <- build_weekly_ts(
   results,
   metric = "infections",
   bin_width = 7,
   efficacy_name = "baseline"
 ) %>%
-  mutate(week = week / 7)
+  mutate(week = week / 7) # days -> weeks
 
 make_infection_bar <- function(sc) {
-  x_max <- (if (sc == "WestAfrica")
-    365 / 7
-    else
-      450 / 7) # days -> weeks
-  
-  df <- filter(ts_infections_allpop, scenario == sc, week <= x_max)
-  
+  x_max <- x_max_weeks(sc)
+  df    <- filter(ts_infections_allpop, scenario == sc, week <= x_max)
+
   ggplot(df, aes(x = week, y = q50)) +
     geom_col(fill = "grey50", width = 0.8) +
-    geom_errorbar(aes(ymin = q025, ymax = q975),
-                  width = 0.25,
-                  linewidth = 0.5) +
+    geom_errorbar(aes(ymin = q025, ymax = q975), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident infections (all)") +
     theme_fig()
 }
 
-# =============================================================================
-# Top panels (v2): Weekly deaths in entire population -- without OBV
-# =============================================================================
+# Weekly deaths in entire population -- without OBV
 ts_deaths_allpop <- build_weekly_ts(
   results,
   metric = "deaths",
@@ -53,27 +45,19 @@ ts_deaths_allpop <- build_weekly_ts(
   mutate(week = week / 7)
 
 make_death_bar <- function(sc) {
-  x_max <- (if (sc == "WestAfrica")
-    365 / 7
-    else
-      450 / 7) # days -> weeks
-  
+  x_max <- x_max_weeks(sc)
   df    <- filter(ts_deaths_allpop, scenario == sc, week <= x_max)
-  
+
   ggplot(df, aes(x = week, y = q50)) +
     geom_col(fill = "grey50", width = 0.8) +
-    geom_errorbar(aes(ymin = q025, ymax = q975),
-                  width = 0.25,
-                  linewidth = 0.5) +
+    geom_errorbar(aes(ymin = q025, ymax = q975), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident deaths (all)") +
     theme_fig()
 }
 
-# =============================================================================
-# Top panels (v3): Weekly HCW deaths -- without OBV
-# =============================================================================
-ts_hcw_deaths_base  <- build_weekly_ts(
+# Weekly HCW deaths -- without OBV
+ts_hcw_deaths_base <- build_weekly_ts(
   results,
   metric = "hcw_deaths_incidence",
   bin_width = 7,
@@ -82,26 +66,18 @@ ts_hcw_deaths_base  <- build_weekly_ts(
   mutate(week = week / 7, arm = "baseline")
 
 make_hcw_death_bar_baseline <- function(sc) {
-  x_max <- (if (sc == "WestAfrica")
-    365 / 7
-    else
-      450 / 7) # days -> weeks
-  
+  x_max <- x_max_weeks(sc)
   df    <- filter(ts_hcw_deaths_base, scenario == sc, week <= x_max)
-  
+
   ggplot(df, aes(x = week, y = q50)) +
     geom_col(fill = "grey50", width = 0.8) +
-    geom_errorbar(aes(ymin = q025, ymax = q975),
-                  width = 0.25,
-                  linewidth = 0.5) +
+    geom_errorbar(aes(ymin = q025, ymax = q975), width = 0.25, linewidth = 0.5) +
     scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident HCW deaths") +
     theme_fig()
 }
 
-# =============================================================================
-# Top panels (v4): Weekly HCW deaths -- with and without OBV
-# =============================================================================
+# Weekly HCW deaths -- with and without OBV
 ts_hcw_deaths_obv80 <- build_weekly_ts(
   results,
   metric = "hcw_deaths_incidence",
@@ -115,108 +91,71 @@ ts_hcw_inc <- bind_rows(ts_hcw_deaths_base, ts_hcw_deaths_obv80) %>%
   mutate(arm = factor(arm, levels = c("baseline", "obv_80")))
 
 make_hcw_death_bar <- function(sc) {
-  arms     <- c("baseline", "obv_80")
-  sc_color <- unname(SCENARIO_COLORS[sc])
+  arms       <- c("baseline", "obv_80")
+  sc_color   <- unname(SCENARIO_COLORS[sc])
   bar_colors <- setNames(c("grey50", sc_color), arms)
   bar_labels <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy, 100% coverage)")
-  
-  x_max <- (if (sc == "WestAfrica")
-    365 / 7
-    else
-      450 / 7) # days -> weeks
-  
-  df <- filter(ts_hcw_inc, scenario == sc, week <= x_max)
-  
+  x_max      <- x_max_weeks(sc)
+  df         <- filter(ts_hcw_inc, scenario == sc, week <= x_max)
+
   ggplot(df, aes(x = week, y = q50, fill = arm)) +
     geom_col(width = 0.5, position = position_dodge(width = 0.5)) +
     geom_errorbar(
       aes(ymin = q025, ymax = q975),
-      width = 0.25,
-      linewidth = 0.25,
+      width = 0.25, linewidth = 0.25,
       position = position_dodge(width = 0.5)
     ) +
-    scale_fill_manual(values = bar_colors,
-                      labels = bar_labels,
-                      name = NULL) +
+    scale_fill_manual(values = bar_colors, labels = bar_labels, name = NULL) +
     scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident HCW deaths") +
     theme_fig()
 }
 
-# =============================================================================
-# Bottom panels: Cumulative HCW deaths -- with and without OBV
-# =============================================================================
+# Cumulative HCW deaths -- with and without OBV
 ts_baseline <- build_weekly_ts(
-  results,
-  metric = "hcw_deaths",
-  bin_width = 7,
-  efficacy_name = "baseline"
+  results, metric = "hcw_deaths", bin_width = 7, efficacy_name = "baseline"
 )
-ts_obv80    <- build_weekly_ts(
-  results,
-  metric = "hcw_deaths",
-  bin_width = 7,
-  efficacy_name = "obv_80",
-  coverage_name = "full"
+ts_obv80 <- build_weekly_ts(
+  results, metric = "hcw_deaths", bin_width = 7, efficacy_name = "obv_80", coverage_name = "full"
 )
 
-ts_hcw_df <- bind_rows(mutate(ts_baseline, arm = "baseline"),
-                       mutate(ts_obv80, arm = "obv_80")) %>%
+ts_hcw_df <- bind_rows(
+  mutate(ts_baseline, arm = "baseline"),
+  mutate(ts_obv80,    arm = "obv_80")
+) %>%
   mutate(week = week / 7)
 
 make_ts <- function(sc) {
-  arms <- c("baseline", "obv_80")
-  sc_color <- unname(SCENARIO_COLORS[sc])
-  ts_colors <- setNames(c("grey50", sc_color), arms)
+  arms         <- c("baseline", "obv_80")
+  sc_color     <- unname(SCENARIO_COLORS[sc])
+  ts_colors    <- setNames(c("grey50", sc_color), arms)
   ts_linetypes <- c(baseline = "solid", obv_80 = "dashed")
-  ts_labels <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy, 100% coverage)")
-  x_max <- if (sc == "WestAfrica")
-    365 / 7
-  else
-    450 / 7
-  
-  df <- filter(ts_hcw_df, scenario == sc, week <= x_max) %>%
+  ts_labels    <- c(baseline = "Without OBV", obv_80 = "With OBV (80% efficacy, 100% coverage)")
+  x_max        <- x_max_weeks(sc)
+  df           <- filter(ts_hcw_df, scenario == sc, week <= x_max) %>%
     mutate(arm = factor(arm, levels = arms))
-  
+
   ggplot(df, aes(x = week, color = arm, fill = arm)) +
-    geom_ribbon(aes(ymin = q025, ymax = q975),
-                alpha = 0.1,
-                color = NA) +
+    geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.1, color = NA) +
     geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.25, color = NA) +
     geom_line(aes(y = q50, linetype = arm), linewidth = 1) +
-    scale_color_manual(values = ts_colors,
-                       labels = ts_labels,
-                       name = NULL) +
-    scale_fill_manual(values = ts_colors,
-                      labels = ts_labels,
-                      name = NULL) +
-    scale_linetype_manual(values = ts_linetypes,
-                          labels = ts_labels,
-                          name = NULL) +
+    scale_color_manual(values = ts_colors, labels = ts_labels, name = NULL) +
+    scale_fill_manual(values = ts_colors, labels = ts_labels, name = NULL) +
+    scale_linetype_manual(values = ts_linetypes, labels = ts_labels, name = NULL) +
     scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Cumulative HCW deaths") +
     theme_fig() +
     theme(legend.key.width = unit(1, "cm"))
 }
 
-# =============================================================================
-# Combined figure layouts
-# =============================================================================
-# Helper function to make column headers
+# Column headers
 make_header <- function(label) {
   ggplot() +
-    annotate(
-      "text",
-      x = 0.5,
-      y = 0.5,
-      label = label,
-      fontface = "bold",
-      size = 5
-    ) +
+    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5) +
     theme_void()
 }
 
-# Version 1
+# Version 1: weekly infections + cumulative HCW deaths
 fig1_v1 <- ((make_header("West Africa") | make_header("DRC")) /
               ((make_infection_bar("WestAfrica") | make_infection_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
@@ -225,14 +164,10 @@ fig1_v1 <- ((make_header("West Africa") | make_header("DRC")) /
 
 ggsave(
   file.path(OUT_DIR, "figure_1_all-infections-baseline-only.png"),
-  fig1_v1,
-  width = 11,
-  height = 6.5,
-  dpi = 150,
-  units = "in"
+  fig1_v1, width = 11, height = 6.5, dpi = 150, units = "in"
 )
 
-# Version 2
+# Version 2: weekly deaths + cumulative HCW deaths
 fig1_v2 <- ((make_header("West Africa") | make_header("DRC")) /
               ((make_death_bar("WestAfrica") | make_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
@@ -241,14 +176,10 @@ fig1_v2 <- ((make_header("West Africa") | make_header("DRC")) /
 
 ggsave(
   file.path(OUT_DIR, "figure_1_all-deaths-baseline-only.png"),
-  fig1_v2,
-  width = 11,
-  height = 6.5,
-  dpi = 150,
-  units = "in"
+  fig1_v2, width = 11, height = 6.5, dpi = 150, units = "in"
 )
 
-# Version 3
+# Version 3: weekly HCW deaths (baseline only) + cumulative HCW deaths
 fig1_v3 <- (
   (make_header("West Africa") | make_header("DRC")) /
     ((make_hcw_death_bar_baseline("WestAfrica") | make_hcw_death_bar_baseline("DRC")) + plot_layout(axis_titles = "collect")) /
@@ -258,14 +189,10 @@ fig1_v3 <- (
 
 ggsave(
   file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-only.png"),
-  fig1_v3,
-  width = 11,
-  height = 6.5,
-  dpi = 150,
-  units = "in"
+  fig1_v3, width = 11, height = 6.5, dpi = 150, units = "in"
 )
 
-# Version 4
+# Version 4: weekly HCW deaths (with/without OBV) + cumulative HCW deaths
 fig1_v4 <- ((make_header("West Africa") | make_header("DRC")) /
               ((make_hcw_death_bar("WestAfrica") | make_hcw_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
@@ -274,11 +201,7 @@ fig1_v4 <- ((make_header("West Africa") | make_header("DRC")) /
 
 ggsave(
   file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-obv.png"),
-  fig1_v4,
-  width = 11,
-  height = 6.5,
-  dpi = 150,
-  units = "in"
+  fig1_v4, width = 11, height = 6.5, dpi = 150, units = "in"
 )
 
 message("Figure 1 variants saved")
