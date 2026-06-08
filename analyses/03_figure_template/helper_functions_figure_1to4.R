@@ -385,11 +385,6 @@ build_weekly_ts <- function(results,
 theme_fig <- function(base_size = 12) {
   theme_classic(base_size = base_size) +
     theme(
-      plot.title       = element_text(face = "bold", size = base_size + 1),
-      plot.subtitle    = element_text(color = "grey40", size = base_size - 2),
-      strip.background = element_blank(),
-      strip.text       = element_text(face = "bold"),
-      panel.grid.minor = element_blank(),
-      legend.position  = "top"
+      legend.position = "top"
     )
 }
