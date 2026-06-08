@@ -99,7 +99,7 @@ PEAK_TIME_ORIGIN <- "first_death"
 
 # WA epidemic is ~28k cases; keep check_final_size well above it so summaries are
 # not truncated (correctness AND it bounds runaway draws' cost).
-MODEL_OVERRIDES <- list(check_final_size = 45000)
+MODEL_OVERRIDES <- list(check_final_size = 40000)
 
 ABC_OUTPUT_BASE   <- ANALYSIS_DIR
 ABC_OUTPUT_LABEL  <- "Decoupled"
