@@ -59,8 +59,7 @@ make_bar_plot <- function(summ_df, sc, y_label, title) {
                        limits = c(0, 100),
                        labels = function(x) paste0(x, "%")) +
     labs(x = "OBV efficacy", y = y_label) +
-    theme_fig() +
-    theme(panel.grid.major.x = element_blank())
+    theme_fig()
 }
 
 
