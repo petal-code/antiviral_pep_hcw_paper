@@ -10,6 +10,7 @@ source(here::here(
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
+# Build panels ----
 # Five scalar coverage levels (not ramp curves)
 COVERAGE_GRID <- c(0.10, 0.30, 0.50, 0.70, 0.90)
 
@@ -115,6 +116,7 @@ make_heatmap <- function(sc, metric, fill_label, palette = "YlOrRd") {
     theme(legend.position = "right", panel.grid = element_blank(), axis.ticks = element_blank())
 }
 
+# Combine panels ----
 make_header <- function(label) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5) +
