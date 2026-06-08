@@ -50,7 +50,7 @@ SCENARIO_ID    <- "Worst_WestAfrica"
 #   smoke      : minutes; confirms the pipeline runs end-to-end (NOT a real fit).
 #   check      : ~1 hr-ish; a rough posterior to sanity-check shapes/targets.
 #   production : the real fit (n_reps=40 from the noise check; stop on plateau).
-RUN_PROFILE <- "smoke"
+RUN_PROFILE <- "check"
 .PROFILES <- list(
   smoke      = list(n_reps =  5L, nb_simul =  60L, tolerance_target = 5.00, n_traj =  20L),
   check      = list(n_reps = 30L, nb_simul = 472L, tolerance_target = 1, n_traj = 200L),
