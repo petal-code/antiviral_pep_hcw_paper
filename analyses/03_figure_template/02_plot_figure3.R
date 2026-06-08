@@ -9,7 +9,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 results <- load_results()
 
 # =============================================================================
-# Panels a, b, c: Coverage curve visualisations
+# Panels a, b, c: Coverage scenarios
 # =============================================================================
 make_coverage_plot <- function(cs) {
   spec  <- COVERAGE_SPECS[[cs]]
@@ -19,10 +19,10 @@ make_coverage_plot <- function(cs) {
   ggplot(df, aes(x = time, y = coverage)) +
     geom_line(color = color, linewidth = 1.2) +
     geom_point(color = color, size = 3) +
-    scale_y_continuous(limits = c(0, 100)) +
+    scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     scale_x_continuous(breaks = c(0, 30, 60, 90)) +
     labs(x = "Days since outbreak start",
-         y = "OBV coverage (%)") +
+         y = "OBV coverage") +
     theme_fig()
 }
 
@@ -87,28 +87,16 @@ make_box_plot <- function(cs, metric, y_label) {
     scale_fill_manual(values = fill_vals, breaks = legend_breaks,
                       labels = c("West Africa", "DRC"), name = NULL) +
     scale_linewidth_manual(values = c("TRUE" = 1.0, "FALSE" = 0.4), guide = "none") +
-    scale_y_continuous(limits = c(0, 100)) +
+    scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     labs(x = "OBV efficacy", y = y_label) +
     theme_fig() +
     theme(panel.grid.major.x = element_blank())
 }
 
-# Panels d, e, f -- HCW deaths averted
-# for (i in seq_along(COVERAGE_LEVELS)) {
-#   cs    <- COVERAGE_LEVELS[i]
-#   label <- letters[3 + i]   # d, e, f
-#   ggsave(
-#     file.path(OUT_DIR, sprintf("figure_3_%s.png", label)),
-#     make_box_plot(cs, "pct_hcw_deaths_averted",
-#                   "HCW deaths averted (%)"),
-#     width = 7, height = 5, dpi = 150
-#   )
-# }
-
 # =============================================================================
 # Composite Figure 3: row 1 = coverage curves (a-c), row 2 = HCW deaths (d-f)
 # =============================================================================
-ake_col_header <- function(label) {
+make_col_header <- function(label) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
     theme_void()
@@ -118,54 +106,50 @@ h1 <- make_col_header("Constant, Full Coverage")
 h2 <- make_col_header("Ramp Up to High Coverage")
 h3 <- make_col_header("Ramp Up to Medium Coverage")
 
-# Re-generate panel objects (individual PNGs already saved above)
 p_a <- make_coverage_plot(COVERAGE_LEVELS[1])
 p_b <- make_coverage_plot(COVERAGE_LEVELS[2])
 p_c <- make_coverage_plot(COVERAGE_LEVELS[3])
 
 p_d <- make_box_plot(COVERAGE_LEVELS[1], "pct_hcw_deaths_averted",
-                     "HCW deaths averted (%)")
+                     "HCW deaths averted")
 p_e <- make_box_plot(COVERAGE_LEVELS[2], "pct_hcw_deaths_averted",
-                     "HCW deaths averted (%)")
+                     "HCW deaths averted")
 p_f <- make_box_plot(COVERAGE_LEVELS[3], "pct_hcw_deaths_averted",
-                     "HCW deaths averted (%)")
+                     "HCW deaths averted")
 
-no_x  <- function(p) p + theme(axis.title.x = element_blank())
-no_y  <- function(p) p + theme(axis.title.y = element_blank())
-no_xy <- function(p) p + theme(axis.title.x = element_blank(), axis.title.y = element_blank())
-
-figure_3_composite <- (
+# Deaths averted
+figure_3_deaths <- (
   (h1 | h2 | h3) /
-  (no_x(p_a) | no_y(p_b) | no_xy(p_c)) /
-  (no_x(p_d) | no_y(p_e) | no_xy(p_f))
+  ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
+    ((p_d | p_e | p_f) + plot_layout(axis_titles = "collect")) 
 ) +
-  plot_layout(guides = "collect", axes = "collect",
+  plot_layout(guides = "collect", 
               heights = c(0.08, 1, 1)) +
-  plot_annotation(tag_levels = list(c("", "", "", "a", "b", "c", "d", "e", "f"))) &
+  plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
   theme(legend.position = "bottom")
 
 ggsave(
   file.path(OUT_DIR, "figure_3_deaths-averted.png"),
-  figure_3_composite,
+  figure_3_deaths,
   width = 15, height = 11, dpi = 150
 )
 
-# Days lost averted panels
 p_g <- make_box_plot(COVERAGE_LEVELS[1], "pct_days_lost_averted",
-                     "HCW days lost averted (%)")
+                     "HCW days lost averted")
 p_h <- make_box_plot(COVERAGE_LEVELS[2], "pct_days_lost_averted",
-                     "HCW days lost averted (%)")
+                     "HCW days lost averted")
 p_i <- make_box_plot(COVERAGE_LEVELS[3], "pct_days_lost_averted",
-                     "HCW days lost averted (%)")
+                     "HCW days lost averted")
 
+# Days lost averted
 figure_3_days_lost <- (
   (h1 | h2 | h3) /
-  (no_x(p_a) | no_y(p_b) | no_xy(p_c)) /
-  (no_x(p_g) | no_y(p_h) | no_xy(p_i))
+    ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
+    ((p_g | p_h | p_i) + plot_layout(axis_titles = "collect")) 
 ) +
   plot_layout(guides = "collect", axes = "collect",
               heights = c(0.08, 1, 1)) +
-  plot_annotation(tag_levels = list(c("", "", "", "a", "b", "c", "d", "e", "f"))) &
+  plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
   theme(legend.position = "bottom")
 
 ggsave(
@@ -174,15 +158,16 @@ ggsave(
   width = 15, height = 11, dpi = 150
 )
 
+# days and deaths averted
 figure_3_all <- (
   (h1 | h2 | h3) /
-  (no_x(p_a) | no_y(p_b) | no_xy(p_c)) /
-  (no_x(p_d) | no_y(p_e) | no_xy(p_f)) /
-  (no_x(p_g) | no_y(p_h) | no_xy(p_i))
+    ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
+    ((p_d | p_e | p_f) + plot_layout(axis_titles = "collect")) / 
+    ((p_g | p_h | p_i) + plot_layout(axis_titles = "collect")) 
 ) +
   plot_layout(guides = "collect", axes = "collect",
               heights = c(0.08, 1, 1, 1)) +
-  plot_annotation(tag_levels = list(c("", "", "", "a", "b", "c", "d", "e", "f", "g", "h", "i"))) &
+  plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f ", "g ", "h ", "i "))) &
   theme(legend.position = "bottom")
 
 ggsave(
