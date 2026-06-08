@@ -2,7 +2,11 @@
 # 02_plot_figure4.R
 # Efficacy x coverage heatmap -- fully post-hoc, no separate simulation needed
 # =============================================================================
-source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
+source(here::here(
+  "analyses",
+  "03_figure_template",
+  "helper_functions_figure_1to4.R"
+))
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -41,9 +45,12 @@ grid_rows <- do.call(rbind, lapply(names(efficacy_grid), function(eff_name) {
       
       # Use prevented_flag returned directly from apply_obv_posthoc so that
       # the prevented individuals are consistent with the prevented count.
-      days_lost <- compute_hcw_days_lost(x$tdf, x$duration,
-                                         obv_received = obv$obv_received,
-                                         prevented    = obv$prevented_flag)
+      days_lost <- compute_hcw_days_lost(
+        x$tdf,
+        x$duration,
+        obv_received = obv$obv_received,
+        prevented    = obv$prevented_flag
+      )
       
       data.frame(
         scenario           = x$scenario,
@@ -69,7 +76,8 @@ grid_rows <- do.call(rbind, lapply(names(efficacy_grid), function(eff_name) {
 # =============================================================================
 base_particle <- baseline_rows %>%
   group_by(scenario, particle_id) %>%
-  summarise(baseline_days_lost = mean(hcw_days_lost), .groups = "drop")
+  summarise(baseline_days_lost = mean(hcw_days_lost),
+            .groups = "drop")
 
 heatmap_df <- grid_rows %>%
   group_by(scenario, particle_id, obv_efficacy, obv_coverage) %>%
@@ -95,83 +103,90 @@ heatmap_df <- grid_rows %>%
   group_by(scenario, obv_efficacy, obv_coverage) %>%
   summarise(
     median_deaths_averted    = median(pct_hcw_deaths_averted, na.rm = TRUE),
-    median_days_lost_averted = median(pct_days_lost_averted,  na.rm = TRUE),
+    median_days_lost_averted = median(pct_days_lost_averted, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   mutate(
-    coverage_label = factor(paste0(round(obv_coverage * 100), "%"),
-                            levels = paste0(c(10, 30, 50, 70, 90), "%")),
-    efficacy_label = factor(paste0(round(obv_efficacy * 100), "%"),
-                            levels = paste0(c(50, 60, 70, 80, 90), "%"))
+    coverage_label = factor(paste0(round(obv_coverage * 100), "%"), levels = paste0(c(10, 30, 50, 70, 90), "%")),
+    efficacy_label = factor(paste0(round(obv_efficacy * 100), "%"), levels = paste0(c(50, 60, 70, 80, 90), "%"))
   )
 
 # =============================================================================
 # Heatmap plot function
 # =============================================================================
-make_heatmap <- function(sc, metric, fill_label, title, palette = "YlOrRd") {
+make_heatmap <- function(sc, metric, fill_label, palette = "YlOrRd") {
   df <- filter(heatmap_df, scenario == sc)
-
-  ggplot(df, aes(x = coverage_label, y = efficacy_label,
-                 fill = .data[[metric]])) +
+  
+  ggplot(df, aes(x = coverage_label, y = efficacy_label, fill = .data[[metric]])) +
     geom_tile(color = "white", linewidth = 0.5) +
-    geom_text(aes(label = sprintf("%.0f%%", .data[[metric]])),
-              size = 4, fontface = "bold", color = "grey20") +
+    geom_text(
+      aes(label = sprintf("%.0f%%", .data[[metric]])),
+      size = 4,
+      fontface = "bold",
+      color = "grey20"
+    ) +
     scale_fill_distiller(
       palette   = palette,
       direction = 1,
       name      = fill_label,
       limits    = c(0, 100),
+      labels    = function(x)
+        paste0(x, "%"),
       na.value  = "grey90"
     ) +
-    labs(x = "OBV coverage", y = "OBV efficacy",
-         title    = title,
-         subtitle = sprintf("%s | Median across posterior particles",
-                            SCENARIO_LABELS[sc]),
-         caption  = "Stochastic branching process model (fiber)") +
+    labs(x = "OBV coverage", y = "OBV efficacy") +
     theme_fig(base_size = 13) +
-    theme(legend.position = "right",
-          panel.grid      = element_blank(),
-          axis.ticks      = element_blank())
+    theme(
+      legend.position = "right",
+      panel.grid      = element_blank(),
+      axis.ticks      = element_blank()
+    )
 }
-
-# =============================================================================
-# Save four panels
-# =============================================================================
-fig4a <- make_heatmap("WestAfrica", "median_deaths_averted",
-                      "Deaths averted (%)", "% HCW deaths averted -- West Africa",
-                      palette = "YlOrRd")
-fig4b <- make_heatmap("WestAfrica", "median_days_lost_averted",
-                      "Days lost averted (%)", "% HCW days lost averted -- West Africa",
-                      palette = "YlGnBu")
-fig4c <- make_heatmap("DRC", "median_deaths_averted",
-                      "Deaths averted (%)", "% HCW deaths averted -- DRC",
-                      palette = "YlOrRd")
-fig4d <- make_heatmap("DRC", "median_days_lost_averted",
-                      "Days lost averted (%)", "% HCW days lost averted -- DRC",
-                      palette = "YlGnBu")
 
 # =============================================================================
 # Composite Figure 4
 # =============================================================================
 make_header <- function(label) {
   ggplot() +
-    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 5) +
+    annotate(
+      "text",
+      x = 0.5,
+      y = 0.5,
+      label = label,
+      fontface = "bold",
+      size = 5
+    ) +
     theme_void()
 }
 
-strip_titles <- function(p) p + theme(plot.title    = element_blank(),
-                                       plot.subtitle = element_blank(),
-                                       plot.caption  = element_blank())
+fig4a <- make_heatmap("WestAfrica",
+                      "median_deaths_averted",
+                      "Deaths averted",
+                      palette = "YlOrRd")
+fig4c <- make_heatmap("WestAfrica",
+                      "median_days_lost_averted",
+                      "Days lost averted",
+                      palette = "YlGnBu")
+fig4b <- make_heatmap("DRC", "median_deaths_averted", "Deaths averted", palette = "YlOrRd")
+fig4d <- make_heatmap("DRC",
+                      "median_days_lost_averted",
+                      "Days lost averted",
+                      palette = "YlGnBu")
 
-fig4_all <- (
-  (make_header("West Africa") | make_header("DRC")) /
-  (strip_titles(fig4a)        | strip_titles(fig4c)) /
-  (strip_titles(fig4b)        | strip_titles(fig4d))
-) +
-  plot_layout(guides = "collect", heights = c(0.08, 1, 1)) +
-  plot_annotation(tag_levels = list(c("", "", "a", "c", "b", "d")))
+fig4_all <- ((make_header("West Africa") | make_header("DRC")) /
+               ((fig4a + fig4b +
+                   fig4c + fig4d) + plot_layout(nrow = 2, axis_titles = "collect")
+               )) +
+  plot_layout(guides = "collect", heights = c(0.08, 1)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
-ggsave(file.path(OUT_DIR, "figure_4.png"), fig4_all,
-       width = 14, height = 10, dpi = 150, units = "in")
+ggsave(
+  file.path(OUT_DIR, "figure_4.png"),
+  fig4_all,
+  width = 14,
+  height = 10,
+  dpi = 150,
+  units = "in"
+)
 
 message("Figure 4 saved")
