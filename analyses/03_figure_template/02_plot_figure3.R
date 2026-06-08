@@ -17,7 +17,6 @@ make_coverage_plot <- function(cs) {
 
   ggplot(df, aes(x = time, y = coverage)) +
     geom_line(color = color, linewidth = 1.2) +
-    geom_point(color = color, size = 3) +
     scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     scale_x_continuous(breaks = c(0, 30, 60, 90)) +
     labs(x = "Days since outbreak start", y = "OBV coverage") +
@@ -68,12 +67,10 @@ make_box_plot <- function(cs, metric, y_label) {
   )
 
   ggplot(df, aes(x = arm_label, y = .data[[metric]], fill = fill_group)) +
-    geom_boxplot(aes(linewidth = arm_label == "80%"),
-                 outlier.size = 0.5, width = 0.6, color = "black",
+    geom_boxplot(outlier.size = 0.5, width = 0.6, color = "black", linewidth = 0.4,
                  position = position_dodge(0.75)) +
-    scale_fill_manual(values = fill_vals, breaks = legend_breaks,
-                      labels = c("West Africa archetype", "DRC archetype"), name = NULL) +
-    scale_linewidth_manual(values = c("TRUE" = 1.0, "FALSE" = 0.4), guide = "none") +
+    scale_fill_manual(values = fill_vals, breaks = rev(legend_breaks),
+                      labels = c("DRC archetype", "West Africa archetype"), name = NULL) +
     scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     labs(x = "OBV efficacy", y = y_label) +
     theme_fig()
@@ -108,13 +105,13 @@ figure_3_deaths <- (
   ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
   ((p_d | p_e | p_f) + plot_layout(axis_titles = "collect"))
 ) +
-  plot_layout(guides = "collect", heights = c(0.08, 1, 1)) +
+  plot_layout(guides = "collect", heights = c(0.2, 1, 3)) +
   plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
   theme(legend.position = "bottom")
 
 ggsave(
   file.path(OUT_DIR, "figure_3_deaths-averted.png"),
-  figure_3_deaths, width = 15, height = 11, dpi = 150
+  figure_3_deaths, width = 11, height = 6.5, dpi = 150
 )
 
 # Version 2 - days averted only
@@ -123,13 +120,13 @@ figure_3_days_lost <- (
   ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
   ((p_g | p_h | p_i) + plot_layout(axis_titles = "collect"))
 ) +
-  plot_layout(guides = "collect", axes = "collect", heights = c(0.08, 1, 1)) +
+  plot_layout(guides = "collect", axes = "collect", heights = c(0.2, 1, 3)) +
   plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
   theme(legend.position = "bottom")
 
 ggsave(
   file.path(OUT_DIR, "figure_3_days-averted.png"),
-  figure_3_days_lost, width = 15, height = 11, dpi = 150
+  figure_3_days_lost, width = 11, height = 6.5, dpi = 150
 )
 
 message("Figure 3 variants saved")
