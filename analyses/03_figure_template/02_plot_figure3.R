@@ -8,39 +8,23 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 results <- load_results()
 
-# =============================================================================
-# Panels a, b, c: Coverage curve visualisations
-# =============================================================================
+# Build panels ----
+# Coverage scenario curves (panels a-c)
 make_coverage_plot <- function(cs) {
   spec  <- COVERAGE_SPECS[[cs]]
-  df    <- data.frame(time = spec$times, coverage = spec$values)
+  df    <- data.frame(time = spec$times, coverage = spec$values * 100)
   color <- COVERAGE_COLORS[cs]
-  
+
   ggplot(df, aes(x = time, y = coverage)) +
     geom_line(color = color, linewidth = 1.2) +
-    geom_point(color = color, size = 3) +
-    scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+    scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     scale_x_continuous(breaks = c(0, 30, 60, 90)) +
-    labs(x = "Days since outbreak start",
-         y = "OBV coverage",
-         title = COVERAGE_LABELS[match(cs, COVERAGE_LEVELS)],
-         subtitle = "OBV coverage over time") +
+    labs(x = "Days since outbreak start", y = "OBV coverage") +
     theme_fig()
 }
 
-# ggsave(file.path(OUT_DIR, "figure_3_a.png"), make_coverage_plot("full"),
-#        width = 5, height = 4, dpi = 150)
-# ggsave(file.path(OUT_DIR, "figure_3_b.png"), make_coverage_plot("ramp_high"),
-#        width = 5, height = 4, dpi = 150)
-# ggsave(file.path(OUT_DIR, "figure_3_c.png"), make_coverage_plot("ramp_low"),
-#        width = 5, height = 4, dpi = 150)
-
-# =============================================================================
-# Build post-hoc OBV data: all efficacy x coverage combinations in one pass
-# =============================================================================
 message("Applying post-hoc OBV across efficacy x coverage grid...")
 
-# Baseline rows needed once for the denominator
 baseline_rows <- build_run_df_obv(results, "baseline")
 
 obv_rows <- do.call(rbind, lapply(OBV_EFFICACY_LEVELS, function(eff) {
@@ -49,8 +33,7 @@ obv_rows <- do.call(rbind, lapply(OBV_EFFICACY_LEVELS, function(eff) {
   }))
 }))
 
-all_rows <- rbind(baseline_rows, obv_rows)
-pdf      <- make_particle_df(all_rows)
+pdf <- make_particle_df(rbind(baseline_rows, obv_rows))
 
 obv_df <- pdf %>%
   filter(arm %in% OBV_EFFICACY_LEVELS) %>%
@@ -62,110 +45,88 @@ obv_df <- pdf %>%
     scenario_label = factor(SCENARIO_LABELS[scenario], levels = SCENARIO_LABELS)
   )
 
-# =============================================================================
-# Panels d-f (HCW deaths averted) and g-i (HCW days lost averted)
-# x = efficacy, colour = scenario, one panel per coverage scenario
-# =============================================================================
-sc_colors <- setNames(SCENARIO_COLORS, SCENARIO_LABELS)
-
-make_box_plot <- function(cs, metric, y_label, title) {
+make_box_plot <- function(cs, metric, y_label) {
   df <- obv_df %>%
-    filter(coverage_scenario == cs, !is.na(.data[[metric]]))
-  
-  ggplot(df, aes(x = arm_label, y = .data[[metric]],
-                 fill = scenario_label, color = scenario_label)) +
-    geom_boxplot(outlier.size = 0.5, width = 0.6,
-                 alpha = 0.6, position = position_dodge(0.75)) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-    scale_fill_manual(values  = sc_colors, name = NULL) +
-    scale_color_manual(values = sc_colors, name = NULL) +
-    labs(x = "OBV efficacy", y = y_label,
-         title = title,
-         subtitle = sprintf("%s | Boxplot across posterior particles",
-                            COVERAGE_LABELS[match(cs, COVERAGE_LEVELS)])) +
-    theme_fig() +
-    theme(panel.grid.major.x = element_blank())
+    filter(coverage_scenario == cs, !is.na(.data[[metric]])) %>%
+    mutate(fill_group = paste(as.character(scenario_label),
+                              as.character(arm_label), sep = "."))
+
+  build_sc_fill <- function(sc_key) {
+    sc_lbl    <- SCENARIO_LABELS[sc_key]
+    base_col  <- SCENARIO_COLORS[sc_key]
+    light_col <- if (sc_key == "WestAfrica") "#fdd8a0" else "#b2e4d8"
+    dark_col  <- rgb(t(col2rgb(base_col) * 0.7), maxColorValue = 255)
+    cols      <- c(colorRampPalette(c(light_col, base_col))(4), dark_col)
+    setNames(cols, paste(sc_lbl, OBV_EFFICACY_LABELS, sep = "."))
+  }
+
+  fill_vals     <- c(build_sc_fill("WestAfrica"), build_sc_fill("DRC"))
+  legend_breaks <- c(
+    paste(SCENARIO_LABELS["WestAfrica"], "80%", sep = "."),
+    paste(SCENARIO_LABELS["DRC"],        "80%", sep = ".")
+  )
+
+  ggplot(df, aes(x = arm_label, y = .data[[metric]], fill = fill_group)) +
+    geom_boxplot(outlier.size = 0.5, width = 0.6, color = "black", linewidth = 0.4,
+                 position = position_dodge(0.75)) +
+    scale_fill_manual(values = fill_vals, breaks = rev(legend_breaks),
+                      labels = c("DRC archetype", "West Africa archetype"), name = NULL) +
+    scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
+    labs(x = "OBV efficacy", y = y_label) +
+    theme_fig()
 }
 
-# Panels d, e, f -- HCW deaths averted
-for (i in seq_along(COVERAGE_LEVELS)) {
-  cs    <- COVERAGE_LEVELS[i]
-  label <- letters[3 + i]   # d, e, f
-  # ggsave(
-  #   file.path(OUT_DIR, sprintf("figure_3_%s.png", label)),
-  #   make_box_plot(cs, "pct_hcw_deaths_averted",
-  #                 "HCW deaths averted (%)",
-  #                 "% HCW deaths averted"),
-  #   width = 7, height = 5, dpi = 150
-  # )
+# Combine panels ----
+make_col_header <- function(label) {
+  ggplot() +
+    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
+    theme_void()
 }
 
-# =============================================================================
-# Composite Figure 3: row 1 = coverage curves (a-c), row 2 = HCW deaths (d-f)
-# =============================================================================
-library(cowplot)
+h1 <- make_col_header("Constant, Full Coverage")
+h2 <- make_col_header("Ramp Up to High Coverage")
+h3 <- make_col_header("Ramp Up to Medium Coverage")
 
-# Re-generate panel objects (individual PNGs already saved above)
 p_a <- make_coverage_plot(COVERAGE_LEVELS[1])
 p_b <- make_coverage_plot(COVERAGE_LEVELS[2])
 p_c <- make_coverage_plot(COVERAGE_LEVELS[3])
 
-p_d <- make_box_plot(COVERAGE_LEVELS[1], "pct_hcw_deaths_averted",
-                     "HCW deaths averted (%)", "% HCW deaths averted")
-p_e <- make_box_plot(COVERAGE_LEVELS[2], "pct_hcw_deaths_averted",
-                     "HCW deaths averted (%)", "% HCW deaths averted")
-p_f <- make_box_plot(COVERAGE_LEVELS[3], "pct_hcw_deaths_averted",
-                     "HCW deaths averted (%)", "% HCW deaths averted")
+p_d <- make_box_plot(COVERAGE_LEVELS[1], "pct_hcw_deaths_averted", "HCW deaths averted")
+p_e <- make_box_plot(COVERAGE_LEVELS[2], "pct_hcw_deaths_averted", "HCW deaths averted")
+p_f <- make_box_plot(COVERAGE_LEVELS[3], "pct_hcw_deaths_averted", "HCW deaths averted")
 
-# Extract shared legend from one of the box plots, then strip individual legends
-shared_legend <- get_legend(
-  p_d + theme(legend.position = "bottom",
-              legend.direction = "horizontal")
+p_g <- make_box_plot(COVERAGE_LEVELS[1], "pct_days_lost_averted", "HCW days lost averted")
+p_h <- make_box_plot(COVERAGE_LEVELS[2], "pct_days_lost_averted", "HCW days lost averted")
+p_i <- make_box_plot(COVERAGE_LEVELS[3], "pct_days_lost_averted", "HCW days lost averted")
+
+# Version 1 - deaths averted only
+figure_3_deaths <- (
+  (h1 | h2 | h3) /
+  ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
+  ((p_d | p_e | p_f) + plot_layout(axis_titles = "collect"))
+) +
+  plot_layout(guides = "collect", heights = c(0.2, 1, 3)) +
+  plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
+  theme(legend.position = "bottom")
+
+ggsave(
+  file.path(OUT_DIR, "figure_3_deaths-averted.png"),
+  figure_3_deaths, width = 10, height = 6.5, dpi = 400
 )
 
-strip_legend <- function(p) p + theme(legend.position = "none")
+# Version 2 - days averted only
+figure_3_days_lost <- (
+  (h1 | h2 | h3) /
+  ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
+  ((p_g | p_h | p_i) + plot_layout(axis_titles = "collect"))
+) +
+  plot_layout(guides = "collect", axes = "collect", heights = c(0.2, 1, 3)) +
+  plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
+  theme(legend.position = "bottom")
 
-row1 <- plot_grid(
-  strip_legend(p_a), strip_legend(p_b), strip_legend(p_c),
-  nrow = 1, labels = c("a", "b", "c"), label_size = 11
+ggsave(
+  file.path(OUT_DIR, "figure_3_days-averted.png"),
+  figure_3_days_lost, width = 10, height = 6.5, dpi = 400
 )
 
-row2 <- plot_grid(
-  strip_legend(p_d), strip_legend(p_e), strip_legend(p_f),
-  nrow = 1, labels = c("d", "e", "f"), label_size = 11
-)
-
-# row3 <- plot_grid(
-#   strip_legend(p_g), strip_legend(p_h), strip_legend(p_i),
-#   nrow = 1, labels = c("g", "h", "i"), label_size = 11
-# )
-figure_3_composite <- plot_grid(
-  row1, row2, shared_legend,
-  ncol = 1,
-  rel_heights = c(1, 1, 0.12)
-)
-
-print(figure_3_composite)
-
-# ggsave(
-#   file.path(OUT_DIR, "figure_3_composite.png"),
-#   figure_3_composite,
-#   width = 15, height = 10, dpi = 150
-# )
-
-#message("Composite Figure 3 saved to ", file.path(OUT_DIR, "figure_3_composite.png"))
-# Panels g, h, i -- HCW days lost averted
-for (i in seq_along(COVERAGE_LEVELS)) {
-  cs    <- COVERAGE_LEVELS[i]
-  label <- letters[6 + i]   # g, h, i
-  # ggsave(
-  #   file.path(OUT_DIR, sprintf("figure_3_%s.png", label)),
-  #   make_box_plot(cs, "pct_days_lost_averted",
-  #                 "HCW days lost averted (%)",
-  #                 "% HCW days lost averted"),
-  #   width = 7, height = 5, dpi = 150
-  # )
-}
-
-
-message("Figure 3 panels saved: a-c (coverage curves), d-f (deaths averted), g-i (days lost averted)")
+message("Figure 3 variants saved")
