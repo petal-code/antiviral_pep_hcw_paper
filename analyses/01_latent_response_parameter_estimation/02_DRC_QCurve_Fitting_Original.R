@@ -247,8 +247,8 @@ drc_conflict_plusplus_qseries <- drc_prep$conflict_plusplus_qseries
 drc_conflict_fit          <- fit_drc_scenario(drc_conflict_qseries,          "drc_conflict")
 drc_conflict_plusplus_fit <- fit_drc_scenario(drc_conflict_plusplus_qseries, "drc_conflict_plusplus")
 
-saveRDS(drc_conflict_fit,          file.path(DIR_PROCESSED, "drc_conflict_fit.rds"))
-saveRDS(drc_conflict_plusplus_fit, file.path(DIR_PROCESSED, "drc_conflict_plusplus_fit.rds"))
+saveRDS(drc_conflict_fit,          file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_Conflict_Fit.rds"))
+saveRDS(drc_conflict_plusplus_fit, file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds"))
 
 # ----------------------------------------------------------------------------
 # 5. Plot each fitted scenario with its data on top  (display only)
@@ -296,5 +296,3 @@ plot_drc_fit <- function(fit, qseries, label) {
 
 print(plot_drc_fit(drc_conflict_fit,          drc_conflict_qseries,          "conflict"))     # display only
 print(plot_drc_fit(drc_conflict_plusplus_fit, drc_conflict_plusplus_qseries, "conflict++"))   # display only
-
-message("\n02_DRC_QCurve_Fitting_Original.R complete. Saved DRC conflict + conflict++ fits.")
