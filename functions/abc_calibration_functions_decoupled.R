@@ -108,11 +108,17 @@ per_rep_metrics_decoupled <- function(out,
 
 
 # Aggregate a [metric x replicate] matrix into the requested fitted summaries.
-# Means are over TAKEN-OFF replicates; hcw_fraction is the ratio of the two means
-# (stable); "log_*" summaries log the corresponding mean; "takeoff" is the
-# take-off fraction. Returns a named vector in `summary_stats` order.
+# Means are over TAKEN-OFF replicates (the `took_off` mask = n_deaths >=
+# takeoff_death_threshold); hcw_fraction is the ratio of the two means (stable);
+# "log_*" summaries log the corresponding mean. "takeoff" is the fraction of
+# replicates that took off, scored on its OWN threshold
+# (takeoff_fraction_threshold, default 1 death) so it stays DECOUPLED from the
+# conditioning `took_off` mask -- it reports a low-bar "did it seed at all?"
+# fraction while the means remain conditioned on real (>= takeoff_death_threshold)
+# outbreaks. Returns a named vector in `summary_stats` order.
 aggregate_decoupled <- function(reps, took_off,
-                                summary_stats = DEFAULT_DECOUPLED_SUMMARIES) {
+                                summary_stats = DEFAULT_DECOUPLED_SUMMARIES,
+                                takeoff_fraction_threshold = 1) {
   any_off <- any(took_off)
   m  <- function(metric) if (any_off) mean(reps[metric, took_off]) else 0
   md <- m("n_deaths"); mh <- m("n_hcw_deaths"); mp <- m("peak_height")
@@ -120,7 +126,7 @@ aggregate_decoupled <- function(reps, took_off,
 
   val <- function(s) switch(
     s,
-    takeoff          = mean(took_off),
+    takeoff          = mean(reps["n_deaths", ] >= takeoff_fraction_threshold),
     n_deaths         = md,
     log_n_deaths     = slog(md),
     n_hcw_deaths     = mh,
@@ -149,7 +155,8 @@ run_abc_particle_decoupled <- function(args,
                                        takeoff_death_threshold,
                                        summary_stats = DEFAULT_DECOUPLED_SUMMARIES,
                                        bin_width     = DECOUPLED_PEAK_BIN_WIDTH,
-                                       time_origin   = DECOUPLED_PEAK_TIME_ORIGIN) {
+                                       time_origin   = DECOUPLED_PEAK_TIME_ORIGIN,
+                                       takeoff_fraction_threshold = 1) {
   unknown <- setdiff(summary_stats, DECOUPLED_AVAILABLE_SUMMARIES)
   if (length(unknown) > 0L) {
     stop("Unknown summary_stats: ", paste(unknown, collapse = ", "),
@@ -165,7 +172,8 @@ run_abc_particle_decoupled <- function(args,
                       "duration", "time_to_peak", "d_p05_p95")
 
   took_off <- reps["n_deaths", ] >= takeoff_death_threshold
-  aggregate_decoupled(reps, took_off, summary_stats)
+  aggregate_decoupled(reps, took_off, summary_stats,
+                      takeoff_fraction_threshold = takeoff_fraction_threshold)
 }
 
 
@@ -251,7 +259,8 @@ fiber_abc_model_decoupled <- function(theta,
                                       takeoff_death_threshold = 100,
                                       summary_stats = DEFAULT_DECOUPLED_SUMMARIES,
                                       bin_width     = DECOUPLED_PEAK_BIN_WIDTH,
-                                      time_origin   = DECOUPLED_PEAK_TIME_ORIGIN) {
+                                      time_origin   = DECOUPLED_PEAK_TIME_ORIGIN,
+                                      takeoff_fraction_threshold = 1) {
   full <- assemble_decoupled_theta(theta, fit_params, fixed_values)
   args <- build_abc_model_args_decoupled(
     R0 = full$R0, prop_funeral = full$prop_funeral,
@@ -264,7 +273,8 @@ fiber_abc_model_decoupled <- function(theta,
   )
   run_abc_particle_decoupled(
     args, n_reps = n_replicates, takeoff_death_threshold = takeoff_death_threshold,
-    summary_stats = summary_stats, bin_width = bin_width, time_origin = time_origin
+    summary_stats = summary_stats, bin_width = bin_width, time_origin = time_origin,
+    takeoff_fraction_threshold = takeoff_fraction_threshold
   )
 }
 
@@ -290,8 +300,9 @@ bootstrap_abc_worker_decoupled <- function(setup_path,
   }
 
   default_config <- list(
-    check_final_size        = 30000,
-    takeoff_death_threshold = 100,
+    check_final_size           = 30000,
+    takeoff_death_threshold    = 100,
+    takeoff_fraction_threshold = 1,
     n_reps                  = 30,
     seeding_cases           = 25,
     setup_R0_n              = 100000L,
@@ -403,7 +414,9 @@ fiber_abc_model_parallel_decoupled <- function(theta_with_seed) {
     takeoff_death_threshold = cfg_run$takeoff_death_threshold,
     summary_stats           = cfg_run$summary_stats,
     bin_width               = cfg_run$peak_bin_width,
-    time_origin             = cfg_run$peak_time_origin
+    time_origin             = cfg_run$peak_time_origin,
+    takeoff_fraction_threshold =
+      if (is.null(cfg_run$takeoff_fraction_threshold)) 1 else cfg_run$takeoff_fraction_threshold
   )
 }
 
@@ -566,7 +579,8 @@ prior_predictive_check_decoupled <- function(n_draws,
                                              takeoff_death_threshold = 100,
                                              summary_stats = DEFAULT_DECOUPLED_SUMMARIES,
                                              bin_width = DECOUPLED_PEAK_BIN_WIDTH,
-                                             time_origin = DECOUPLED_PEAK_TIME_ORIGIN) {
+                                             time_origin = DECOUPLED_PEAK_TIME_ORIGIN,
+                                             takeoff_fraction_threshold = 1) {
   if (length(prior_list) != length(fit_params)) {
     stop("length(prior_list) must equal length(fit_params).", call. = FALSE)
   }
@@ -591,7 +605,8 @@ prior_predictive_check_decoupled <- function(n_draws,
       safe_funeral_efficacy = safe_funeral_efficacy, hcw_base_prob = hcw_base_prob,
       n_replicates = n_replicates, seeding_cases = seeding_cases,
       takeoff_death_threshold = takeoff_death_threshold,
-      summary_stats = summary_stats, bin_width = bin_width, time_origin = time_origin
+      summary_stats = summary_stats, bin_width = bin_width, time_origin = time_origin,
+      takeoff_fraction_threshold = takeoff_fraction_threshold
     )
   }
   sims_list <- if (parallel && requireNamespace("future.apply", quietly = TRUE)) {

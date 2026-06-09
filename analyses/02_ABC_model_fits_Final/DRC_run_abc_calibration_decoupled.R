@@ -11,8 +11,12 @@
 #       -- and overall epidemic size -- down.
 #     * hcw_risk_scalar (bounded prior) is the HCW-exposure lever.
 #
-#   FITTED SUMMARIES (5): log(n_deaths), log(n_hcw_deaths), hcw_fraction,
-#                         d_p05_p95, log(peak_height)
+#   FITTED SUMMARIES: takeoff, log(n_deaths), log(n_hcw_deaths), hcw_fraction,
+#                     d_p05_p95, log(peak_height)   (any subset; see SUMMARY_STATS)
+#     * takeoff is the fraction of trajectories that took off, scored on its OWN
+#       threshold (TAKEOFF_FRACTION_THRESHOLD, default 1 death) -- separate from
+#       the 100-death threshold that conditions the means. Observed target = 1.0
+#       (the real outbreak did take off);
 #     * logs put the heavy-tailed counts on a relative-error scale;
 #     * hcw_fraction up-weights the HCW share (deliberately redundant with the
 #       two count logs);
@@ -75,16 +79,19 @@ FIXED_PARAMS <- list(
 )
 
 # ---- WHICH SUMMARIES TO FIT -------------------------------------------------
-SUMMARY_STATS <- c("log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height")
+# Any subset of DECOUPLED_AVAILABLE_SUMMARIES; comment a line out of BOTH this
+# vector and OBSERVED_NAMED to drop a summary from the fit.
+SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height")
                   #  "d_p05_p95", )
 
 # Observed targets, ON THE FITTED SCALE (log the counts), keyed BY NAME.
 #   raw DRC targets: n_deaths = 2299, n_hcw_deaths = 79, peak_height = 95.
 OBSERVED_NAMED <- c(
+  takeoff          = 1.0,           # the real outbreak took off (>= TAKEOFF_FRACTION_THRESHOLD deaths)
   log_n_deaths     = log(2299),
   log_n_hcw_deaths = log(79),       # https://afenet-journal.org/10-37432-jieph-d-25-00072/
   hcw_fraction     = 79 / 2299,     # = 0.0344
-  # d_p05_p95        = 378,           # https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic - 4th Oct 2018 - 17 Oct 2019 
+  # d_p05_p95        = 378,           # https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic - 4th Oct 2018 - 17 Oct 2019
   log_peak_height  = log(95)        # see https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic
 )
 
@@ -112,7 +119,8 @@ ABC_SETTINGS <- list(
 
 N_REPS                  <- .prof$n_reps
 SEEDING_CASES           <- 25L
-TAKEOFF_DEATH_THRESHOLD <- 100L
+TAKEOFF_DEATH_THRESHOLD <- 100L   # >= K deaths = a "real" outbreak for the conditional means
+TAKEOFF_FRACTION_THRESHOLD <- 1L  # >= K deaths = a take-off for the `takeoff` summary (default 1)
 SETUP_R0_N              <- 100000L
 SETUP_R0_SEED           <- 42L
 
@@ -159,6 +167,7 @@ PARAM_NAMES        <- prep$fit_params
 
 ABC_CONFIG <- list(
   takeoff_death_threshold = TAKEOFF_DEATH_THRESHOLD,
+  takeoff_fraction_threshold = TAKEOFF_FRACTION_THRESHOLD,
   n_reps                  = N_REPS,
   seeding_cases           = SEEDING_CASES,
   setup_R0_n              = SETUP_R0_N,
@@ -203,6 +212,7 @@ R0_invariants <- compute_R0_invariants(args = mp$args, n = ABC_CONFIG$setup_R0_n
 #   safe_funeral_efficacy = DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy,
 #   hcw_base_prob = HCW_BASE_PROB, n_replicates = 5, seeding_cases = ABC_CONFIG$seeding_cases,
 #   takeoff_death_threshold = ABC_CONFIG$takeoff_death_threshold,
+#   takeoff_fraction_threshold = ABC_CONFIG$takeoff_fraction_threshold,
 #   summary_stats = prep$summary_stats, bin_width = PEAK_BIN_WIDTH, time_origin = PEAK_TIME_ORIGIN)
 # print(summary(pp))
 
