@@ -26,7 +26,7 @@ source(here::here("analyses", "01_latent_response_parameter_estimation", "helper
 set.seed(123)
 
 # The cleaned West Africa anchors (same input as the production fit in 01).
-wa_anchors <- readRDS(file.path(DIR_PROCESSED, "wa_prep.rds"))$anchors
+wa_anchors <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve_PreppedData.rds"))$anchors
 
 # ---- Shared per-parameter metadata (identical to script 01) ----------------
 # Hard admissible domains, then collapse to one row per parameter and add the
