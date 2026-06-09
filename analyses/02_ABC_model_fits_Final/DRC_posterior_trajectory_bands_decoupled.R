@@ -474,3 +474,76 @@ cat("Saved:\n  ",
     file.path(FIG_DIR, paste0(FIG_STEM_HCW, ".pdf")), " (+ .png)\n  ",
     file.path(FIG_DIR, paste0(FIG_STEM_TOT, ".pdf")), " (+ .png)\n  ",
     file.path(OUT_DIR, paste0(DATA_STEM, ".rds")), "\n", sep = "")
+
+library(ggplot2)
+
+## ---------------------------------------------------------------------------
+## Small constants (delete these 4 lines if the script already defined them).
+## ---------------------------------------------------------------------------
+ARM_LABELS <- c("Without OBV", "With OBV")                      # legend / colour order
+ARM_COLS   <- c("Without OBV" = "#D55E00", "With OBV" = "#0072B2")
+MEASURES   <- c("Weekly incidence", "Cumulative")              # facet order (incidence on top)
+XLIM       <- 500
+
+## ---------------------------------------------------------------------------
+## Cross-draw bands from `draws_long` (one row per draw x week; `value` = that
+## draw's central across the N_REPS reps, with arm / metric / measure columns).
+## Summarise ACROSS the 250 draws: central line + IQR + 95% CrI, per cell.
+## ---------------------------------------------------------------------------
+central_fun <- median            # central LINE; set `central_fun <- mean` if preferred
+qf <- function(x, p) stats::quantile(x, p, names = FALSE, na.rm = TRUE)
+
+grp <- with(draws_long, interaction(arm, metric, measure, week, drop = TRUE, sep = "\r"))
+band95 <- do.call(rbind, lapply(split(draws_long, grp), function(d) data.frame(
+  arm     = as.character(d$arm[1]),
+  metric  = as.character(d$metric[1]),
+  measure = as.character(d$measure[1]),
+  week    = d$week[1],
+  med     = central_fun(d$value, na.rm = TRUE),
+  q25     = qf(d$value, 0.25),  q75  = qf(d$value, 0.75),    # IQR
+  lo95    = qf(d$value, 0.025), hi95 = qf(d$value, 0.975),   # 95% CrI
+  stringsAsFactors = FALSE
+)))
+band95$arm     <- factor(band95$arm,     levels = ARM_LABELS)
+band95$measure <- factor(band95$measure, levels = MEASURES)
+
+## ---------------------------------------------------------------------------
+## Figure 1: HCW deaths
+## ---------------------------------------------------------------------------
+fig_hcw_bands <- ggplot(band95[band95$metric == "HCW deaths", ],
+                        aes(week, med, colour = arm, fill = arm)) +
+  geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = 0.15, colour = NA) +   # 95% CrI (lighter)
+  geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = 0.30, colour = NA) +   # IQR (darker)
+  geom_line(linewidth = 1.05, na.rm = TRUE) +
+  facet_wrap(~ measure, ncol = 1, scales = "free_y") +
+  scale_colour_manual(values = ARM_COLS) +
+  scale_fill_manual(values = ARM_COLS) +
+  coord_cartesian(xlim = c(0, XLIM)) +
+  labs(x = "Days since outbreak seeding", y = "HCW deaths",
+       colour = NULL, fill = NULL,
+       title = "DRC decoupled fit: HCW deaths, obeldesivir effect",
+       subtitle = "Line: cross-draw median; dark band: IQR; light band: 95% CrI.") +
+  theme_bw(base_size = 12) +
+  theme(plot.subtitle = element_text(size = 8), legend.position = "top")
+
+## ---------------------------------------------------------------------------
+## Figure 2: all deaths
+## ---------------------------------------------------------------------------
+fig_tot_bands <- ggplot(band95[band95$metric == "Total deaths", ],
+                        aes(week, med, colour = arm, fill = arm)) +
+  geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = 0.15, colour = NA) +   # 95% CrI (lighter)
+  geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = 0.30, colour = NA) +   # IQR (darker)
+  geom_line(linewidth = 1.05, na.rm = TRUE) +
+  facet_wrap(~ measure, ncol = 1, scales = "free_y") +
+  scale_colour_manual(values = ARM_COLS) +
+  scale_fill_manual(values = ARM_COLS) +
+  coord_cartesian(xlim = c(0, XLIM)) +
+  labs(x = "Days since outbreak seeding", y = "Total deaths",
+       colour = NULL, fill = NULL,
+       title = "DRC decoupled fit: total deaths, obeldesivir effect",
+       subtitle = "Line: cross-draw median; dark band: IQR; light band: 95% CrI.") +
+  theme_bw(base_size = 12) +
+  theme(plot.subtitle = element_text(size = 8), legend.position = "top")
+
+print(fig_hcw_bands)
+print(fig_tot_bands)
