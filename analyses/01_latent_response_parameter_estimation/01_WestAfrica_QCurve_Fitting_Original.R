@@ -309,10 +309,10 @@ wa_fit <- list(
   max_day     = max_day,       # the West Africa anchor horizon (days) behind tau
   tweaks_on   = TWEAKS_ON      # whether the targeted tweaks were applied
 )
-saveRDS(wa_fit, file.path(DIR_PROCESSED, "wa_fit.rds"))
+saveRDS(wa_fit, file.path(DIR_PROCESSED, "WestAfrica_QCurve_Fit.rds"))
 
 # Also write the fitted parameter curves as a plain CSV for quick human inspection.
-write_csv(curve_summ, file.path(DIR_PROCESSED, "wa_fit_curve_summaries.csv"))
+write_csv(curve_summ, file.path(DIR_PROCESSED, "WestAfrica_QCurve_Summaries.csv"))
 
 # ----------------------------------------------------------------------------
 # 10. Plot the fitted curves with the anchor data on top  (display only)
@@ -326,7 +326,7 @@ wa_curve_plot_df <- curve_summ %>%
 wa_anchor_plot_df <- fit_df %>%
   mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
 
-p_wa_fit <- ggplot(wa_curve_plot_df, aes(relative_day, mean)) +
+ggplot(wa_curve_plot_df, aes(relative_day, mean)) +
   geom_ribbon(aes(ymin = q5, ymax = q95), fill = "#1f77b4", alpha = 0.20) +   # 90% interval
   geom_line(colour = "#1f77b4", linewidth = 0.9) +                            # posterior mean
   geom_point(data = wa_anchor_plot_df, aes(relative_day, y_obs),              # the anchor data
@@ -337,7 +337,3 @@ p_wa_fit <- ggplot(wa_curve_plot_df, aes(relative_day, mean)) +
        x = "Relative outbreak day", y = NULL) +
   theme_bw(base_size = 11) +
   theme(strip.text = element_text(face = "bold"))
-
-print(p_wa_fit)   # display only; not saved
-
-message("\n01_WestAfrica_QCurve_Fitting_Original.R complete. Saved data-processed/wa_fit.rds")
