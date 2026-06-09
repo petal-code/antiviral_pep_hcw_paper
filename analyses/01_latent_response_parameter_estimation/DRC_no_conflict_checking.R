@@ -28,7 +28,7 @@
 # pooling (the SDB shape is imposed on all parameters), large values mean each
 # parameter keeps its own shape.
 #
-# Inputs : data-processed/drc_prep.rds   (uses $anchors and $no_conflict_qseries)
+# Inputs : data-processed/DRC_QCurve_PreppedData.rds   (uses $anchors and $no_conflict_qseries)
 # Stan   : stan-models/modelB_fixedQ_boundsOnly.stan
 #          stan-models/modelA_partialpool_estimateQ_noTweaks.stan
 # Outputs: data-processed/drc_no_conflict_checking_curves.csv
@@ -52,7 +52,7 @@ SDB_TARGET_EQUIV_ANCHORS <- 3
 # Data and shared metadata
 # ----------------------------------------------------------------------------
 # Pull what we need out of the bundled DRC prep object (from 00).
-drc_prep    <- readRDS(file.path(DIR_PROCESSED, "drc_prep.rds"))
+drc_prep    <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve_PreppedData.rds"))
 qseries     <- drc_prep$no_conflict_qseries   # the truncated no-conflict Q series
 drc_anchors <- drc_prep$anchors               # cleaned DRC literature anchors
 

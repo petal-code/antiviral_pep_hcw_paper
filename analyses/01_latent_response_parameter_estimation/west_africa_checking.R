@@ -6,14 +6,13 @@
 #   priors (and the WA_UFC_01 down-weight), once WITHOUT any of them -- and
 #   overlay the two fitted curves parameter-by-parameter. The gap between the two
 #   curves for a parameter is exactly "what the tweaks are doing", which is the
-#   thing to look at and judge. Nothing here feeds 03; it only writes a
-#   comparison table and an overlay figure.
+#   thing to look at and judge. Nothing here feeds 03 and nothing is saved; the
+#   overlay figure is printed to the active graphics device only.
 #
-# Inputs : data-processed/wa_prep.rds   (uses $anchors)
+# Inputs : data-processed/WestAfrica_QCurve_PreppedData.rds   (uses $anchors)
 # Stan   : stan-models/modelA_partialpool_estimateQ_withTweaks.stan
 #          stan-models/modelA_partialpool_estimateQ_noTweaks.stan
-# Outputs: data-processed/wa_checking_curves.csv
-#          data-processed/wa_checking_overlay.png
+# Outputs: none (the overlay plot is displayed, not saved)
 # ============================================================================
 
 suppressPackageStartupMessages({
