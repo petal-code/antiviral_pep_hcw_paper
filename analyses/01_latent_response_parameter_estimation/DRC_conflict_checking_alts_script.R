@@ -36,7 +36,7 @@
 #   makes the "how much does the SDB series bleed into everything else" question
 #   (the SDB-domination concern) directly visible.
 #
-# Inputs : data-processed/DRC_QCurve_PreppedData.rds (uses $anchors,
+# Inputs : data-processed/DRC_QCurve/DRC_QCurve_PreppedData.rds (uses $anchors,
 #          $conflict_qseries, $conflict_plusplus_qseries)
 # Output : none -- two comparison plots are printed to the graphics device only.
 #
@@ -197,7 +197,7 @@ mod <- cmdstan_model(write_stan_file(stan_code))
 # ----------------------------------------------------------------------------
 # 2. Inputs and shared metadata
 # ----------------------------------------------------------------------------
-drc_prep    <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve_PreppedData.rds"))
+drc_prep    <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_PreppedData.rds"))
 drc_anchors <- drc_prep$anchors
 
 # DRC admissible domains (same as Model B in script 02).
