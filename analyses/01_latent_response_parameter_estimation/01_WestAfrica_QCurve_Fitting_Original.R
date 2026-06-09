@@ -37,6 +37,7 @@ suppressPackageStartupMessages({
   library(stringr)
   library(readr)
   library(tibble)
+  library(ggplot2)   # display-only plots of the fitted curves at the end
 })
 
 # helpers.R defines the path constants (DIR_PROCESSED, DIR_STAN), the canonical
@@ -312,5 +313,31 @@ saveRDS(wa_fit, file.path(DIR_PROCESSED, "wa_fit.rds"))
 
 # Also write the fitted parameter curves as a plain CSV for quick human inspection.
 write_csv(curve_summ, file.path(DIR_PROCESSED, "wa_fit_curve_summaries.csv"))
+
+# ----------------------------------------------------------------------------
+# 10. Plot the fitted curves with the anchor data on top  (display only)
+# ----------------------------------------------------------------------------
+# One facet per parameter: the posterior-MEAN fitted curve (blue) with its 90%
+# credible-interval ribbon, and the literature anchor observations the model was
+# fit to (orange points), so the fit can be eyeballed against its data. The plot
+# is printed to the active graphics device and is deliberately NOT saved.
+wa_curve_plot_df <- curve_summ %>%
+  mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
+wa_anchor_plot_df <- fit_df %>%
+  mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
+
+p_wa_fit <- ggplot(wa_curve_plot_df, aes(relative_day, mean)) +
+  geom_ribbon(aes(ymin = q5, ymax = q95), fill = "#1f77b4", alpha = 0.20) +   # 90% interval
+  geom_line(colour = "#1f77b4", linewidth = 0.9) +                            # posterior mean
+  geom_point(data = wa_anchor_plot_df, aes(relative_day, y_obs),              # the anchor data
+             inherit.aes = FALSE, colour = "#ff7f0e", size = 2) +
+  facet_wrap(~ panel, scales = "free_y", ncol = 2) +
+  labs(title = "West Africa Model A: fitted parameter curves vs anchor data",
+       subtitle = "Blue = posterior mean + 90% interval; orange points = literature anchors",
+       x = "Relative outbreak day", y = NULL) +
+  theme_bw(base_size = 11) +
+  theme(strip.text = element_text(face = "bold"))
+
+print(p_wa_fit)   # display only; not saved
 
 message("\n01_WestAfrica_QCurve_Fitting_Original.R complete. Saved data-processed/wa_fit.rds")
