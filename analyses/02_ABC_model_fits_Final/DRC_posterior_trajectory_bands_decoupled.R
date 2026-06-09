@@ -20,21 +20,21 @@
 #      This is the DIRECT effect only: it adds back the prevented index deaths,
 #      NOT their averted onward transmission chains (that is the total effect).
 #   4. Bins each replicate into a weekly death-incidence curve (and its running
-#      cumulative), then for EACH posterior draw takes the median across its 10
-#      replicates -> ONE "with OBV" and ONE "without OBV" median line per draw.
+#      cumulative), then for EACH posterior draw takes the per-rep CENTRAL across
+#      its 10 replicates -> ONE "with OBV" and ONE "without OBV" line per draw.
 #      Across the 250 draws that is 250 lines per arm.
 #   5. Produces TWO figures, each with two stacked facets (weekly incidence on
-#      top, cumulative on the bottom). Each plots all 250 per-draw median lines
-#      per arm (faint), with the cross-draw median drawn bold on top:
+#      top, cumulative on the bottom). Each plots all 250 per-draw lines per arm
+#      (faint), with the cross-draw central drawn bold on top:
 #        * Figure 1: HCW deaths     (figures/DRC_decoupled_obv_direct_HCW_deaths)
 #        * Figure 2: Total deaths   (figures/DRC_decoupled_obv_direct_total_deaths)
 #
-#      NOTE on HCW weekly incidence: HCW deaths are rare (a handful per epidemic),
-#      so a given week usually has 0 in most replicates and the per-draw MEDIAN
-#      across replicates is 0 for most weeks -- the incidence facet is therefore
-#      sparse/spiky for HCWs by construction. The cumulative facet is unaffected.
-#      Flip the per-rep aggregation to mean (per_draw_medians) if a smooth HCW
-#      incidence curve is wanted instead.
+#      CENTRAL TENDENCY: defaults to the MEAN over taken-off replicates, matching
+#      how the ABC fit was scored (aggregate_decoupled() logs the MEAN), so the
+#      figure reproduces the fitted scale (~79 HCW deaths / ~2,299 total for DRC).
+#      Epidemic sizes are heavily right-skewed under a near-critical branching
+#      process, so the MEDIAN sits ~4x lower and weekly HCW deaths are 0 in most
+#      weeks; set CENTRAL <- "median" (Section 8) only for the typical-outbreak view.
 #
 # Because both curves come from the SAME run, the comparison is exactly paired:
 # the realised epidemic is identical and "without OBV" simply adds the prevented
@@ -337,12 +337,25 @@ cat(sprintf(paste0("Death counts summed over all %d sims:\n",
 # trajectories -> ONE "With OBV" median line and ONE "Without OBV" median line
 # per draw. Repeated over all N_POST draws this gives N_POST lines per arm,
 # which we plot directly (Section 9) rather than collapsing to a single band.
-qfun <- function(x, p) stats::quantile(x, p, names = FALSE, na.rm = TRUE)
+# Per-rep -> per-draw central tendency. The ABC fit scored log(MEAN over taken-off
+# reps) (aggregate_decoupled() in abc_calibration_functions_decoupled.R), so
+# CENTRAL = "mean" makes this figure consistent with the calibration and
+# reproduces the fitted scale (observed log_n_hcw_deaths = 4.37 -> mean 79 HCW
+# deaths). For a near-critical, overdispersed branching process the epidemic-size
+# distribution is heavily right-skewed, so the MEDIAN sits ~4x below the mean and
+# weekly HCW death counts are 0 in most weeks -- set CENTRAL = "median" only if
+# you specifically want the typical (not the expected) outbreak.
+CENTRAL <- "mean"
+agg_fun <- if (identical(CENTRAL, "mean")) {
+  function(x) mean(x, na.rm = CONDITION_ON_TAKEOFF)
+} else {
+  function(x) median(x, na.rm = CONDITION_ON_TAKEOFF)
+}
 
-# arr3d [N_POST x N_REPS x n_bins] -> mt [N_POST x n_bins]: per-draw median over reps.
-per_draw_medians <- function(arr3d) {
-  if (CONDITION_ON_TAKEOFF) arr3d[!took] <- NA_integer_  # drop fizzled reps before the per-draw median
-  mt <- apply(arr3d, c(1, 3), median, na.rm = CONDITION_ON_TAKEOFF)
+# arr3d [N_POST x N_REPS x n_bins] -> mt [N_POST x n_bins]: per-draw central over reps.
+per_draw_central <- function(arr3d) {
+  if (CONDITION_ON_TAKEOFF) arr3d[!took] <- NA_integer_  # drop fizzled reps first (matches the fit)
+  mt <- apply(arr3d, c(1, 3), agg_fun)
   mt[!is.finite(mt)] <- NA_real_                         # draws with no take-off at all -> NA line
   mt
 }
@@ -351,7 +364,7 @@ per_draw_medians <- function(arr3d) {
 # every arm x metric x measure; plus the bold cross-draw median for readability.
 draws_list <- list(); central_list <- list(); li <- 1L
 for (ak in names(ARM_LABELS)) for (mk in names(METRIC_KEYS)) for (meas in names(MEASURES)) {
-  mt <- per_draw_medians(A[[ak]][[mk]][[meas]])               # [N_POST x n_bins]
+  mt <- per_draw_central(A[[ak]][[mk]][[meas]])               # [N_POST x n_bins] per-draw central over reps
   draws_list[[li]] <- data.frame(
     draw    = rep(seq_len(N_POST), times = n_bins),
     week    = rep(week, each = N_POST),
@@ -361,7 +374,7 @@ for (ak in names(ARM_LABELS)) for (mk in names(METRIC_KEYS)) for (meas in names(
   )
   central_list[[li]] <- data.frame(
     week    = week,
-    med     = apply(mt, 2, median, na.rm = TRUE),
+    med     = apply(mt, 2, agg_fun),                           # cross-draw central of the per-draw centrals
     arm     = ARM_LABELS[[ak]], metric = METRIC_KEYS[[mk]], measure = MEASURES[[meas]],
     stringsAsFactors = FALSE
   )
@@ -383,8 +396,14 @@ for (mlab in METRIC_KEYS) {
   fw <- max(d$week)
   no <- d$med[d$arm == "Without OBV" & d$week == fw]
   ob <- d$med[d$arm == "With OBV"    & d$week == fw]
-  cat(sprintf("%-12s cumulative deaths (cross-draw median): without OBV = %.1f, with OBV = %.1f (direct averted %.1f%%)\n",
-              mlab, no, ob, if (length(no) && no > 0) 100 * (no - ob) / no else NA_real_))
+  cat(sprintf("%-12s cumulative deaths (cross-draw %s): without OBV = %.1f, with OBV = %.1f (direct averted %.1f%%)\n",
+              mlab, CENTRAL, no, ob, if (length(no) && no > 0) 100 * (no - ob) / no else NA_real_))
+}
+# For reference, the ABC fit's observed targets (mean over taken-off reps):
+if (!is.null(meta$observed_summaries)) {
+  os <- meta$observed_summaries
+  cat(sprintf("ABC observed targets (mean over taken-off reps): total deaths ~ %.0f, HCW deaths ~ %.0f.\n",
+              exp(os[["log_n_deaths"]]), exp(os[["log_n_hcw_deaths"]])))
 }
 
 
@@ -413,8 +432,8 @@ make_fig <- function(metric_label) {
       title = sprintf("DRC decoupled fit: %s, direct obeldesivir effect", tolower(metric_label)),
       subtitle = sprintf(paste0("Single OBV run (PEP %.0f%% efficacy, coverage %.0f, adherence %.0f, HCW in hospital).  ",
                                 "'Without OBV' = realised + directly-prevented index deaths (excludes averted chains).  ",
-                                "Faint lines: each draw's median across %d reps (%d draws); bold: cross-draw median."),
-                         100 * OBV$efficacy, OBV$coverage, OBV$adherence, N_REPS, N_POST)
+                                "Faint lines: each draw's %s across %d reps (%d draws); bold: cross-draw %s (matches the ABC fit, which scored the mean)."),
+                         100 * OBV$efficacy, OBV$coverage, OBV$adherence, CENTRAL, N_REPS, N_POST, CENTRAL)
     ) +
     theme_bw(base_size = 12) +
     theme(plot.subtitle = element_text(size = 7), legend.position = "top")
