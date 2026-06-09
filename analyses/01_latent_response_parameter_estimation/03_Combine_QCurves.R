@@ -30,7 +30,7 @@
 # separate q-scaling of IPC is applied (that is a revised-methodology step).
 #
 # Inputs : data-processed/wa_fit.rds, drc_conflict_fit.rds,
-#          drc_conflict_plusplus_fit.rds, drc_prep.rds (uses $durations)
+#          drc_conflict_plusplus_fit.rds, DRC_QCurve_PreppedData.rds (uses $durations)
 # Output : data-processed/combined_original_methodology_outputs.csv
 # ============================================================================
 
@@ -110,7 +110,7 @@ qvalue_from_param_Q <- function(param_Q_wide) {
 wa_fit                    <- readRDS(file.path(DIR_PROCESSED, "wa_fit.rds"))
 drc_conflict_fit          <- readRDS(file.path(DIR_PROCESSED, "drc_conflict_fit.rds"))
 drc_conflict_plusplus_fit <- readRDS(file.path(DIR_PROCESSED, "drc_conflict_plusplus_fit.rds"))
-drc_durations             <- readRDS(file.path(DIR_PROCESSED, "drc_prep.rds"))$durations
+drc_durations             <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve_PreppedData.rds"))$durations
 
 # ----------------------------------------------------------------------------
 # Scenario 1: worst_west_africa

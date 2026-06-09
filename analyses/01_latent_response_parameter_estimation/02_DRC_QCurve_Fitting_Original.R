@@ -25,7 +25,7 @@
 #   a forced collapse (success -> 0) baked in over days 200-300 (done in 00), so
 #   every parameter collapses with it -- no extra logic is needed here.
 #
-# Inputs : data-processed/drc_prep.rds   (from 00; uses $anchors,
+# Inputs : data-processed/DRC_QCurve_PreppedData.rds   (from 00; uses $anchors,
 #          $conflict_qseries, $conflict_plusplus_qseries)
 # Stan   : stan-models/modelB_fixedQ_boundsOnly.stan
 # Output : data-processed/drc_conflict_fit.rds
@@ -54,10 +54,10 @@ set.seed(123)
 # ----------------------------------------------------------------------------
 # 1. Read the bundled DRC inputs
 # ----------------------------------------------------------------------------
-# drc_prep.rds (from 00) bundles the cleaned anchors, the three Q series, the
+# DRC_QCurve_PreppedData.rds (from 00) bundles the cleaned anchors, the three Q series, the
 # durations and a QC table. Here we need the anchors now and the two conflict Q
 # series further down.
-drc_prep    <- readRDS(file.path(DIR_PROCESSED, "drc_prep.rds"))
+drc_prep    <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve_PreppedData.rds"))
 drc_anchors <- drc_prep$anchors
 
 # ----------------------------------------------------------------------------

@@ -11,11 +11,11 @@
 #   Two bundled R objects (named lists), so data-processed/ stays tidy instead of
 #   filling up with many loose CSVs. Every downstream script reads one of these:
 #
-#   wa_prep.rds   list(
+#   WestAfrica_QCurve_PreppedData.rds   list(
 #                   anchors = <cleaned West Africa literature anchors>
 #                 )
 #
-#   drc_prep.rds  list(
+#   DRC_QCurve_PreppedData.rds  list(
 #                   anchors                   = <cleaned DRC literature anchors>,
 #                   conflict_qseries          = <empirical "conflict" Q(t) curve>,
 #                   conflict_plusplus_qseries = <conflict Q with a forced collapse
@@ -425,4 +425,4 @@ saveRDS(drc_prep, file.path(DIR_PROCESSED, "DRC_QCurve_PreppedData.rds"))
 message("\nDRC scenario horizons (max day):")
 print(drc_durations)
 message("\n00_DataPreparation_and_Cleaning.R complete. ",
-        "Wrote data-processed/wa_prep.rds and data-processed/drc_prep.rds")
+        "Wrote data-processed/WestAfrica_QCurve_PreppedData.rds and data-processed/DRC_QCurve_PreppedData.rds")

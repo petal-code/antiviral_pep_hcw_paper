@@ -24,7 +24,7 @@
 #   west_africa_checking.R fits the same data with and without them and overlays
 #   the curves, so their effect is visible.
 #
-# Input  : data-processed/wa_prep.rds   (from 00; uses its $anchors element)
+# Input  : data-processed/WestAfrica_QCurve_PreppedData.rds   (from 00; uses its $anchors element)
 # Stan   : stan-models/modelA_partialpool_estimateQ_withTweaks.stan
 # Output : data-processed/wa_fit.rds              (curves + endpoints; read by 03)
 #          data-processed/wa_fit_curve_summaries.csv   (human-readable curves)
@@ -50,11 +50,11 @@ set.seed(123)  # reproducible R-side randomness (the sampler seed is set separat
 # ----------------------------------------------------------------------------
 # 1. Read the cleaned West Africa anchors
 # ----------------------------------------------------------------------------
-# wa_prep.rds was produced by 00. Its $anchors element is the cleaned anchor
+# WestAfrica_QCurve_PreppedData.rds was produced by 00. Its $anchors element is the cleaned anchor
 # table (one row per literature data point; see read_anchor_sheet() in 00 for the
 # column meanings, e.g. parameter, relative_day, value_used, weight, direction,
 # lower_bound, upper_bound).
-wa_anchors <- readRDS(file.path(DIR_PROCESSED, "wa_prep.rds"))$anchors
+wa_anchors <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve_PreppedData.rds"))$anchors
 
 # ----------------------------------------------------------------------------
 # 2. Per-parameter metadata: priors, direction, and admissible support
