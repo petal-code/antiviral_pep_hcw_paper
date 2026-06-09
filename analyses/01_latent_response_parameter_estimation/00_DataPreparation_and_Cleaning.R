@@ -7,19 +7,28 @@
 #   reconstructs and saves. The two fitting scripts (01, 02), the combine script
 #   (03) and the two checking scripts all read ONLY from data-processed/.
 #
-# WHAT IT PRODUCES (all written to data-processed/)
-#   wa_anchors.csv                  Cleaned West Africa literature anchors.
-#   drc_anchors.csv                 Cleaned DRC literature anchors (shared by all
-#                                   three DRC scenarios).
-#   drc_conflict_qseries.csv        The empirical DRC "conflict" response-quality
-#                                   curve Q(t) reconstructed from the SDB data.
-#   drc_conflict_plusplus_qseries.csv   As conflict, plus a forced response
-#                                   collapse (success -> 0) over days 200-300.
-#   drc_no_conflict_qseries.csv     The counterfactual "no-conflict" curve:
-#                                   monthly, plateaued, conflict tail removed.
-#   drc_durations.csv               The scenario horizons (max day) used later to
-#                                   set the West-Africa-with-conflict time stretch.
-#   sdb_province_weekly.csv         QC: the per-province weekly SDB reconstruction.
+# WHAT IT PRODUCES
+#   Two bundled R objects (named lists), so data-processed/ stays tidy instead of
+#   filling up with many loose CSVs. Every downstream script reads one of these:
+#
+#   wa_prep.rds   list(
+#                   anchors = <cleaned West Africa literature anchors>
+#                 )
+#
+#   drc_prep.rds  list(
+#                   anchors                   = <cleaned DRC literature anchors>,
+#                   conflict_qseries          = <empirical "conflict" Q(t) curve>,
+#                   conflict_plusplus_qseries = <conflict Q with a forced collapse
+#                                                (success -> 0) over days 200-300>,
+#                   no_conflict_qseries       = <counterfactual no-conflict Q(t):
+#                                                monthly, plateaued, tail removed>,
+#                   durations                 = <scenario horizons (max day)>,
+#                   province_weekly_qc        = <per-province weekly reconstruction;
+#                                                diagnostic only, not used in fits>
+#                 )
+#
+#   The anchor tables and the Q series are documented column-by-column where they
+#   are built, below.
 #
 # KEY IDEA - the "response-quality curve" Q(t)
 #   For the DRC scenarios, Q(t) is NOT estimated. It is the empirical fraction of
@@ -117,6 +126,22 @@ REQUIRED_ANCHOR_COLS <- c(
   "lower_bound", "upper_bound"
 )
 
+# read_anchor_sheet() returns a cleaned anchor table: one row per literature data
+# point kept for fitting, with these columns ---------------------------------
+#   anchor_id      unique id of the anchor (e.g. "WA_UFC_01")
+#   parameter      which response parameter it informs (one of PARAM_LEVELS)
+#   relative_day   outbreak day the anchor refers to (days since response start)
+#   value_used     the observed / derived value of that parameter at that day
+#   fit_role       the anchor's role label from the workbook (e.g. "main_fit")
+#   include_in_fit "YES" for rows used in the fit (others are filtered out here)
+#   weight         relative trust in the anchor; higher = fit it more tightly
+#                  (becomes obs_sd_mult = 1 / weight in the fitting scripts)
+#   direction      "up" if the parameter improves upward over the response,
+#                  "down" if it improves downward
+#   lower_bound    workbook low end of the parameter -> prior CENTRE for that
+#                  parameter's LOWER magnitude endpoint
+#   upper_bound    workbook high end of the parameter -> prior CENTRE for the
+#                  UPPER magnitude endpoint
 read_anchor_sheet <- function(path, sheet) {
   raw <- read_excel(path, sheet = sheet, skip = 2)
 
@@ -152,9 +177,7 @@ drc_anchors <- read_anchor_sheet(curve_workbook, "Middle_DRC_2018_2019") %>%
   # Drop the SDB-summary anchors that the line-list reconstruction supersedes.
   filter(!(anchor_id %in% DRC_SUPERSEDED_ANCHORS))
 
-write_csv(wa_anchors,  file.path(DIR_PROCESSED, "wa_anchors.csv"))
-write_csv(drc_anchors, file.path(DIR_PROCESSED, "drc_anchors.csv"))
-
+# (wa_anchors and drc_anchors are bundled into the .rds objects at the end.)
 message("West Africa anchors per parameter:")
 print(table(wa_anchors$parameter))
 message("DRC anchors per parameter:")
@@ -309,6 +332,17 @@ finalise_q_series <- function(avg, smooth, drc_anchor_max_day,
   scale_max <- max(s$success_smoothed, na.rm = TRUE)
   if (!is.finite(scale_max) || scale_max <= 0) stop("Q scaling maximum is not positive.")
 
+  # The returned Q series has one row per support point (the forced day-0 start
+  # first, then each retained SDB bin), with these columns -------------------
+  #   relative_day               outbreak day of the support point
+  #   tau_q                      relative_day / max_day  (normalised time, 0-1)
+  #   q_value                    the shared response-quality index Q in [0,1]
+  #                              (= success / max success); supplied to Model B
+  #                              as DATA and used as the scenario's q_value
+  #   unsafe_funeral_comm_proxy  ABSOLUTE community unsafe-funeral level (1 - success);
+  #                              floor is 1 - max(success), not 0
+  #   success_smoothed           the smoothed SDB success proportion behind Q
+  #   n_eligible_sum             eligible burials behind the bin (0 at the start row)
   s %>%
     mutate(
       tau_q = relative_day / max_day,
@@ -355,14 +389,11 @@ drc_no_conflict_qseries <- finalise_q_series(
   end_day = no_conflict_end_day
 )
 
-# ---- 2e. Save the Q series and the scenario horizons -----------------------
-write_csv(drc_conflict_qseries,           file.path(DIR_PROCESSED, "drc_conflict_qseries.csv"))
-write_csv(drc_conflict_plusplus_qseries,  file.path(DIR_PROCESSED, "drc_conflict_plusplus_qseries.csv"))
-write_csv(drc_no_conflict_qseries,        file.path(DIR_PROCESSED, "drc_no_conflict_qseries.csv"))
-
-# The "duration" of each DRC scenario is the largest day on its curve. The ratio
-# conflict/no-conflict is used in 03 to stretch the West-Africa-with-conflict
-# timeline (conflict drags the response out over a longer window).
+# ---- 2e. Bundle everything into two tidy .rds objects ----------------------
+# drc_durations: one row per scenario giving the largest day on its curve. The
+# ratio duration(conflict) / duration(no-conflict) is used in 03 to stretch the
+# West-Africa-with-conflict timeline (conflict drags the response out over a
+# longer window). The wa_anchor_max_day row is carried for context only.
 drc_durations <- tibble(
   scenario = c("drc_conflict", "drc_conflict_plusplus", "drc_no_conflict", "wa_anchor_max_day"),
   max_day  = c(
@@ -372,11 +403,26 @@ drc_durations <- tibble(
     max(wa_anchors$relative_day, na.rm = TRUE)
   )
 )
-write_csv(drc_durations, file.path(DIR_PROCESSED, "drc_durations.csv"))
 
-# QC: keep the per-province weekly reconstruction for inspection.
-write_csv(weekly_binned, file.path(DIR_PROCESSED, "sdb_province_weekly.csv"))
+# Save exactly two bundled lists (see the header for their full contents). Each
+# element is a data frame documented where it was built above; the trailing
+# comments say which downstream script consumes it.
+wa_prep <- list(
+  anchors = wa_anchors                          # cleaned WA anchors   (01, west_africa_checking)
+)
+saveRDS(wa_prep, file.path(DIR_PROCESSED, "wa_prep.rds"))
+
+drc_prep <- list(
+  anchors                   = drc_anchors,                   # cleaned DRC anchors          (02, no-conflict check)
+  conflict_qseries          = drc_conflict_qseries,          # shared Q, "conflict"         (02)
+  conflict_plusplus_qseries = drc_conflict_plusplus_qseries, # shared Q, "conflict++"       (02)
+  no_conflict_qseries       = drc_no_conflict_qseries,       # shared Q, no-conflict        (no-conflict check)
+  durations                 = drc_durations,                 # scenario horizons            (03 time-stretch)
+  province_weekly_qc        = weekly_binned                  # per-province reconstruction  (diagnostic only)
+)
+saveRDS(drc_prep, file.path(DIR_PROCESSED, "drc_prep.rds"))
 
 message("\nDRC scenario horizons (max day):")
 print(drc_durations)
-message("\n00_DataPreparation_and_Cleaning.R complete. Outputs in data-processed/.")
+message("\n00_DataPreparation_and_Cleaning.R complete. ",
+        "Wrote data-processed/wa_prep.rds and data-processed/drc_prep.rds")
