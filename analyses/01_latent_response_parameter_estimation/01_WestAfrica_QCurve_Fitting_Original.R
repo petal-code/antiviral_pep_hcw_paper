@@ -54,7 +54,7 @@ set.seed(123)  # reproducible R-side randomness (the sampler seed is set separat
 # table (one row per literature data point; see read_anchor_sheet() in 00 for the
 # column meanings, e.g. parameter, relative_day, value_used, weight, direction,
 # lower_bound, upper_bound).
-wa_anchors <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve_PreppedData.rds"))$anchors
+wa_anchors <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_PreppedData.rds"))$anchors
 
 # ----------------------------------------------------------------------------
 # 2. Per-parameter metadata: priors, direction, and admissible support
@@ -309,10 +309,10 @@ wa_fit <- list(
   max_day     = max_day,       # the West Africa anchor horizon (days) behind tau
   tweaks_on   = TWEAKS_ON      # whether the targeted tweaks were applied
 )
-saveRDS(wa_fit, file.path(DIR_PROCESSED, "WestAfrica_QCurve_Fit.rds"))
+saveRDS(wa_fit, file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_Fit.rds"))
 
 # Also write the fitted parameter curves as a plain CSV for quick human inspection.
-write_csv(curve_summ, file.path(DIR_PROCESSED, "WestAfrica_QCurve_Summaries.csv"))
+write_csv(curve_summ, file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_Summaries.csv"))
 
 # ----------------------------------------------------------------------------
 # 10. Plot the fitted curves with the anchor data on top  (display only)

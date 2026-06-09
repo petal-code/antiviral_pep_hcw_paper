@@ -57,7 +57,7 @@ set.seed(123)
 # DRC_QCurve_PreppedData.rds (from 00) bundles the cleaned anchors, the three Q series, the
 # durations and a QC table. Here we need the anchors now and the two conflict Q
 # series further down.
-drc_prep    <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve_PreppedData.rds"))
+drc_prep    <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_PreppedData.rds"))
 drc_anchors <- drc_prep$anchors
 
 # ----------------------------------------------------------------------------

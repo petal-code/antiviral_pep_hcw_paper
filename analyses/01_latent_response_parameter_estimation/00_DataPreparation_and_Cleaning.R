@@ -410,7 +410,7 @@ drc_durations <- tibble(
 wa_prep <- list(
   anchors = wa_anchors                          # cleaned WA anchors   (01, west_africa_checking)
 )
-saveRDS(wa_prep, file.path(DIR_PROCESSED, "WestAfrica_QCurve_PreppedData.rds"))
+saveRDS(wa_prep, file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_PreppedData.rds"))
 
 drc_prep <- list(
   anchors                   = drc_anchors,                   # cleaned DRC anchors          (02, no-conflict check)
@@ -420,7 +420,7 @@ drc_prep <- list(
   durations                 = drc_durations,                 # scenario horizons            (03 time-stretch)
   province_weekly_qc        = weekly_binned                  # per-province reconstruction  (diagnostic only)
 )
-saveRDS(drc_prep, file.path(DIR_PROCESSED, "DRC_QCurve_PreppedData.rds"))
+saveRDS(drc_prep, file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_PreppedData.rds"))
 
 message("\nDRC scenario horizons (max day):")
 print(drc_durations)
