@@ -9,7 +9,7 @@
 #   thing to look at and judge. Nothing here feeds 03 and nothing is saved; the
 #   overlay figure is printed to the active graphics device only.
 #
-# Inputs : data-processed/WestAfrica_QCurve_PreppedData.rds   (uses $anchors)
+# Inputs : data-processed/WestAfrica_QCurve/WestAfrica_QCurve_PreppedData.rds   (uses $anchors)
 # Stan   : stan-models/modelA_partialpool_estimateQ_withTweaks.stan
 #          stan-models/modelA_partialpool_estimateQ_noTweaks.stan
 # Outputs: none (the overlay plot is displayed, not saved)
@@ -25,7 +25,7 @@ source(here::here("analyses", "01_latent_response_parameter_estimation", "helper
 set.seed(123)
 
 # The cleaned West Africa anchors (same input as the production fit in 01).
-wa_anchors <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve_PreppedData.rds"))$anchors
+wa_anchors <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_PreppedData.rds"))$anchors
 
 # ---- Shared per-parameter metadata (identical to script 01) ----------------
 # Hard admissible domains, then collapse to one row per parameter and add the
