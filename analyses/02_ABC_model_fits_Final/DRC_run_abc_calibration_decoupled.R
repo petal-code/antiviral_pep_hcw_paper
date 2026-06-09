@@ -215,7 +215,7 @@ R0_invariants <- compute_R0_invariants(args = mp$args, n = ABC_CONFIG$setup_R0_n
 
 
 # -----------------------------------------------------------------------------
-# 6. PER-RUN OUTPUT DIRECTORY + WORKER CONFIG
+# 6. PER-RUN OUTPUT DIRECTORY + WORKER CONFIG + PRE-RUN PROVENANCE
 # -----------------------------------------------------------------------------
 RUN_TAG <- sprintf("%s_NP%d_NS%d_NBREPS_%d_NBSIMUL_%d",
                    RUN_PROFILE, length(PARAM_NAMES), length(prep$summary_stats),
@@ -231,11 +231,33 @@ save_abc_config(list(
   abc_config = ABC_CONFIG, model_overrides = MODEL_OVERRIDES
 ))
 
+# Build + write the run metadata to ABC_OUTPUT_DIR *before* ABC_sequential() starts.
+# A run interrupted mid-fit leaves only the raw output_step*/tolerance_step* files
+# (no result.rds); writing the metadata up front means those partial runs can still
+# be traced back to the exact parameter combination, priors, fixed values and
+# observed targets that produced them. start_time / result_stamp / result_filename
+# are fixed here so the pre-run sidecar matches the post-run result.rds copy exactly.
+start_time      <- Sys.time()
+result_stamp    <- format(start_time, "%Y%m%d_%H%M%S")
+result_filename <- paste0("fiber_ABC_SMC_", SCENARIO_ID, "_", ABC_OUTPUT_LABEL,
+                          "_", result_stamp, "_", RUN_TAG, ".rds")
+
+run_metadata <- make_decoupled_run_metadata(
+  scenario_id = SCENARIO_ID, fit_params = PARAM_NAMES, priors = priors,
+  fixed_values = fixed_values, summary_stats = prep$summary_stats,
+  observed_summaries = observed_summaries, hcw_base_prob = HCW_BASE_PROB,
+  general_hospital_quarantine_efficacy = DEFAULT_SCALAR_INPUTS$general_hospital_quarantine_efficacy,
+  safe_funeral_efficacy = DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy,
+  peak_settings = list(bin_width = PEAK_BIN_WIDTH, time_origin = PEAK_TIME_ORIGIN),
+  extra = list(result_filename = result_filename, run_profile = RUN_PROFILE,
+               abc_settings = ABC_SETTINGS, abc_output_dir = ABC_OUTPUT_DIR)
+)
+write_decoupled_run_metadata(run_metadata, file.path(ABC_OUTPUT_DIR, "result.rds"))
+
 
 # -----------------------------------------------------------------------------
 # 7. RUN ABC_SEQUENTIAL (Del Moral et al. 2012 adaptive SMC)
 # -----------------------------------------------------------------------------
-start_time <- Sys.time()
 result <- with_abc_output_dir(
   ABC_OUTPUT_DIR,
   ABC_sequential(
@@ -254,25 +276,13 @@ result <- with_abc_output_dir(
 )
 print(Sys.time() - start_time)
 
-result_stamp    <- format(start_time, "%Y%m%d_%H%M%S")
-result_filename <- paste0("fiber_ABC_SMC_", SCENARIO_ID, "_", ABC_OUTPUT_LABEL,
-                          "_", result_stamp, "_", RUN_TAG, ".rds")
-
-run_metadata <- make_decoupled_run_metadata(
-  scenario_id = SCENARIO_ID, fit_params = PARAM_NAMES, priors = priors,
-  fixed_values = fixed_values, summary_stats = prep$summary_stats,
-  observed_summaries = observed_summaries, hcw_base_prob = HCW_BASE_PROB,
-  general_hospital_quarantine_efficacy = DEFAULT_SCALAR_INPUTS$general_hospital_quarantine_efficacy,
-  safe_funeral_efficacy = DEFAULT_SCALAR_INPUTS$safe_funeral_efficacy,
-  peak_settings = list(bin_width = PEAK_BIN_WIDTH, time_origin = PEAK_TIME_ORIGIN),
-  extra = list(result_filename = result_filename, run_profile = RUN_PROFILE,
-               abc_settings = ABC_SETTINGS)
-)
+# Metadata sidecars were written to ABC_OUTPUT_DIR pre-run (section 6); here we
+# attach the same metadata to the completed object and persist the .rds plus the
+# descriptive-name copy (and its sidecar) to FINAL_OUTPUTS_DIR.
 result <- attach_decoupled_run_metadata(result, run_metadata)
 
 saveRDS(result, file = file.path(ABC_OUTPUT_DIR, "result.rds"))
 saveRDS(result, file = file.path(FINAL_OUTPUTS_DIR, result_filename))
-write_decoupled_run_metadata(run_metadata, file.path(ABC_OUTPUT_DIR, "result.rds"))
 write_decoupled_run_metadata(run_metadata, file.path(FINAL_OUTPUTS_DIR, result_filename))
 
 # -----------------------------------------------------------------------------
