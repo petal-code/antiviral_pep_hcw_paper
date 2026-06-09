@@ -38,9 +38,9 @@ suppressPackageStartupMessages({
   library(tibble)
 })
 
-source("helpers.R")
+source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
 
-dir.create("data-processed", showWarnings = FALSE, recursive = TRUE)
+dir.create(DIR_PROCESSED, showWarnings = FALSE, recursive = TRUE)
 
 # ----------------------------------------------------------------------------
 # Settings that define the SDB reconstruction
@@ -152,8 +152,8 @@ drc_anchors <- read_anchor_sheet(curve_workbook, "Middle_DRC_2018_2019") %>%
   # Drop the SDB-summary anchors that the line-list reconstruction supersedes.
   filter(!(anchor_id %in% DRC_SUPERSEDED_ANCHORS))
 
-write_csv(wa_anchors,  "data-processed/wa_anchors.csv")
-write_csv(drc_anchors, "data-processed/drc_anchors.csv")
+write_csv(wa_anchors,  file.path(DIR_PROCESSED, "wa_anchors.csv"))
+write_csv(drc_anchors, file.path(DIR_PROCESSED, "drc_anchors.csv"))
 
 message("West Africa anchors per parameter:")
 print(table(wa_anchors$parameter))
@@ -356,9 +356,9 @@ drc_no_conflict_qseries <- finalise_q_series(
 )
 
 # ---- 2e. Save the Q series and the scenario horizons -----------------------
-write_csv(drc_conflict_qseries,           "data-processed/drc_conflict_qseries.csv")
-write_csv(drc_conflict_plusplus_qseries,  "data-processed/drc_conflict_plusplus_qseries.csv")
-write_csv(drc_no_conflict_qseries,        "data-processed/drc_no_conflict_qseries.csv")
+write_csv(drc_conflict_qseries,           file.path(DIR_PROCESSED, "drc_conflict_qseries.csv"))
+write_csv(drc_conflict_plusplus_qseries,  file.path(DIR_PROCESSED, "drc_conflict_plusplus_qseries.csv"))
+write_csv(drc_no_conflict_qseries,        file.path(DIR_PROCESSED, "drc_no_conflict_qseries.csv"))
 
 # The "duration" of each DRC scenario is the largest day on its curve. The ratio
 # conflict/no-conflict is used in 03 to stretch the West-Africa-with-conflict
@@ -372,10 +372,10 @@ drc_durations <- tibble(
     max(wa_anchors$relative_day, na.rm = TRUE)
   )
 )
-write_csv(drc_durations, "data-processed/drc_durations.csv")
+write_csv(drc_durations, file.path(DIR_PROCESSED, "drc_durations.csv"))
 
 # QC: keep the per-province weekly reconstruction for inspection.
-write_csv(weekly_binned, "data-processed/sdb_province_weekly.csv")
+write_csv(weekly_binned, file.path(DIR_PROCESSED, "sdb_province_weekly.csv"))
 
 message("\nDRC scenario horizons (max day):")
 print(drc_durations)

@@ -11,6 +11,18 @@
 # 00_DataPreparation_and_Cleaning.R, not here - this file is only generic glue.
 # ============================================================================
 
+# ---- Project paths ---------------------------------------------------------
+# Every script resolves paths from the repository root with here::here(), which
+# locates obv_hcw_paper.Rproj / the .git directory. This means the scripts run
+# correctly no matter which working directory they are launched from. Raw inputs
+# and processed outputs live at the TOP LEVEL of the repository (shared across
+# analyses, matching the rest of obv_hcw_paper); the Stan models live in this
+# analysis folder alongside the scripts.
+ANALYSIS_DIR  <- here::here("analyses", "01_latent_response_parameter_estimation")
+DIR_RAW       <- here::here("data-raw")
+DIR_PROCESSED <- here::here("data-processed")
+DIR_STAN      <- file.path(ANALYSIS_DIR, "stan-models")
+
 # ---- The shared model "vocabulary" -----------------------------------------
 
 # The six latent response parameters, in a fixed canonical order. Every script
@@ -53,11 +65,11 @@ rescale_01 <- function(x) {
 
 # ---- Locating raw input files ----------------------------------------------
 
-# Resolve a raw input workbook by name inside data-raw/. Accepts several
-# candidate filenames (the SDB workbook has been distributed under a couple of
-# slightly different names) and returns the first that exists.
+# Resolve a raw input workbook by name inside the top-level data-raw/. Accepts
+# several candidate filenames (the SDB workbook has been distributed under a
+# couple of slightly different names) and returns the first that exists.
 resolve_input_file <- function(candidates, description = "input file",
-                               data_raw_dir = "data-raw") {
+                               data_raw_dir = DIR_RAW) {
   for (nm in candidates) {
     p <- file.path(data_raw_dir, nm)
     if (file.exists(p)) return(p)

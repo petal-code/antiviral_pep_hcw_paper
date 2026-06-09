@@ -41,7 +41,7 @@ suppressPackageStartupMessages({
   library(readr); library(tibble); library(ggplot2)
 })
 
-source("helpers.R")
+source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
 set.seed(123)
 
 # How many literature anchors' worth of information the whole SDB series should
@@ -51,8 +51,8 @@ SDB_TARGET_EQUIV_ANCHORS <- 3
 # ----------------------------------------------------------------------------
 # Data and shared metadata
 # ----------------------------------------------------------------------------
-qseries     <- read_csv("data-processed/drc_no_conflict_qseries.csv", show_col_types = FALSE)
-drc_anchors <- read_csv("data-processed/drc_anchors.csv", show_col_types = FALSE)
+qseries     <- read_csv(file.path(DIR_PROCESSED, "drc_no_conflict_qseries.csv"), show_col_types = FALSE)
+drc_anchors <- read_csv(file.path(DIR_PROCESSED, "drc_anchors.csv"), show_col_types = FALSE)
 
 # The no-conflict horizon ends where its (truncated) Q series ends; clip anchors
 # to the same window.
@@ -89,8 +89,8 @@ hyper <- list(
 )
 SIGMA_FRAC_PRIOR_MEANLOG <- log(0.12); SIGMA_FRAC_PRIOR_SDLOG <- 0.60
 
-mod_B <- cmdstan_model("stan-models/modelB_fixedQ_boundsOnly.stan")
-mod_A <- cmdstan_model("stan-models/modelA_partialpool_estimateQ_noTweaks.stan")
+mod_B <- cmdstan_model(file.path(DIR_STAN, "modelB_fixedQ_boundsOnly.stan"))
+mod_A <- cmdstan_model(file.path(DIR_STAN, "modelA_partialpool_estimateQ_noTweaks.stan"))
 
 # Helper: pull a tidy per-parameter theta curve out of a fit.
 tidy_theta <- function(fit, variant) {
@@ -219,7 +219,7 @@ curveA_dw   <- fit_modelA(sdb_downweight = TRUE)
 # ============================================================================
 curves <- bind_rows(curveB, curveA_full, curveA_dw) %>%
   mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
-write_csv(curves, "data-processed/drc_no_conflict_checking_curves.csv")
+write_csv(curves, file.path(DIR_PROCESSED, "drc_no_conflict_checking_curves.csv"))
 
 # Overlay the SDB community-unsafe-funeral data points for reference.
 sdb_points <- sdb_obs %>%
@@ -241,5 +241,5 @@ p <- ggplot(curves, aes(relative_day, mean, colour = variant)) +
   theme_bw(base_size = 11) +
   theme(legend.position = "bottom", strip.text = element_text(face = "bold"))
 
-ggsave("data-processed/drc_no_conflict_checking_overlay.png", p, width = 12, height = 9, dpi = 150)
+ggsave(file.path(DIR_PROCESSED, "drc_no_conflict_checking_overlay.png"), p, width = 12, height = 9, dpi = 150)
 message("DRC_no_conflict_checking.R complete. Wrote curves CSV and overlay PNG.")

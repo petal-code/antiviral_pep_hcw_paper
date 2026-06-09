@@ -32,7 +32,7 @@ suppressPackageStartupMessages({
   library(tibble)
 })
 
-source("helpers.R")
+source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
 
 # Common reporting grid: integer days 0..730, with tau = day / 730.
 days    <- 0:HORIZON_DAYS
@@ -95,10 +95,10 @@ qvalue_from_param_Q <- function(param_Q_wide) {
 # ----------------------------------------------------------------------------
 # Load the fitted objects
 # ----------------------------------------------------------------------------
-wa_fit                    <- readRDS("data-processed/wa_fit.rds")
-drc_conflict_fit          <- readRDS("data-processed/drc_conflict_fit.rds")
-drc_conflict_plusplus_fit <- readRDS("data-processed/drc_conflict_plusplus_fit.rds")
-drc_durations             <- read_csv("data-processed/drc_durations.csv", show_col_types = FALSE)
+wa_fit                    <- readRDS(file.path(DIR_PROCESSED, "wa_fit.rds"))
+drc_conflict_fit          <- readRDS(file.path(DIR_PROCESSED, "drc_conflict_fit.rds"))
+drc_conflict_plusplus_fit <- readRDS(file.path(DIR_PROCESSED, "drc_conflict_plusplus_fit.rds"))
+drc_durations             <- read_csv(file.path(DIR_PROCESSED, "drc_durations.csv"), show_col_types = FALSE)
 
 # ----------------------------------------------------------------------------
 # Scenario 1: worst_west_africa
@@ -252,7 +252,7 @@ for (col in prob_cols) {
   }
 }
 
-write_csv(combined, "data-processed/combined_original_methodology_outputs.csv")
-message("\n03_Combine_QCurves.R complete. Wrote ",
-        "data-processed/combined_original_methodology_outputs.csv (",
-        nrow(combined), " rows, ", length(unique(combined$scenario_key)), " scenarios).")
+write_csv(combined, file.path(DIR_PROCESSED, "combined_original_methodology_outputs.csv"))
+message("\n03_Combine_QCurves.R complete. Wrote combined_original_methodology_outputs.csv ",
+        "to data-processed/ (", nrow(combined), " rows, ",
+        length(unique(combined$scenario_key)), " scenarios).")

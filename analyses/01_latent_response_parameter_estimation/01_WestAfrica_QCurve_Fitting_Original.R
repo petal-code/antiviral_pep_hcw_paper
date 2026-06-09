@@ -24,14 +24,14 @@ suppressPackageStartupMessages({
   library(tibble)
 })
 
-source("helpers.R")
+source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
 
 set.seed(123)
 
 # ----------------------------------------------------------------------------
 # 1. Read the cleaned West Africa anchors
 # ----------------------------------------------------------------------------
-wa_anchors <- read_csv("data-processed/wa_anchors.csv", show_col_types = FALSE)
+wa_anchors <- read_csv(file.path(DIR_PROCESSED, "wa_anchors.csv"), show_col_types = FALSE)
 
 # ----------------------------------------------------------------------------
 # 2. Per-parameter metadata: priors, direction, and admissible support
@@ -190,7 +190,7 @@ stan_data <- c(
 # ----------------------------------------------------------------------------
 # 7. Compile and sample
 # ----------------------------------------------------------------------------
-mod <- cmdstan_model("stan-models/modelA_partialpool_estimateQ_withTweaks.stan")
+mod <- cmdstan_model(file.path(DIR_STAN, "modelA_partialpool_estimateQ_withTweaks.stan"))
 
 fit <- mod$sample(
   data = stan_data, seed = 123,
@@ -234,7 +234,7 @@ wa_fit <- list(
   max_day     = max_day,
   tweaks_on   = TWEAKS_ON
 )
-saveRDS(wa_fit, "data-processed/wa_fit.rds")
-write_csv(curve_summ, "data-processed/wa_fit_curve_summaries.csv")
+saveRDS(wa_fit, file.path(DIR_PROCESSED, "wa_fit.rds"))
+write_csv(curve_summ, file.path(DIR_PROCESSED, "wa_fit_curve_summaries.csv"))
 
 message("\n01_WestAfrica_QCurve_Fitting_Original.R complete. Saved data-processed/wa_fit.rds")

@@ -22,11 +22,17 @@ The six response parameters (fixed canonical order; see `helpers.R`):
 
 ## Pipeline (run in order)
 
+All paths are resolved from the repository root with `here::here()` (it locates
+`obv_hcw_paper.Rproj` / `.git`), so the scripts run regardless of the working
+directory. Open `obv_hcw_paper.Rproj` (or set the working directory anywhere in
+the repo) and source in order:
+
 ```r
-source("00_DataPreparation_and_Cleaning.R")   # data-raw -> data-processed
-source("01_WestAfrica_QCurve_Fitting_Original.R")  # Model A (+tweaks) -> wa_fit.rds
-source("02_DRC_QCurve_Fitting_Original.R")    # Model B -> drc_conflict(_plusplus)_fit.rds
-source("03_Combine_QCurves.R")                # -> combined_original_methodology_outputs.csv
+d <- here::here("analyses", "01_latent_response_parameter_estimation")
+source(file.path(d, "00_DataPreparation_and_Cleaning.R"))      # data-raw -> data-processed
+source(file.path(d, "01_WestAfrica_QCurve_Fitting_Original.R")) # Model A (+tweaks) -> wa_fit.rds
+source(file.path(d, "02_DRC_QCurve_Fitting_Original.R"))        # Model B -> drc_conflict(_plusplus)_fit.rds
+source(file.path(d, "03_Combine_QCurves.R"))                    # -> combined_original_methodology_outputs.csv
 ```
 
 `03` produces **five** scenarios on a common 0–730 day grid: `worst_west_africa`,
@@ -46,10 +52,19 @@ over days 200–300).
 
 ## Folders
 
-- `data-raw/` — the two source workbooks (curve anchors; DRC SDB line-list).
-- `data-processed/` — cleaned inputs, fitted `.rds`, and the final CSV.
+Inputs and outputs live at the **repository top level** (shared across analyses,
+matching the rest of `obv_hcw_paper`), not inside this analysis folder:
+
+- `obv_hcw_paper/data-raw/` — the two source workbooks (curve anchors; DRC SDB
+  line-list).
+- `obv_hcw_paper/data-processed/` — cleaned inputs, fitted `.rds`, and the final
+  CSV produced by this pipeline (alongside the other analyses' processed data).
+
+Inside this analysis folder:
+
 - `stan-models/` — the three Stan files.
-- `helpers.R` — small shared utilities (one definition each, no duplication).
+- `helpers.R` — small shared utilities and the `here::here()` path constants
+  (`DIR_RAW`, `DIR_PROCESSED`, `DIR_STAN`); one definition each, no duplication.
 
 ## Notes
 

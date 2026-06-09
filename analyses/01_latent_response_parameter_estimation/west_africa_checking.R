@@ -22,10 +22,10 @@ suppressPackageStartupMessages({
   library(readr); library(tibble); library(ggplot2)
 })
 
-source("helpers.R")
+source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
 set.seed(123)
 
-wa_anchors <- read_csv("data-processed/wa_anchors.csv", show_col_types = FALSE)
+wa_anchors <- read_csv(file.path(DIR_PROCESSED, "wa_anchors.csv"), show_col_types = FALSE)
 
 # ---- Shared per-parameter metadata (identical to script 01) ----------------
 domain_meta <- tribble(
@@ -64,8 +64,8 @@ hyper <- list(
   sigma_frac_prior_meanlog = log(0.12), sigma_frac_prior_sdlog = 0.60
 )
 
-mod_with <- cmdstan_model("stan-models/modelA_partialpool_estimateQ_withTweaks.stan")
-mod_no   <- cmdstan_model("stan-models/modelA_partialpool_estimateQ_noTweaks.stan")
+mod_with <- cmdstan_model(file.path(DIR_STAN, "modelA_partialpool_estimateQ_withTweaks.stan"))
+mod_no   <- cmdstan_model(file.path(DIR_STAN, "modelA_partialpool_estimateQ_noTweaks.stan"))
 
 # ---- Fit Model A with or without the tweaks --------------------------------
 fit_wa <- function(tweaks_on) {
@@ -137,7 +137,7 @@ fit_wa <- function(tweaks_on) {
 curves <- bind_rows(fit_wa(TRUE), fit_wa(FALSE)) %>%
   mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
 
-write_csv(curves, "data-processed/wa_checking_curves.csv")
+write_csv(curves, file.path(DIR_PROCESSED, "wa_checking_curves.csv"))
 
 # ---- Overlay plot: with-tweaks vs no-tweaks, per parameter -----------------
 anchor_points <- wa_anchors %>%
@@ -157,5 +157,5 @@ p <- ggplot(curves, aes(relative_day, mean, colour = variant, fill = variant)) +
   theme_bw(base_size = 11) +
   theme(legend.position = "bottom", strip.text = element_text(face = "bold"))
 
-ggsave("data-processed/wa_checking_overlay.png", p, width = 12, height = 9, dpi = 150)
+ggsave(file.path(DIR_PROCESSED, "wa_checking_overlay.png"), p, width = 12, height = 9, dpi = 150)
 message("west_africa_checking.R complete. Wrote wa_checking_curves.csv and wa_checking_overlay.png")
