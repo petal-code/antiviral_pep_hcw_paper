@@ -11,8 +11,12 @@
 #       -- and overall epidemic size -- down.
 #     * hcw_risk_scalar (bounded prior) is the HCW-exposure lever.
 #
-#   FITTED SUMMARIES (5): log(n_deaths), log(n_hcw_deaths), hcw_fraction,
-#                         d_p05_p95, log(peak_height)
+#   FITTED SUMMARIES: takeoff, log(n_deaths), log(n_hcw_deaths), hcw_fraction,
+#                     d_p05_p95, log(peak_height)   (any subset; see SUMMARY_STATS)
+#     * takeoff is the fraction of trajectories that took off, scored on the SAME
+#       TAKEOFF_DEATH_THRESHOLD (>= 100 deaths) that conditions the means -- so
+#       "took off" means one thing throughout, and the fraction is what conditions
+#       the means. Observed target = 1.0 (the real outbreak did take off);
 #     * logs put the heavy-tailed counts on a relative-error scale;
 #     * hcw_fraction up-weights the HCW share (deliberately redundant with the
 #       two count logs);
@@ -78,13 +82,15 @@ FIXED_PARAMS <- list(
 )
 
 # ---- WHICH SUMMARIES TO FIT -------------------------------------------------
-# Any subset of DECOUPLED_AVAILABLE_SUMMARIES.
-SUMMARY_STATS <- c("log_n_deaths", "log_n_hcw_deaths", "hcw_fraction",
+# Any subset of DECOUPLED_AVAILABLE_SUMMARIES; comment a line out of BOTH this
+# vector and OBSERVED_NAMED to drop a summary from the fit.
+SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction",
                    "d_p05_p95", "log_peak_height")
 
 # Observed targets, ON THE FITTED SCALE (log the counts), keyed BY NAME.
 #   raw WA targets: n_deaths = 11325, n_hcw_deaths = 513, peak_height = 599.
 OBSERVED_NAMED <- c(
+  takeoff          = 1.0,           # the real outbreak took off (>= TAKEOFF_DEATH_THRESHOLD deaths)
   log_n_deaths     = log(11325),
   log_n_hcw_deaths = log(513),
   hcw_fraction     = 513 / 11325,   # = 0.0453
@@ -118,7 +124,7 @@ ABC_SETTINGS <- list(
 
 N_REPS                  <- .prof$n_reps
 SEEDING_CASES           <- 25L
-TAKEOFF_DEATH_THRESHOLD <- 100L
+TAKEOFF_DEATH_THRESHOLD <- 100L   # >= K deaths = "took off": conditions the means AND the takeoff fraction
 SETUP_R0_N              <- 100000L
 SETUP_R0_SEED           <- 42L
 

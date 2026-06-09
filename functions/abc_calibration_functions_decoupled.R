@@ -108,9 +108,12 @@ per_rep_metrics_decoupled <- function(out,
 
 
 # Aggregate a [metric x replicate] matrix into the requested fitted summaries.
-# Means are over TAKEN-OFF replicates; hcw_fraction is the ratio of the two means
-# (stable); "log_*" summaries log the corresponding mean; "takeoff" is the
-# take-off fraction. Returns a named vector in `summary_stats` order.
+# Means are over TAKEN-OFF replicates (the `took_off` mask = n_deaths >=
+# takeoff_death_threshold); hcw_fraction is the ratio of the two means (stable);
+# "log_*" summaries log the corresponding mean; "takeoff" is the fraction of
+# replicates that took off -- scored on the SAME `took_off` mask, so "took off"
+# means one thing (n_deaths >= takeoff_death_threshold) for both the fraction and
+# the conditional means. Returns a named vector in `summary_stats` order.
 aggregate_decoupled <- function(reps, took_off,
                                 summary_stats = DEFAULT_DECOUPLED_SUMMARIES) {
   any_off <- any(took_off)
