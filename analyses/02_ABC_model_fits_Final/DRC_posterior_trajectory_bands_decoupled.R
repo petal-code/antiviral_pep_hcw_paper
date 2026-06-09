@@ -1,44 +1,45 @@
 # DRC_posterior_trajectory_bands_decoupled.R
 # =============================================================================
-# Direct obeldesivir (OBV) effect on death trajectories for the DECOUPLED-efficacy
-# DRC fit (Middle_DRC_ConflictSmoothed_PlusPlus): WITH vs WITHOUT OBV, from a
-# SINGLE OBV run per replicate (no separate baseline arm).
+# Obeldesivir (OBV) effect on death trajectories for the DECOUPLED-efficacy DRC
+# fit (Middle_DRC_ConflictSmoothed_PlusPlus): WITH vs WITHOUT OBV, as a paired
+# two-run (total-effect) comparison.
 #
 # What it does:
 #   1. Reads the ABC-SMC result.rds from the decoupled DRC run.
 #   2. Draws N_POST = 250 posterior parameter samples (weighted, with
 #      replacement, by the ABC importance weights).
-#   3. For EACH posterior sample, runs N_REPS = 10 stochastic replicates with
-#      obeldesivir PEP ON (80% efficacy, coverage 1, adherence 1, delivered to
-#      HCWs exposed in hospital). Each run yields BOTH curves:
-#        * WITH OBV     = the realised deaths in the simulated tree (out$tdf).
-#        * WITHOUT OBV  = realised deaths PLUS the would-be deaths OBV directly
-#          (direct)       prevented -- fiber's out$prevented_completed (the
-#                         averted index infections replayed through the same
-#                         outcome model), counted at their would-be death time
-#                         (time_outcome_absolute where outcome == TRUE).
-#      This is the DIRECT effect only: it adds back the prevented index deaths,
-#      NOT their averted onward transmission chains (that is the total effect).
-#   4. Bins each replicate into a weekly death-incidence curve (and its running
-#      cumulative), then for EACH posterior draw takes the per-rep CENTRAL across
-#      its 10 replicates -> ONE "with OBV" and ONE "without OBV" line per draw.
-#      Across the 250 draws that is 250 lines per arm.
+#   3. For EACH posterior sample, runs N_REPS = 10 stochastic replicates TWICE:
+#        * Without OBV: obv_pep_enabled = FALSE  (the calibrated epidemic).
+#        * With OBV:    obv_pep_enabled = TRUE    (PEP 80% efficacy, coverage 1,
+#                       adherence 1, delivered to HCWs exposed in hospital).
+#      Realised deaths are read directly from each run's tdf (time_outcome_absolute
+#      where outcome == TRUE), split into HCW vs total. This captures the TOTAL
+#      OBV effect -- prevented index infections AND their averted onward chains --
+#      unlike a single-run "prevented_completed" reconstruction, which only adds
+#      back index deaths (~0 here, since prevented hospital-exposed HCWs mostly
+#      survive) and so shows almost no difference.
+#   4. Bins each replicate into a weekly death curve (and running cumulative),
+#      then for EACH posterior draw takes the per-rep CENTRAL across its 10
+#      replicates -> one "with" and one "without" line per draw, per arm. Across
+#      the 250 draws that is 250 lines per arm.
 #   5. Produces TWO figures, each with two stacked facets (weekly incidence on
-#      top, cumulative on the bottom). Each plots all 250 per-draw lines per arm
-#      (faint), with the cross-draw central drawn bold on top:
-#        * Figure 1: HCW deaths     (figures/DRC_decoupled_obv_direct_HCW_deaths)
-#        * Figure 2: Total deaths   (figures/DRC_decoupled_obv_direct_total_deaths)
+#      top, cumulative on the bottom), all 250 per-draw lines per arm (faint) with
+#      the cross-draw central bold on top:
+#        * Figure 1: HCW deaths     (figures/DRC_decoupled_obv_HCW_deaths)
+#        * Figure 2: Total deaths   (figures/DRC_decoupled_obv_total_deaths)
 #
-#      CENTRAL TENDENCY: defaults to the MEAN over taken-off replicates, matching
-#      how the ABC fit was scored (aggregate_decoupled() logs the MEAN), so the
-#      figure reproduces the fitted scale (~79 HCW deaths / ~2,299 total for DRC).
-#      Epidemic sizes are heavily right-skewed under a near-critical branching
-#      process, so the MEDIAN sits ~4x lower and weekly HCW deaths are 0 in most
-#      weeks; set CENTRAL <- "median" (Section 8) only for the typical-outbreak view.
+#   CENTRAL TENDENCY: defaults to the MEAN over taken-off replicates, matching how
+#   the ABC fit was scored (aggregate_decoupled() logs the MEAN over reps with
+#   n_deaths >= take-off threshold). So the WITHOUT-OBV arm reproduces the fitted
+#   scale (~79 HCW deaths / ~2,299 total for DRC). Epidemic sizes are heavily
+#   right-skewed under a near-critical branching process, so the MEDIAN sits ~4x
+#   lower and HCW weekly deaths are 0 in most weeks; set CENTRAL <- "median"
+#   (Section 8) only for the typical-outbreak view.
 #
-# Because both curves come from the SAME run, the comparison is exactly paired:
-# the realised epidemic is identical and "without OBV" simply adds the prevented
-# deaths on top.
+# Each arm is conditioned on its OWN taken-off replicates (n_deaths >= threshold),
+# mirroring the fit. OBV-off and OBV-on share a seed per (draw, rep) but diverge
+# once the first OBV draw fires (see branching_process_main reproducibility note),
+# so the arms are compared as distributions (means), not as paired trajectories.
 #
 # Parallelism: replicates run with future / future.apply on a `multisession`
 # (Windows-safe PSOCK) plan, one explicit seed per (sample, replicate) so results
@@ -69,12 +70,15 @@ SCENARIO_ID_DFLT <- "Middle_DRC_ConflictSmoothed_PlusPlus"
 
 # ---- Sampling / replication ----
 N_POST    <- 250L     # posterior parameter samples
-N_REPS    <- 10L      # stochastic replicates per posterior sample
+N_REPS    <- 10L      # stochastic replicates per posterior sample PER ARM
 BIN_WIDTH <- 7L       # days per incidence bin (weekly); overridden by run metadata if present
 
-# ---- Obeldesivir (OBV) PEP settings ----
-# Standard delivery from the codebase (OBV_BASE): full coverage/adherence,
-# modelled as post-exposure prophylaxis for HCWs exposed in hospital.
+# Per-rep -> per-draw (and cross-draw) central tendency. "mean" matches the ABC
+# fit (which scored the mean over taken-off reps) and reproduces the ~79 HCW /
+# ~2,299 total scale; "median" gives the typical (right-skewed) outbreak instead.
+CENTRAL <- "mean"
+
+# ---- Obeldesivir (OBV) PEP settings (the WITH-OBV arm) ----
 OBV <- list(efficacy = 0.80, coverage = 1.0, adherence = 1.0, dpc = 1L,
             target_class = "HCW", target_locations = "hospital")
 
@@ -87,29 +91,27 @@ SEEDING_CASES           <- 25L
 SETUP_R0_N              <- 100000L   # n for compute_R0_invariants() in the fit
 SETUP_R0_SEED           <- 42L       # seed   for compute_R0_invariants() in the fit
 MODEL_OVERRIDES         <- list(check_final_size = 10000)
-TAKEOFF_DEATH_THRESHOLD <- 100L      # take-off defined on the realised (with-OBV) total deaths
+TAKEOFF_DEATH_THRESHOLD <- 100L      # per-rep take-off (n_deaths >= this), per arm; matches the fit
 
-# If TRUE, per-sample medians use only replicates whose epidemic took off
-# (>= TAKEOFF_DEATH_THRESHOLD realised deaths); fizzles are dropped. Same mask
-# for both curves (they share the run).
+# If TRUE, each draw's per-rep central uses only that arm's taken-off replicates
+# (fizzles dropped), matching the fit. Set FALSE to average over all replicates.
 CONDITION_ON_TAKEOFF <- TRUE
 
 # ---- Parallel workers (Windows-safe multisession / PSOCK) ----
-# NULL = auto. Mirrors the calibration script's heuristic; cap as you like.
 N_WORKERS_OVERRIDE <- NULL
 
 # ---- Outputs ----
 FIG_DIR  <- here::here("figures")
 OUT_DIR  <- here::here("outputs", "02_ABC_model_fits_Final")
-FIG_STEM_HCW <- "DRC_decoupled_obv_direct_HCW_deaths"
-FIG_STEM_TOT <- "DRC_decoupled_obv_direct_total_deaths"
-DATA_STEM    <- "DRC_decoupled_obv_direct_trajectory_bands"
+FIG_STEM_HCW <- "DRC_decoupled_obv_HCW_deaths"
+FIG_STEM_TOT <- "DRC_decoupled_obv_total_deaths"
+DATA_STEM    <- "DRC_decoupled_obv_trajectory_lines"
 
 # ---- Plot aesthetics ----
-ARM_COLS        <- c("Without OBV" = "#D55E00", "With OBV" = "#0072B2")  # Okabe-Ito (colourblind-safe)
-SPAGHETTI_ALPHA <- 0.06   # opacity of the N_POST faint per-draw median lines
-MEDIAN_LWD      <- 1.20   # bold cross-draw median line width
-XLIM            <- 500    # x-axis (days) display cap; zoom only, data not dropped
+ARM_COLS     <- c("Without OBV" = "#D55E00", "With OBV" = "#0072B2")  # Okabe-Ito (colourblind-safe)
+RIBBON_ALPHA <- 0.22   # cross-draw IQR ribbon opacity, per arm
+MEDIAN_LWD   <- 1.30   # bold cross-draw central line width
+XLIM         <- 500    # x-axis (days) display cap; zoom only, data not dropped
 
 
 # -----------------------------------------------------------------------------
@@ -126,7 +128,6 @@ source(file.path(FUNCTIONS_DIR, "abc_calibration_functions_decoupled.R")) # asse
 source(file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R"))           # compute_R0_invariants(), D/F_from_invariants(), solve_offspring_means()
 source(file.path(FUNCTIONS_DIR, "simulation_helpers.R"))                  # bin_counts()
 
-# Soft version check (warn, don't stop, if the helper is unavailable/mismatched).
 tryCatch(check_model_function_version(),
          error = function(e) warning("check_model_function_version() failed: ", conditionMessage(e)))
 
@@ -139,13 +140,13 @@ if (!file.exists(RDS_PATH)) {
        "\nEdit RDS_PATH at the top of this script to point at your result.rds.", call. = FALSE)
 }
 result <- readRDS(RDS_PATH)
-meta   <- result$run_metadata  # NULL-safe accessors below
+meta   <- result$run_metadata
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0L) b else a
 
-PARAM_NAMES  <- meta$fit_params    %||% DECOUPLED_PARAM_NAMES
-fixed_values <- meta$fixed_values  %||% DECOUPLED_PARAM_DEFAULTS
-SCENARIO_ID  <- meta$scenario_id   %||% SCENARIO_ID_DFLT
+PARAM_NAMES   <- meta$fit_params    %||% DECOUPLED_PARAM_NAMES
+fixed_values  <- meta$fixed_values  %||% DECOUPLED_PARAM_DEFAULTS
+SCENARIO_ID   <- meta$scenario_id   %||% SCENARIO_ID_DFLT
 HCW_BASE_PROB <- meta$hcw_base_prob %||% 0.25
 GEN_HOSP_EFF <- meta$fixed_efficacies$general_hospital_quarantine_efficacy %||%
                   DEFAULT_SCALAR_INPUTS$general_hospital_quarantine_efficacy
@@ -164,10 +165,15 @@ if (is.null(weights) || length(weights) != nrow(posterior)) {
 cat(sprintf("Loaded %d posterior particles from:\n  %s\n", nrow(posterior), RDS_PATH))
 cat("Scenario        : ", SCENARIO_ID, "\n", sep = "")
 cat("Fitted params   : ", paste(PARAM_NAMES, collapse = ", "), "\n", sep = "")
-cat(sprintf("OBV (direct)    : efficacy %.0f%%, coverage %.1f, adherence %.1f, target %s/%s\n",
+cat(sprintf("OBV (with-arm)  : efficacy %.0f%%, coverage %.1f, adherence %.1f, target %s/%s\n",
             100 * OBV$efficacy, OBV$coverage, OBV$adherence, OBV$target_class, OBV$target_locations))
-cat(sprintf("Sampling %d draws x %d replicates = %d simulations; bin width = %d days.\n",
-            N_POST, N_REPS, N_POST * N_REPS, BIN_WIDTH))
+cat(sprintf("Sampling %d draws x %d reps x 2 arms = %d simulations; bin width = %d days.\n",
+            N_POST, N_REPS, N_POST * N_REPS * 2L, BIN_WIDTH))
+if (!is.null(meta$observed_summaries)) {
+  os <- meta$observed_summaries
+  cat(sprintf("ABC observed targets (mean over taken-off reps): total deaths ~ %.0f, HCW deaths ~ %.0f.\n",
+              exp(os[["log_n_deaths"]]), exp(os[["log_n_hcw_deaths"]])))
+}
 
 
 # -----------------------------------------------------------------------------
@@ -182,18 +188,24 @@ R0_invariants <- compute_R0_invariants(args = mp$args, n = SETUP_R0_N, seed = SE
 
 
 # -----------------------------------------------------------------------------
-# 5. DRAW 250 POSTERIOR SAMPLES + BUILD THE (sample, replicate) JOB LIST
+# 5. DRAW 250 POSTERIOR SAMPLES + BUILD THE (sample, replicate, arm) JOB LIST
 # -----------------------------------------------------------------------------
 set.seed(SAMPLE_SEED)
 draw_idx <- sample(seq_len(nrow(posterior)), size = N_POST, replace = TRUE, prob = weights)
 
-jobs <- vector("list", N_POST * N_REPS)
+ARM_ON     <- c(off = FALSE, on = TRUE)                       # internal key -> obv_pep_enabled
+ARM_LABELS <- c(off = "Without OBV", on = "With OBV")
+
+jobs <- vector("list", N_POST * N_REPS * length(ARM_ON))
 jj <- 1L
 for (k in seq_len(N_POST)) {
   for (r in seq_len(N_REPS)) {
-    jobs[[jj]] <- list(draw = k, draw_row = draw_idx[k], rep = r,
-                       seed = BASE_SEED + (k - 1L) * N_REPS + r)
-    jj <- jj + 1L
+    seed_kr <- BASE_SEED + (k - 1L) * N_REPS + r            # shared by both arms (they diverge once OBV fires)
+    for (ak in names(ARM_ON)) {
+      jobs[[jj]] <- list(draw = k, draw_row = draw_idx[k], rep = r,
+                         arm = ak, obv_on = ARM_ON[[ak]], seed = seed_kr)
+      jj <- jj + 1L
+    }
   }
 }
 
@@ -201,10 +213,9 @@ for (k in seq_len(N_POST)) {
 # -----------------------------------------------------------------------------
 # 6. RUN ALL REPLICATES IN PARALLEL (future / multisession; Windows-safe)
 # -----------------------------------------------------------------------------
-# Worker builds the fiber arg list from the posterior draw, switches OBV PEP on,
-# runs ONE replicate, and returns: the floored day of every realised death (total
-# and HCW), and the floored would-be death day of every OBV-prevented index
-# infection (total and HCW), read from out$prevented_completed.
+# Worker builds the fiber arg list from the posterior draw, sets OBV on/off for
+# this arm, runs ONE replicate, and returns the floored day of every realised
+# death (total and HCW) plus the total death count (for the take-off filter).
 run_traj_job <- function(job) {
   full <- assemble_decoupled_theta(as.numeric(posterior[job$draw_row, PARAM_NAMES]),
                                    PARAM_NAMES, fixed_values)
@@ -216,43 +227,31 @@ run_traj_job <- function(job) {
     safe_funeral_efficacy = SAFE_FUN_EFF,
     hcw_base_prob = HCW_BASE_PROB, seeding_cases = SEEDING_CASES)
 
-  a$obv_pep_enabled          <- TRUE
-  a$obv_pep_coverage         <- OBV$coverage
-  a$obv_pep_adherence        <- OBV$adherence
-  a$obv_pep_efficacy         <- OBV$efficacy
-  a$obv_pep_dpc              <- OBV$dpc
-  a$obv_pep_target_class     <- OBV$target_class
-  a$obv_pep_target_locations <- OBV$target_locations
+  if (isTRUE(job$obv_on)) {
+    a$obv_pep_enabled          <- TRUE
+    a$obv_pep_coverage         <- OBV$coverage
+    a$obv_pep_adherence        <- OBV$adherence
+    a$obv_pep_efficacy         <- OBV$efficacy
+    a$obv_pep_dpc              <- OBV$dpc
+    a$obv_pep_target_class     <- OBV$target_class
+    a$obv_pep_target_locations <- OBV$target_locations
+  } else {
+    a$obv_pep_enabled <- FALSE
+  }
   a$seed <- job$seed
 
   out <- do.call(branching_process_main, a)
 
   fdays <- function(x) { x <- x[is.finite(x)]; as.integer(floor(x)) }
-
-  # Realised deaths WITH OBV (from the simulated tree).
   tdf  <- out$tdf
   tdf  <- tdf[!is.na(tdf$time_infection_absolute), , drop = FALSE]
   died <- !is.na(tdf$outcome) & tdf$outcome
   hcw  <- !is.na(tdf$class) & tdf$class == "HCW"
 
-  # Would-be deaths OBV directly prevented (averted index infections only), at
-  # their counterfactual death time.
-  pc <- out$prevented_completed
-  if (!is.null(pc) && nrow(pc) > 0) {
-    pdied <- !is.na(pc$outcome) & pc$outcome
-    phcw  <- !is.na(pc$class) & pc$class == "HCW"
-    prevented_total_days <- fdays(pc$time_outcome_absolute[pdied])
-    prevented_hcw_days   <- fdays(pc$time_outcome_absolute[pdied & phcw])
-  } else {
-    prevented_total_days <- integer(0)
-    prevented_hcw_days   <- integer(0)
-  }
-
-  list(draw = job$draw, rep = job$rep,
-       realised_total_days  = fdays(tdf$time_outcome_absolute[died]),
-       realised_hcw_days    = fdays(tdf$time_outcome_absolute[died & hcw]),
-       prevented_total_days = prevented_total_days,
-       prevented_hcw_days   = prevented_hcw_days)
+  total_days <- fdays(tdf$time_outcome_absolute[died])
+  hcw_days   <- fdays(tdf$time_outcome_absolute[died & hcw])
+  list(draw = job$draw, rep = job$rep, arm = job$arm,
+       total_days = total_days, hcw_days = hcw_days, n_total = length(total_days))
 }
 
 N_CLUSTER <- if (parallel::detectCores() > 120) {
@@ -262,8 +261,7 @@ N_CLUSTER <- if (parallel::detectCores() > 120) {
 }
 N_WORKERS <- N_WORKERS_OVERRIDE %||% max(1L, min(N_CLUSTER, future::availableCores()))
 
-cat(sprintf("Running %d simulations on %d workers (multisession)...\n",
-            length(jobs), N_WORKERS))
+cat(sprintf("Running %d simulations on %d workers (multisession)...\n", length(jobs), N_WORKERS))
 start_time <- Sys.time()
 
 plan(multisession, workers = N_WORKERS)
@@ -275,96 +273,66 @@ cat("Simulation time: "); print(Sys.time() - start_time)
 
 
 # -----------------------------------------------------------------------------
-# 7. BIN TO WEEKLY INCIDENCE (+ CUMULATIVE) -> PER-SAMPLE MEDIAN TRAJECTORIES
+# 7. BIN TO WEEKLY DEATHS (+ CUMULATIVE) PER ARM
 # -----------------------------------------------------------------------------
-# Common weekly grid across ALL replicates (absolute model time, from day 0).
-max_day <- max(c(unlist(lapply(results, function(r) c(r$realised_total_days, r$prevented_total_days))), 0L))
+max_day <- max(c(unlist(lapply(results, function(r) r$total_days)), 0L))
 n_bins  <- max(1L, ceiling((max_day + 1L) / BIN_WIDTH))
 week    <- ((seq_len(n_bins) - 1L) + 0.5) * BIN_WIDTH
 
-ARM_LABELS  <- c(noobv = "Without OBV", obv = "With OBV")
 METRIC_KEYS <- c(hcw = "HCW deaths", tot = "Total deaths")
 MEASURES    <- c(inc = "Weekly incidence", cum = "Cumulative")
 
-# A[[arm]][[metric]]$inc / $cum : [N_POST x N_REPS x n_bins] weekly counts.
+# A[[arm]][[metric]]$inc / $cum : [N_POST x N_REPS x n_bins]; A[[arm]]$took : [N_POST x N_REPS]
 mk_arr <- function() array(0L, dim = c(N_POST, N_REPS, n_bins))
 A <- setNames(lapply(names(ARM_LABELS), function(ak)
-  setNames(lapply(names(METRIC_KEYS), function(mk) list(inc = mk_arr(), cum = mk_arr())),
-           names(METRIC_KEYS))), names(ARM_LABELS))
+  list(hcw  = list(inc = mk_arr(), cum = mk_arr()),
+       tot  = list(inc = mk_arr(), cum = mk_arr()),
+       took = matrix(FALSE, N_POST, N_REPS))), names(ARM_LABELS))
 
-# WITH OBV   = realised deaths; WITHOUT OBV = realised + directly-prevented.
-took <- matrix(FALSE, N_POST, N_REPS)
 for (res in results) {
-  d <- res$draw; rp <- res$rep
-  days <- list(
-    obv   = list(hcw = res$realised_hcw_days,
-                 tot = res$realised_total_days),
-    noobv = list(hcw = c(res$realised_hcw_days,   res$prevented_hcw_days),
-                 tot = c(res$realised_total_days, res$prevented_total_days))
-  )
-  for (ak in names(days)) for (mk in names(days[[ak]])) {
-    b <- bin_counts(days[[ak]][[mk]], BIN_WIDTH, n_bins)
-    A[[ak]][[mk]]$inc[d, rp, ] <- b
-    A[[ak]][[mk]]$cum[d, rp, ] <- cumsum(b)
-  }
-  took[d, rp] <- length(res$realised_total_days) >= TAKEOFF_DEATH_THRESHOLD
+  ak <- res$arm; d <- res$draw; rp <- res$rep
+  bh <- bin_counts(res$hcw_days,   BIN_WIDTH, n_bins)
+  bt <- bin_counts(res$total_days, BIN_WIDTH, n_bins)
+  A[[ak]]$hcw$inc[d, rp, ] <- bh; A[[ak]]$hcw$cum[d, rp, ] <- cumsum(bh)
+  A[[ak]]$tot$inc[d, rp, ] <- bt; A[[ak]]$tot$cum[d, rp, ] <- cumsum(bt)
+  A[[ak]]$took[d, rp] <- res$n_total >= TAKEOFF_DEATH_THRESHOLD
 }
 
-takeoff_frac_per_draw <- rowMeans(took)
-cat(sprintf("Take-off (>= %d realised deaths): %.1f%% of replicates; per-sample take-off fraction median = %.2f.\n",
-            TAKEOFF_DEATH_THRESHOLD, 100 * mean(took), median(takeoff_frac_per_draw)))
-
-# Magnitude check (sums over ALL sims): how big is the DIRECT OBV effect on
-# deaths? If "OBV-prevented HCW deaths" is ~0 the with/without lines will sit on
-# top of each other -- that is the direct effect being genuinely small (most of
-# OBV's benefit is indirect, via averted onward chains, which this design does
-# NOT count), not a plotting bug. Compare against realised to gauge the ratio.
-tot_real_hcw <- sum(vapply(results, function(r) length(r$realised_hcw_days),  0L))
-tot_real_all <- sum(vapply(results, function(r) length(r$realised_total_days), 0L))
-tot_prev_hcw <- sum(vapply(results, function(r) length(r$prevented_hcw_days),  0L))
-tot_prev_all <- sum(vapply(results, function(r) length(r$prevented_total_days), 0L))
-cat(sprintf(paste0("Death counts summed over all %d sims:\n",
-                   "  realised:  HCW = %d, total = %d\n",
-                   "  prevented: HCW = %d, total = %d  (direct effect; %.1f%% of realised HCW deaths)\n"),
-            length(results), tot_real_hcw, tot_real_all, tot_prev_hcw, tot_prev_all,
-            if (tot_real_hcw > 0) 100 * tot_prev_hcw / tot_real_hcw else NA_real_))
+# Magnitude check vs the ABC targets: mean total/HCW deaths over taken-off reps,
+# per arm. WITHOUT OBV should land near the fitted ~2,299 total / ~79 HCW.
+for (ak in names(ARM_LABELS)) {
+  tk <- A[[ak]]$took
+  ft <- A[[ak]]$tot$cum[, , n_bins]; fh <- A[[ak]]$hcw$cum[, , n_bins]
+  cat(sprintf("%-12s: take-off %.1f%% of reps; mean over taken-off reps -> total = %.0f, HCW = %.1f deaths.\n",
+              ARM_LABELS[[ak]], 100 * mean(tk),
+              if (any(tk)) mean(ft[tk]) else NA_real_,
+              if (any(tk)) mean(fh[tk]) else NA_real_))
+}
 
 
 # -----------------------------------------------------------------------------
-# 8. PER-DRAW MEDIAN TRAJECTORIES (median across the N_REPS replicates per draw)
+# 8. PER-DRAW LINES (per-rep CENTRAL within each draw, conditioned on take-off)
 # -----------------------------------------------------------------------------
-# For each posterior draw: take the median across its N_REPS replicate weekly
-# trajectories -> ONE "With OBV" median line and ONE "Without OBV" median line
-# per draw. Repeated over all N_POST draws this gives N_POST lines per arm,
-# which we plot directly (Section 9) rather than collapsing to a single band.
-# Per-rep -> per-draw central tendency. The ABC fit scored log(MEAN over taken-off
-# reps) (aggregate_decoupled() in abc_calibration_functions_decoupled.R), so
-# CENTRAL = "mean" makes this figure consistent with the calibration and
-# reproduces the fitted scale (observed log_n_hcw_deaths = 4.37 -> mean 79 HCW
-# deaths). For a near-critical, overdispersed branching process the epidemic-size
-# distribution is heavily right-skewed, so the MEDIAN sits ~4x below the mean and
-# weekly HCW death counts are 0 in most weeks -- set CENTRAL = "median" only if
-# you specifically want the typical (not the expected) outbreak.
-CENTRAL <- "mean"
 agg_fun <- if (identical(CENTRAL, "mean")) {
   function(x) mean(x, na.rm = CONDITION_ON_TAKEOFF)
 } else {
   function(x) median(x, na.rm = CONDITION_ON_TAKEOFF)
 }
 
-# arr3d [N_POST x N_REPS x n_bins] -> mt [N_POST x n_bins]: per-draw central over reps.
-per_draw_central <- function(arr3d) {
-  if (CONDITION_ON_TAKEOFF) arr3d[!took] <- NA_integer_  # drop fizzled reps first (matches the fit)
+# arr3d [N_POST x N_REPS x n_bins] + that arm's took [N_POST x N_REPS]
+#   -> mt [N_POST x n_bins] : per-draw central across (taken-off) reps.
+per_draw_central <- function(arr3d, took_mat) {
+  if (CONDITION_ON_TAKEOFF) arr3d[!took_mat] <- NA_integer_   # drop fizzled reps first (matches the fit)
   mt <- apply(arr3d, c(1, 3), agg_fun)
-  mt[!is.finite(mt)] <- NA_real_                         # draws with no take-off at all -> NA line
+  mt[!is.finite(mt)] <- NA_real_                              # draws with no take-off at all -> NA line
   mt
 }
 
-# Long frame of all N_POST per-draw median lines (one row per draw x week), for
-# every arm x metric x measure; plus the bold cross-draw median for readability.
-draws_list <- list(); central_list <- list(); li <- 1L
+qfun <- function(x, p) stats::quantile(x, p, names = FALSE, na.rm = TRUE)
+
+draws_list <- list(); band_list <- list(); li <- 1L
 for (ak in names(ARM_LABELS)) for (mk in names(METRIC_KEYS)) for (meas in names(MEASURES)) {
-  mt <- per_draw_central(A[[ak]][[mk]][[meas]])               # [N_POST x n_bins] per-draw central over reps
+  mt <- per_draw_central(A[[ak]][[mk]][[meas]], A[[ak]]$took)   # [N_POST x n_bins]
   draws_list[[li]] <- data.frame(
     draw    = rep(seq_len(N_POST), times = n_bins),
     week    = rep(week, each = N_POST),
@@ -372,68 +340,58 @@ for (ak in names(ARM_LABELS)) for (mk in names(METRIC_KEYS)) for (meas in names(
     arm     = ARM_LABELS[[ak]], metric = METRIC_KEYS[[mk]], measure = MEASURES[[meas]],
     stringsAsFactors = FALSE
   )
-  central_list[[li]] <- data.frame(
+  band_list[[li]] <- data.frame(
     week    = week,
-    med     = apply(mt, 2, agg_fun),                           # cross-draw central of the per-draw centrals
+    med     = apply(mt, 2, agg_fun),       # cross-draw central of the per-draw centrals
+    lo      = apply(mt, 2, qfun, 0.25),    # cross-draw IQR of the per-draw centrals
+    hi      = apply(mt, 2, qfun, 0.75),
     arm     = ARM_LABELS[[ak]], metric = METRIC_KEYS[[mk]], measure = MEASURES[[meas]],
     stringsAsFactors = FALSE
   )
   li <- li + 1L
 }
 draws_long <- do.call(rbind, draws_list)
-central    <- do.call(rbind, central_list)
-for (df_nm in c("draws_long", "central")) {
+band       <- do.call(rbind, band_list)
+for (df_nm in c("draws_long", "band")) {
   assign(df_nm, within(get(df_nm), {
     arm     <- factor(arm,     levels = ARM_LABELS)
-    measure <- factor(measure, levels = MEASURES)            # Weekly incidence facet on top
+    measure <- factor(measure, levels = MEASURES)              # Weekly incidence facet on top
   }))
 }
 
-# Headline diagnostic: cross-draw median of the per-draw cumulative-death lines
-# at the final week, with vs without OBV, and the implied direct % averted.
+# Headline: cross-draw central cumulative deaths at the final week, with vs
+# without OBV, and the implied total % averted.
 for (mlab in METRIC_KEYS) {
-  d  <- central[central$metric == mlab & central$measure == "Cumulative", ]
+  d  <- band[band$metric == mlab & band$measure == "Cumulative", ]
   fw <- max(d$week)
   no <- d$med[d$arm == "Without OBV" & d$week == fw]
   ob <- d$med[d$arm == "With OBV"    & d$week == fw]
-  cat(sprintf("%-12s cumulative deaths (cross-draw %s): without OBV = %.1f, with OBV = %.1f (direct averted %.1f%%)\n",
+  cat(sprintf("%-12s cumulative deaths (cross-draw %s): without OBV = %.1f, with OBV = %.1f (averted %.1f%%)\n",
               mlab, CENTRAL, no, ob, if (length(no) && no > 0) 100 * (no - ob) / no else NA_real_))
-}
-# For reference, the ABC fit's observed targets (mean over taken-off reps):
-if (!is.null(meta$observed_summaries)) {
-  os <- meta$observed_summaries
-  cat(sprintf("ABC observed targets (mean over taken-off reps): total deaths ~ %.0f, HCW deaths ~ %.0f.\n",
-              exp(os[["log_n_deaths"]]), exp(os[["log_n_hcw_deaths"]])))
 }
 
 
 # -----------------------------------------------------------------------------
-# 9. PLOT: N_POST per-draw median lines per arm (faint), bold cross-draw median
+# 9. PLOT: per-arm cross-draw central line + IQR ribbon, distinct colours
 #          two facets: weekly incidence (top), cumulative (bottom)
 # -----------------------------------------------------------------------------
 make_fig <- function(metric_label) {
-  dl <- draws_long[draws_long$metric == metric_label, , drop = FALSE]
-  ce <- central[central$metric == metric_label, , drop = FALSE]
-  ggplot() +
-    # one faint line per posterior draw (its median across the N_REPS replicates)
-    geom_line(data = dl,
-              aes(week, value, group = interaction(arm, draw), colour = arm),
-              alpha = SPAGHETTI_ALPHA, linewidth = 0.3, na.rm = TRUE) +
-    # bold line: median across the N_POST per-draw medians
-    geom_line(data = ce, aes(week, med, colour = arm),
-              linewidth = MEDIAN_LWD, na.rm = TRUE) +
+  d <- band[band$metric == metric_label, , drop = FALSE]
+  ggplot(d, aes(week, med, colour = arm, fill = arm)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), alpha = RIBBON_ALPHA, colour = NA) +
+    geom_line(linewidth = MEDIAN_LWD, na.rm = TRUE) +
     facet_wrap(~ measure, ncol = 1, scales = "free_y") +
     scale_colour_manual(values = ARM_COLS) +
+    scale_fill_manual(values = ARM_COLS) +
     coord_cartesian(xlim = c(0, XLIM)) +
-    guides(colour = guide_legend(override.aes = list(alpha = 1, linewidth = 1.2))) +
     labs(
       x = "Days since outbreak seeding", y = metric_label,
-      colour = NULL,
-      title = sprintf("DRC decoupled fit: %s, direct obeldesivir effect", tolower(metric_label)),
-      subtitle = sprintf(paste0("Single OBV run (PEP %.0f%% efficacy, coverage %.0f, adherence %.0f, HCW in hospital).  ",
-                                "'Without OBV' = realised + directly-prevented index deaths (excludes averted chains).  ",
-                                "Faint lines: each draw's %s across %d reps (%d draws); bold: cross-draw %s (matches the ABC fit, which scored the mean)."),
-                         100 * OBV$efficacy, OBV$coverage, OBV$adherence, CENTRAL, N_REPS, N_POST, CENTRAL)
+      colour = NULL, fill = NULL,
+      title = sprintf("DRC decoupled fit: %s, obeldesivir effect", tolower(metric_label)),
+      subtitle = sprintf(paste0("Two runs per draw x rep: OBV off vs on (PEP %.0f%% efficacy, coverage %.0f, adherence %.0f, HCW in hospital).  ",
+                                "Line: cross-draw %s of the per-draw %ss across %d reps (%d draws); band: cross-draw IQR.  ",
+                                "'Without OBV' reproduces the ABC fit scale."),
+                         100 * OBV$efficacy, OBV$coverage, OBV$adherence, CENTRAL, CENTRAL, N_REPS, N_POST)
     ) +
     theme_bw(base_size = 12) +
     theme(plot.subtitle = element_text(size = 7), legend.position = "top")
@@ -456,17 +414,18 @@ ggsave(file.path(FIG_DIR, paste0(FIG_STEM_TOT, ".pdf")), fig_tot, width = 8, hei
 ggsave(file.path(FIG_DIR, paste0(FIG_STEM_TOT, ".png")), fig_tot, width = 8, height = 8, dpi = 300)
 
 saveRDS(list(
-  draws_long = draws_long,   # N_POST per-draw median lines per arm/metric/measure
-  central    = central,      # cross-draw median of those per-draw medians
+  draws_long = draws_long,   # N_POST per-draw lines per arm/metric/measure (for spaghetti if wanted)
+  band       = band,         # cross-draw central + IQR of those per-draw lines (plotted)
   week       = week,
   n_bins     = n_bins,
   bin_width  = BIN_WIDTH,
+  central_fun = CENTRAL,
   obv        = OBV,
-  effect     = "direct (realised + prevented index deaths; excludes averted onward chains)",
+  effect     = "total (two runs: OBV off vs on; includes averted onward chains)",
   draw_idx   = draw_idx,
-  takeoff_frac_per_draw = takeoff_frac_per_draw,
   config     = list(N_POST = N_POST, N_REPS = N_REPS, sample_seed = SAMPLE_SEED,
                     base_seed = BASE_SEED, condition_on_takeoff = CONDITION_ON_TAKEOFF,
+                    takeoff_death_threshold = TAKEOFF_DEATH_THRESHOLD,
                     rds_source = RDS_PATH, scenario_id = SCENARIO_ID)
 ), file.path(OUT_DIR, paste0(DATA_STEM, ".rds")))
 
