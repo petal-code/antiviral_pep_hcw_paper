@@ -44,6 +44,7 @@ suppressPackageStartupMessages({
   library(stringr)
   library(readr)
   library(tibble)
+  library(ggplot2)   # display-only plots of the fitted curves at the end
 })
 
 source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
@@ -248,5 +249,52 @@ drc_conflict_plusplus_fit <- fit_drc_scenario(drc_conflict_plusplus_qseries, "dr
 
 saveRDS(drc_conflict_fit,          file.path(DIR_PROCESSED, "drc_conflict_fit.rds"))
 saveRDS(drc_conflict_plusplus_fit, file.path(DIR_PROCESSED, "drc_conflict_plusplus_fit.rds"))
+
+# ----------------------------------------------------------------------------
+# 5. Plot each fitted scenario with its data on top  (display only)
+# ----------------------------------------------------------------------------
+# For a fitted scenario, draw one facet per parameter: the posterior-MEAN curve
+# (blue) with its 90% interval, the literature anchors the model was fit to
+# (orange points), and -- in the community unsafe-funeral panel only -- the SDB
+# data points (1 - success) that actually drive that curve (grey). The plots are
+# printed to the active graphics device and are deliberately NOT saved.
+plot_drc_fit <- function(fit, qseries, label) {
+
+  # The community unsafe-funeral mean was deterministically overridden to the
+  # absolute Warsame proxy, so its fitted q5/q95 are now stale; collapse the
+  # ribbon there to avoid drawing a misleading interval in that one panel.
+  curve_plot_df <- fit$curve_summ %>%
+    mutate(q5  = if_else(parameter == "p_unsafe_funeral_comm", mean, q5),
+           q95 = if_else(parameter == "p_unsafe_funeral_comm", mean, q95),
+           panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
+
+  # Literature anchors the model was fit to (one set, shared across scenarios).
+  anchor_plot_df <- drc_anchors %>%
+    mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
+
+  # SDB community unsafe-funeral data points (1 - success) behind the UFC curve.
+  sdb_plot_df <- qseries %>%
+    filter(n_eligible_sum > 0) %>%
+    transmute(relative_day,
+              value = unsafe_funeral_comm_proxy,
+              panel = factor(PANEL_LOOKUP[["p_unsafe_funeral_comm"]], levels = unname(PANEL_LOOKUP)))
+
+  ggplot(curve_plot_df, aes(relative_day, mean)) +
+    geom_ribbon(aes(ymin = q5, ymax = q95), fill = "#1f77b4", alpha = 0.20) +
+    geom_line(colour = "#1f77b4", linewidth = 0.9) +
+    geom_point(data = sdb_plot_df, aes(relative_day, value),
+               inherit.aes = FALSE, colour = "grey55", size = 1, alpha = 0.7) +
+    geom_point(data = anchor_plot_df, aes(relative_day, value_used),
+               inherit.aes = FALSE, colour = "#ff7f0e", size = 2) +
+    facet_wrap(~ panel, scales = "free_y", ncol = 2) +
+    labs(title = paste0("DRC ", label, ": fitted parameter curves vs data"),
+         subtitle = "Blue = posterior mean + 90% interval; orange = literature anchors; grey = SDB community proxy",
+         x = "Relative outbreak day", y = NULL) +
+    theme_bw(base_size = 11) +
+    theme(strip.text = element_text(face = "bold"))
+}
+
+print(plot_drc_fit(drc_conflict_fit,          drc_conflict_qseries,          "conflict"))     # display only
+print(plot_drc_fit(drc_conflict_plusplus_fit, drc_conflict_plusplus_qseries, "conflict++"))   # display only
 
 message("\n02_DRC_QCurve_Fitting_Original.R complete. Saved DRC conflict + conflict++ fits.")
