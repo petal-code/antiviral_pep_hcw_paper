@@ -73,7 +73,7 @@ TAKEOFF_DEATH_THRESHOLD <- 100L      # used only for the take-off diagnostic bel
 # If TRUE, the per-sample median trajectory is taken only over replicates that
 # "took off" (>= TAKEOFF_DEATH_THRESHOLD deaths); samples with no take-off are
 # dropped. Default FALSE = median over all N_REPS replicates, exactly as asked.
-CONDITION_ON_TAKEOFF <- FALSE
+CONDITION_ON_TAKEOFF <- TRUE
 
 # ---- Parallel workers (Windows-safe multisession / PSOCK) ----
 # NULL = auto. Mirrors the calibration script's heuristic; cap as you like.
@@ -215,7 +215,7 @@ run_traj_job <- function(job) {
 N_CLUSTER <- if (parallel::detectCores() > 120) {
   min(120L, parallel::detectCores() - 10L)
 } else {
-  min(10L, parallel::detectCores() - 4L)
+  min(12L, parallel::detectCores() - 4L)
 }
 N_WORKERS <- N_WORKERS_OVERRIDE %||% max(1L, min(N_CLUSTER, future::availableCores()))
 
