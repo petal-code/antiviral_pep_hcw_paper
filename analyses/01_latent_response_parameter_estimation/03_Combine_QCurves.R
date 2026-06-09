@@ -29,8 +29,9 @@
 # Note: under the ORIGINAL methodology ipc_helper IS the fitted latent_IPC; no
 # separate q-scaling of IPC is applied (that is a revised-methodology step).
 #
-# Inputs : data-processed/wa_fit.rds, drc_conflict_fit.rds,
-#          drc_conflict_plusplus_fit.rds, DRC_QCurve_PreppedData.rds (uses $durations)
+# Inputs : data-processed/WestAfrica_QCurve/WestAfrica_QCurve_Fit.rds,
+#          DRC_QCurve/DRC_QCurve_Conflict_Fit.rds, DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds,
+#          DRC_QCurve/DRC_QCurve_PreppedData.rds (uses $durations)
 # Output : data-processed/combined_original_methodology_outputs.csv
 # ============================================================================
 
@@ -107,10 +108,10 @@ qvalue_from_param_Q <- function(param_Q_wide) {
 # ----------------------------------------------------------------------------
 # Load the fitted objects
 # ----------------------------------------------------------------------------
-wa_fit                    <- readRDS(file.path(DIR_PROCESSED, "wa_fit.rds"))
-drc_conflict_fit          <- readRDS(file.path(DIR_PROCESSED, "drc_conflict_fit.rds"))
-drc_conflict_plusplus_fit <- readRDS(file.path(DIR_PROCESSED, "drc_conflict_plusplus_fit.rds"))
-drc_durations             <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve_PreppedData.rds"))$durations
+wa_fit                    <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_Fit.rds"))
+drc_conflict_fit          <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_Conflict_Fit.rds"))
+drc_conflict_plusplus_fit <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds"))
+drc_durations             <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_PreppedData.rds"))$durations
 
 # ----------------------------------------------------------------------------
 # Scenario 1: worst_west_africa

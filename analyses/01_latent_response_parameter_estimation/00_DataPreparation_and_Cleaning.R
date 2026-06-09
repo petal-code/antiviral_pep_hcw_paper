@@ -50,6 +50,10 @@ suppressPackageStartupMessages({
 source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
 
 dir.create(DIR_PROCESSED, showWarnings = FALSE, recursive = TRUE)
+# Per-analysis subfolders that 00/01/02 write their bundled objects into (so a
+# fresh data-processed/ does not error on saveRDS).
+dir.create(file.path(DIR_PROCESSED, "WestAfrica_QCurve"), showWarnings = FALSE, recursive = TRUE)
+dir.create(file.path(DIR_PROCESSED, "DRC_QCurve"),        showWarnings = FALSE, recursive = TRUE)
 
 # ----------------------------------------------------------------------------
 # Settings that define the SDB reconstruction
