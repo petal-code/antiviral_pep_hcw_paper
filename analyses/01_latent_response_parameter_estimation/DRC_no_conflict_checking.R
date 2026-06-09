@@ -28,7 +28,7 @@
 # pooling (the SDB shape is imposed on all parameters), large values mean each
 # parameter keeps its own shape.
 #
-# Inputs : data-processed/drc_anchors.csv, data-processed/drc_no_conflict_qseries.csv
+# Inputs : data-processed/drc_prep.rds   (uses $anchors and $no_conflict_qseries)
 # Stan   : stan-models/modelB_fixedQ_boundsOnly.stan
 #          stan-models/modelA_partialpool_estimateQ_noTweaks.stan
 # Outputs: data-processed/drc_no_conflict_checking_curves.csv
@@ -51,8 +51,10 @@ SDB_TARGET_EQUIV_ANCHORS <- 3
 # ----------------------------------------------------------------------------
 # Data and shared metadata
 # ----------------------------------------------------------------------------
-qseries     <- read_csv(file.path(DIR_PROCESSED, "drc_no_conflict_qseries.csv"), show_col_types = FALSE)
-drc_anchors <- read_csv(file.path(DIR_PROCESSED, "drc_anchors.csv"), show_col_types = FALSE)
+# Pull what we need out of the bundled DRC prep object (from 00).
+drc_prep    <- readRDS(file.path(DIR_PROCESSED, "drc_prep.rds"))
+qseries     <- drc_prep$no_conflict_qseries   # the truncated no-conflict Q series
+drc_anchors <- drc_prep$anchors               # cleaned DRC literature anchors
 
 # The no-conflict horizon ends where its (truncated) Q series ends; clip anchors
 # to the same window.
@@ -181,6 +183,9 @@ fit_modelA <- function(sdb_downweight) {
     transmute(parameter, relative_day, y_obs = value_used,
               obs_sd_mult = 1 / sdb_weight)   # no 0.25 floor: allow strong down-weighting
 
+  # The Model A fit table stacks the sparse literature anchors (all parameters)
+  # with the many SDB observations (community unsafe funerals only). Columns:
+  # param_id, tau, y_obs, obs_sd_mult -- same contract as the 01 fit table.
   fitA_df <- bind_rows(anchor_rows, sdb_rows) %>%
     left_join(select(param_meta, parameter, param_id, increases), by = "parameter") %>%
     mutate(tau = relative_day / max_day) %>%

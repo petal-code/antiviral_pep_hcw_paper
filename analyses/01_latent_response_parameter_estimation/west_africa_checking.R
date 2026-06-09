@@ -1,15 +1,15 @@
 # ============================================================================
-# west_africa_checking.R
+# west_africa_checking.R   (DIAGNOSTIC -- not part of the main pipeline output)
 # ----------------------------------------------------------------------------
-# Diagnostic script (NOT part of the main pipeline output).
+# PURPOSE
+#   Fit the West Africa data with Model A TWICE -- once WITH the targeted tweak
+#   priors (and the WA_UFC_01 down-weight), once WITHOUT any of them -- and
+#   overlay the two fitted curves parameter-by-parameter. The gap between the two
+#   curves for a parameter is exactly "what the tweaks are doing", which is the
+#   thing to look at and judge. Nothing here feeds 03; it only writes a
+#   comparison table and an overlay figure.
 #
-# Fits the West Africa data with Model A TWICE -- once WITH the targeted tweak
-# priors (and the WA_UFC_01 down-weight) and once WITHOUT any of them -- and
-# overlays the two fitted curves parameter-by-parameter. The gap between the two
-# curves for a given parameter is exactly "what the tweaks are doing", which is
-# the thing we want to see and judge.
-#
-# Inputs : data-processed/wa_anchors.csv
+# Inputs : data-processed/wa_prep.rds   (uses $anchors)
 # Stan   : stan-models/modelA_partialpool_estimateQ_withTweaks.stan
 #          stan-models/modelA_partialpool_estimateQ_noTweaks.stan
 # Outputs: data-processed/wa_checking_curves.csv
@@ -25,9 +25,12 @@ suppressPackageStartupMessages({
 source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
 set.seed(123)
 
-wa_anchors <- read_csv(file.path(DIR_PROCESSED, "wa_anchors.csv"), show_col_types = FALSE)
+# The cleaned West Africa anchors (same input as the production fit in 01).
+wa_anchors <- readRDS(file.path(DIR_PROCESSED, "wa_prep.rds"))$anchors
 
 # ---- Shared per-parameter metadata (identical to script 01) ----------------
+# Hard admissible domains, then collapse to one row per parameter and add the
+# endpoint support/priors. (See 01 section 2 for the param_meta column meanings.)
 domain_meta <- tribble(
   ~parameter,                ~abs_min, ~abs_max,
   "delay_hosp",              0.5,      10.0,
@@ -53,23 +56,29 @@ max_day  <- max(wa_anchors$relative_day, na.rm = TRUE)
 tau_pred <- seq(0, 1, length.out = 100)
 
 # ---- Tweak configuration (same values as script 01) ------------------------
+# These mirror 01 exactly so the "with tweaks" fit here matches the production one.
 tweak_param <- "p_unsafe_funeral_comm"
-j_tweak <- param_meta$param_id[param_meta$parameter == tweak_param]
+j_tweak <- param_meta$param_id[param_meta$parameter == tweak_param]   # row to switch on
 anchor_to_downweight <- "WA_UFC_01"
 anchor_downweight_sd_mult <- 1.75
 
+# Hyperpriors for the partial pooling and observation scale (see 01 section 5).
 hyper <- list(
   mu_t50_raw_prior_mean = 0.0,  mu_t50_raw_prior_sd = 1.25, sigma_t50_prior_sd = 0.50,
   mu_log_k_prior_mean = log(8), mu_log_k_prior_sd = 0.80,   sigma_log_k_prior_sd = 0.40,
   sigma_frac_prior_meanlog = log(0.12), sigma_frac_prior_sdlog = 0.60
 )
 
+# The with-tweaks model has the tweak-prior hooks; the no-tweaks model omits them
+# entirely. Compile both once.
 mod_with <- cmdstan_model(file.path(DIR_STAN, "modelA_partialpool_estimateQ_withTweaks.stan"))
 mod_no   <- cmdstan_model(file.path(DIR_STAN, "modelA_partialpool_estimateQ_noTweaks.stan"))
 
 # ---- Fit Model A with or without the tweaks --------------------------------
+# Returns a tidy table of the fitted parameter curves tagged by `variant`.
 fit_wa <- function(tweaks_on) {
 
+  # Per-observation fit table (param_id, tau, y_obs, obs_sd_mult) -- as in 01.
   fit_df <- wa_anchors %>%
     left_join(select(param_meta, parameter, param_id, increases), by = "parameter") %>%
     mutate(tau = relative_day / max_day, y_obs = value_used,
@@ -85,6 +94,7 @@ fit_wa <- function(tweaks_on) {
         obs_sd_mult * anchor_downweight_sd_mult, obs_sd_mult))
   }
 
+  # Data common to both models (everything except the tweak hooks).
   base_data <- c(list(
     N = nrow(fit_df), J = J,
     param_id = fit_df$param_id, tau = fit_df$tau,
@@ -99,6 +109,9 @@ fit_wa <- function(tweaks_on) {
   ), hyper)
 
   if (tweaks_on) {
+    # Build the tweak-prior vectors. `[<-`(x, i, v) is base R for "return x with
+    # element i replaced by v" -- here: all-OFF vectors with the targeted
+    # parameter (j_tweak) switched on to the same values used in 01.
     zero <- rep(0L, J)
     tweak_data <- list(
       use_t50_tweak = `[<-`(zero, j_tweak, 1L),
@@ -117,7 +130,7 @@ fit_wa <- function(tweaks_on) {
     stan_data <- c(base_data, tweak_data)
     mod <- mod_with
   } else {
-    stan_data <- base_data
+    stan_data <- base_data        # no tweak hooks at all
     mod <- mod_no
   }
 
@@ -125,6 +138,7 @@ fit_wa <- function(tweaks_on) {
                     iter_warmup = 1500, iter_sampling = 1500,
                     adapt_delta = 0.97, max_treedepth = 13, refresh = 0)
 
+  # Tidy the fitted parameter curves (theta_pred[j,m]) and tag the variant.
   fit$summary(variables = "theta_pred") %>%
     mutate(param_id = as.integer(str_match(variable, "\\[([0-9]+),([0-9]+)\\]")[, 2]),
            grid_id  = as.integer(str_match(variable, "\\[([0-9]+),([0-9]+)\\]")[, 3]),
@@ -134,17 +148,20 @@ fit_wa <- function(tweaks_on) {
     select(variant, parameter, relative_day, mean, q5, q95)
 }
 
+# Fit both ways and stack the results; add a human-readable panel label.
 curves <- bind_rows(fit_wa(TRUE), fit_wa(FALSE)) %>%
   mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
 
 write_csv(curves, file.path(DIR_PROCESSED, "wa_checking_curves.csv"))
 
 # ---- Overlay plot: with-tweaks vs no-tweaks, per parameter -----------------
+# One facet per parameter; the literature anchors are shown as grey points so the
+# two fits can be judged against the data they were fit to.
 anchor_points <- wa_anchors %>%
   mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
 
 p <- ggplot(curves, aes(relative_day, mean, colour = variant, fill = variant)) +
-  geom_ribbon(aes(ymin = q5, ymax = q95), alpha = 0.15, colour = NA) +
+  geom_ribbon(aes(ymin = q5, ymax = q95), alpha = 0.15, colour = NA) +   # 90% intervals
   geom_line(linewidth = 0.9) +
   geom_point(data = anchor_points, aes(relative_day, value_used),
              inherit.aes = FALSE, colour = "grey25", size = 1.8) +
