@@ -28,7 +28,7 @@ suppressPackageStartupMessages({
   library(tibble)
 })
 
-source("helpers.R")
+source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
 
 set.seed(123)
 
@@ -47,7 +47,7 @@ domain_meta <- tribble(
   "p_unsafe_funeral_hosp",   0.0,      0.010
 )
 
-drc_anchors <- read_csv("data-processed/drc_anchors.csv", show_col_types = FALSE)
+drc_anchors <- read_csv(file.path(DIR_PROCESSED, "drc_anchors.csv"), show_col_types = FALSE)
 
 param_meta <- drc_anchors %>%
   group_by(parameter) %>%
@@ -71,7 +71,7 @@ J <- nrow(param_meta)
 SIGMA_FRAC_PRIOR_MEANLOG <- log(0.12)
 SIGMA_FRAC_PRIOR_SDLOG   <- 0.60
 
-mod <- cmdstan_model("stan-models/modelB_fixedQ_boundsOnly.stan")
+mod <- cmdstan_model(file.path(DIR_STAN, "modelB_fixedQ_boundsOnly.stan"))
 
 # ----------------------------------------------------------------------------
 # Fit one DRC scenario
@@ -184,13 +184,13 @@ fit_drc_scenario <- function(qseries, label) {
 # ----------------------------------------------------------------------------
 # Run both conflict scenarios and save
 # ----------------------------------------------------------------------------
-drc_conflict_qseries          <- read_csv("data-processed/drc_conflict_qseries.csv", show_col_types = FALSE)
-drc_conflict_plusplus_qseries <- read_csv("data-processed/drc_conflict_plusplus_qseries.csv", show_col_types = FALSE)
+drc_conflict_qseries          <- read_csv(file.path(DIR_PROCESSED, "drc_conflict_qseries.csv"), show_col_types = FALSE)
+drc_conflict_plusplus_qseries <- read_csv(file.path(DIR_PROCESSED, "drc_conflict_plusplus_qseries.csv"), show_col_types = FALSE)
 
 drc_conflict_fit          <- fit_drc_scenario(drc_conflict_qseries,          "drc_conflict")
 drc_conflict_plusplus_fit <- fit_drc_scenario(drc_conflict_plusplus_qseries, "drc_conflict_plusplus")
 
-saveRDS(drc_conflict_fit,          "data-processed/drc_conflict_fit.rds")
-saveRDS(drc_conflict_plusplus_fit, "data-processed/drc_conflict_plusplus_fit.rds")
+saveRDS(drc_conflict_fit,          file.path(DIR_PROCESSED, "drc_conflict_fit.rds"))
+saveRDS(drc_conflict_plusplus_fit, file.path(DIR_PROCESSED, "drc_conflict_plusplus_fit.rds"))
 
 message("\n02_DRC_QCurve_Fitting_Original.R complete. Saved DRC conflict + conflict++ fits.")
