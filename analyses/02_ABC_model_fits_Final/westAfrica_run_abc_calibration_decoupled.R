@@ -84,8 +84,8 @@ FIXED_PARAMS <- list(
 # ---- WHICH SUMMARIES TO FIT -------------------------------------------------
 # Any subset of DECOUPLED_AVAILABLE_SUMMARIES; comment a line out of BOTH this
 # vector and OBSERVED_NAMED to drop a summary from the fit.
-SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction",
-                   "d_p05_p95", "log_peak_height")
+SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height")
+                   # "d_p05_p95", "log_peak_height")
 
 # Observed targets, ON THE FITTED SCALE (log the counts), keyed BY NAME.
 #   raw WA targets: n_deaths = 11325, n_hcw_deaths = 513, peak_height = 599.
@@ -346,6 +346,20 @@ for (s in names(observed_summaries)) {
   abline(v = observed_summaries[s], col = "red", lwd = 2.5)
 }
 par(mfrow = c(1, 1))
+
+# Single-panel summary: simulated / observed for every fitted summary statistic.
+plot(NA, xlim = c(0.5, n_stat + 0.5), ylim = c(0, 1.5),
+     xaxt = "n", xlab = "", ylab = "Simulated / Observed",
+     main = "Posterior-predictive fit ratio")
+axis(1, at = seq_len(n_stat), labels = names(observed_summaries), las = 2, cex.axis = 0.8)
+abline(h = 1, lty = 2, col = "red")
+for (i in seq_len(n_stat)) {
+  s  <- names(observed_summaries)[i]
+  x  <- sim_stats_post[[s]] / observed_summaries[s]
+  qs <- quantile(x, c(0.025, 0.5, 0.975))
+  segments(i, qs[1], i, qs[3], lwd = 2, col = "darkblue")
+  points(i, qs[2], pch = 16, cex = 1.5, col = "darkblue")
+}
 
 
 # -----------------------------------------------------------------------------
