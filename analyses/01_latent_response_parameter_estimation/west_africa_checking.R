@@ -152,8 +152,6 @@ fit_wa <- function(tweaks_on) {
 curves <- bind_rows(fit_wa(TRUE), fit_wa(FALSE)) %>%
   mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
 
-write_csv(curves, file.path(DIR_PROCESSED, "wa_checking_curves.csv"))
-
 # ---- Overlay plot: with-tweaks vs no-tweaks, per parameter -----------------
 # One facet per parameter; the literature anchors are shown as grey points so the
 # two fits can be judged against the data they were fit to.
@@ -173,6 +171,4 @@ p <- ggplot(curves, aes(relative_day, mean, colour = variant, fill = variant)) +
        x = "Relative outbreak day", y = NULL, colour = NULL, fill = NULL) +
   theme_bw(base_size = 11) +
   theme(legend.position = "bottom", strip.text = element_text(face = "bold"))
-
-ggsave(file.path(DIR_PROCESSED, "wa_checking_overlay.png"), p, width = 12, height = 9, dpi = 150)
-message("west_africa_checking.R complete. Wrote wa_checking_curves.csv and wa_checking_overlay.png")
+p
