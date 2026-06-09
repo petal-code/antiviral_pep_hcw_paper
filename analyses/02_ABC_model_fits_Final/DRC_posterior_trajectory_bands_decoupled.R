@@ -20,12 +20,21 @@
 #      This is the DIRECT effect only: it adds back the prevented index deaths,
 #      NOT their averted onward transmission chains (that is the total effect).
 #   4. Bins each replicate into a weekly death-incidence curve (and its running
-#      cumulative), takes the per-sample median across the 10 replicates, then
-#      summarises the 250 medians point-wise (median of medians + IQR + 95% CrI).
+#      cumulative), then for EACH posterior draw takes the median across its 10
+#      replicates -> ONE "with OBV" and ONE "without OBV" median line per draw.
+#      Across the 250 draws that is 250 lines per arm.
 #   5. Produces TWO figures, each with two stacked facets (weekly incidence on
-#      top, cumulative on the bottom), overlaying WITH vs WITHOUT OBV:
+#      top, cumulative on the bottom). Each plots all 250 per-draw median lines
+#      per arm (faint), with the cross-draw median drawn bold on top:
 #        * Figure 1: HCW deaths     (figures/DRC_decoupled_obv_direct_HCW_deaths)
 #        * Figure 2: Total deaths   (figures/DRC_decoupled_obv_direct_total_deaths)
+#
+#      NOTE on HCW weekly incidence: HCW deaths are rare (a handful per epidemic),
+#      so a given week usually has 0 in most replicates and the per-draw MEDIAN
+#      across replicates is 0 for most weeks -- the incidence facet is therefore
+#      sparse/spiky for HCWs by construction. The cumulative facet is unaffected.
+#      Flip the per-rep aggregation to mean (per_draw_medians) if a smooth HCW
+#      incidence curve is wanted instead.
 #
 # Because both curves come from the SAME run, the comparison is exactly paired:
 # the realised epidemic is identical and "without OBV" simply adds the prevented
@@ -97,11 +106,10 @@ FIG_STEM_TOT <- "DRC_decoupled_obv_direct_total_deaths"
 DATA_STEM    <- "DRC_decoupled_obv_direct_trajectory_bands"
 
 # ---- Plot aesthetics ----
-ARM_COLS   <- c("Without OBV" = "#D55E00", "With OBV" = "#0072B2")  # Okabe-Ito (colourblind-safe)
-CI95_ALPHA <- 0.15    # lighter band  (95% CrI)
-IQR_ALPHA  <- 0.30    # darker band   (IQR)
-MEDIAN_LWD <- 1.05
-XLIM       <- 500     # x-axis (days) display cap; zoom only, data not dropped
+ARM_COLS        <- c("Without OBV" = "#D55E00", "With OBV" = "#0072B2")  # Okabe-Ito (colourblind-safe)
+SPAGHETTI_ALPHA <- 0.06   # opacity of the N_POST faint per-draw median lines
+MEDIAN_LWD      <- 1.20   # bold cross-draw median line width
+XLIM            <- 500    # x-axis (days) display cap; zoom only, data not dropped
 
 
 # -----------------------------------------------------------------------------
@@ -306,73 +314,107 @@ takeoff_frac_per_draw <- rowMeans(took)
 cat(sprintf("Take-off (>= %d realised deaths): %.1f%% of replicates; per-sample take-off fraction median = %.2f.\n",
             TAKEOFF_DEATH_THRESHOLD, 100 * mean(took), median(takeoff_frac_per_draw)))
 
+# Magnitude check (sums over ALL sims): how big is the DIRECT OBV effect on
+# deaths? If "OBV-prevented HCW deaths" is ~0 the with/without lines will sit on
+# top of each other -- that is the direct effect being genuinely small (most of
+# OBV's benefit is indirect, via averted onward chains, which this design does
+# NOT count), not a plotting bug. Compare against realised to gauge the ratio.
+tot_real_hcw <- sum(vapply(results, function(r) length(r$realised_hcw_days),  0L))
+tot_real_all <- sum(vapply(results, function(r) length(r$realised_total_days), 0L))
+tot_prev_hcw <- sum(vapply(results, function(r) length(r$prevented_hcw_days),  0L))
+tot_prev_all <- sum(vapply(results, function(r) length(r$prevented_total_days), 0L))
+cat(sprintf(paste0("Death counts summed over all %d sims:\n",
+                   "  realised:  HCW = %d, total = %d\n",
+                   "  prevented: HCW = %d, total = %d  (direct effect; %.1f%% of realised HCW deaths)\n"),
+            length(results), tot_real_hcw, tot_real_all, tot_prev_hcw, tot_prev_all,
+            if (tot_real_hcw > 0) 100 * tot_prev_hcw / tot_real_hcw else NA_real_))
+
 
 # -----------------------------------------------------------------------------
-# 8. SUMMARISE ACROSS THE 250 MEDIAN TRAJECTORIES (median / IQR / 95% CrI)
+# 8. PER-DRAW MEDIAN TRAJECTORIES (median across the N_REPS replicates per draw)
 # -----------------------------------------------------------------------------
+# For each posterior draw: take the median across its N_REPS replicate weekly
+# trajectories -> ONE "With OBV" median line and ONE "Without OBV" median line
+# per draw. Repeated over all N_POST draws this gives N_POST lines per arm,
+# which we plot directly (Section 9) rather than collapsing to a single band.
 qfun <- function(x, p) stats::quantile(x, p, names = FALSE, na.rm = TRUE)
 
-# arr3d -> point-wise cross-sample summary of the per-sample median trajectories.
-summarise_arr <- function(arr3d) {
-  if (CONDITION_ON_TAKEOFF) arr3d[!took] <- NA_integer_          # mask non-take-off (recycles over bins)
-  mt <- apply(arr3d, c(1, 3), median, na.rm = CONDITION_ON_TAKEOFF)  # [N_POST, n_bins] per-sample medians
-  mt[!is.finite(mt)] <- NA_real_                                 # samples with no take-off -> NA rows
-  data.frame(
-    week = week,
-    med  = apply(mt, 2, median, na.rm = TRUE),
-    q25  = apply(mt, 2, qfun, 0.25),
-    q75  = apply(mt, 2, qfun, 0.75),
-    lo95 = apply(mt, 2, qfun, 0.025),
-    hi95 = apply(mt, 2, qfun, 0.975)
-  )
+# arr3d [N_POST x N_REPS x n_bins] -> mt [N_POST x n_bins]: per-draw median over reps.
+per_draw_medians <- function(arr3d) {
+  if (CONDITION_ON_TAKEOFF) arr3d[!took] <- NA_integer_  # drop fizzled reps before the per-draw median
+  mt <- apply(arr3d, c(1, 3), median, na.rm = CONDITION_ON_TAKEOFF)
+  mt[!is.finite(mt)] <- NA_real_                         # draws with no take-off at all -> NA line
+  mt
 }
 
-band <- do.call(rbind, lapply(names(ARM_LABELS), function(ak)
-  do.call(rbind, lapply(names(METRIC_KEYS), function(mk)
-    do.call(rbind, lapply(names(MEASURES), function(meas) {
-      d <- summarise_arr(A[[ak]][[mk]][[meas]])
-      d$arm     <- ARM_LABELS[[ak]]
-      d$metric  <- METRIC_KEYS[[mk]]
-      d$measure <- MEASURES[[meas]]
-      d
-    }))))))
+# Long frame of all N_POST per-draw median lines (one row per draw x week), for
+# every arm x metric x measure; plus the bold cross-draw median for readability.
+draws_list <- list(); central_list <- list(); li <- 1L
+for (ak in names(ARM_LABELS)) for (mk in names(METRIC_KEYS)) for (meas in names(MEASURES)) {
+  mt <- per_draw_medians(A[[ak]][[mk]][[meas]])               # [N_POST x n_bins]
+  draws_list[[li]] <- data.frame(
+    draw    = rep(seq_len(N_POST), times = n_bins),
+    week    = rep(week, each = N_POST),
+    value   = as.vector(mt),
+    arm     = ARM_LABELS[[ak]], metric = METRIC_KEYS[[mk]], measure = MEASURES[[meas]],
+    stringsAsFactors = FALSE
+  )
+  central_list[[li]] <- data.frame(
+    week    = week,
+    med     = apply(mt, 2, median, na.rm = TRUE),
+    arm     = ARM_LABELS[[ak]], metric = METRIC_KEYS[[mk]], measure = MEASURES[[meas]],
+    stringsAsFactors = FALSE
+  )
+  li <- li + 1L
+}
+draws_long <- do.call(rbind, draws_list)
+central    <- do.call(rbind, central_list)
+for (df_nm in c("draws_long", "central")) {
+  assign(df_nm, within(get(df_nm), {
+    arm     <- factor(arm,     levels = ARM_LABELS)
+    measure <- factor(measure, levels = MEASURES)            # Weekly incidence facet on top
+  }))
+}
 
-band$arm     <- factor(band$arm,     levels = ARM_LABELS)
-band$measure <- factor(band$measure, levels = MEASURES)   # Weekly incidence on top
-
-# Headline diagnostic: median (of per-sample medians) cumulative deaths at the
-# final week, with vs without OBV, and the implied direct % averted.
+# Headline diagnostic: cross-draw median of the per-draw cumulative-death lines
+# at the final week, with vs without OBV, and the implied direct % averted.
 for (mlab in METRIC_KEYS) {
-  d  <- band[band$metric == mlab & band$measure == "Cumulative", ]
+  d  <- central[central$metric == mlab & central$measure == "Cumulative", ]
   fw <- max(d$week)
   no <- d$med[d$arm == "Without OBV" & d$week == fw]
   ob <- d$med[d$arm == "With OBV"    & d$week == fw]
-  cat(sprintf("%-12s cumulative deaths (median of medians): without OBV = %.0f, with OBV = %.0f (direct averted %.1f%%)\n",
+  cat(sprintf("%-12s cumulative deaths (cross-draw median): without OBV = %.1f, with OBV = %.1f (direct averted %.1f%%)\n",
               mlab, no, ob, if (length(no) && no > 0) 100 * (no - ob) / no else NA_real_))
 }
 
 
 # -----------------------------------------------------------------------------
-# 9. PLOT: two facets (incidence top, cumulative bottom), WITH vs WITHOUT OBV
+# 9. PLOT: N_POST per-draw median lines per arm (faint), bold cross-draw median
+#          two facets: weekly incidence (top), cumulative (bottom)
 # -----------------------------------------------------------------------------
 make_fig <- function(metric_label) {
-  d <- band[band$metric == metric_label, , drop = FALSE]
-  ggplot(d, aes(week, med, colour = arm, fill = arm)) +
-    geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = CI95_ALPHA, colour = NA) +
-    geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = IQR_ALPHA,  colour = NA) +
-    geom_line(linewidth = MEDIAN_LWD) +
+  dl <- draws_long[draws_long$metric == metric_label, , drop = FALSE]
+  ce <- central[central$metric == metric_label, , drop = FALSE]
+  ggplot() +
+    # one faint line per posterior draw (its median across the N_REPS replicates)
+    geom_line(data = dl,
+              aes(week, value, group = interaction(arm, draw), colour = arm),
+              alpha = SPAGHETTI_ALPHA, linewidth = 0.3, na.rm = TRUE) +
+    # bold line: median across the N_POST per-draw medians
+    geom_line(data = ce, aes(week, med, colour = arm),
+              linewidth = MEDIAN_LWD, na.rm = TRUE) +
     facet_wrap(~ measure, ncol = 1, scales = "free_y") +
     scale_colour_manual(values = ARM_COLS) +
-    scale_fill_manual(values = ARM_COLS) +
     coord_cartesian(xlim = c(0, XLIM)) +
+    guides(colour = guide_legend(override.aes = list(alpha = 1, linewidth = 1.2))) +
     labs(
       x = "Days since outbreak seeding", y = metric_label,
-      colour = NULL, fill = NULL,
+      colour = NULL,
       title = sprintf("DRC decoupled fit: %s, direct obeldesivir effect", tolower(metric_label)),
       subtitle = sprintf(paste0("Single OBV run (PEP %.0f%% efficacy, coverage %.0f, adherence %.0f, HCW in hospital).  ",
                                 "'Without OBV' = realised + directly-prevented index deaths (excludes averted chains).  ",
-                                "Line: median of per-sample medians; dark band: IQR; light band: 95%% CrI.  %d draws x %d reps."),
-                         100 * OBV$efficacy, OBV$coverage, OBV$adherence, N_POST, N_REPS)
+                                "Faint lines: each draw's median across %d reps (%d draws); bold: cross-draw median."),
+                         100 * OBV$efficacy, OBV$coverage, OBV$adherence, N_REPS, N_POST)
     ) +
     theme_bw(base_size = 12) +
     theme(plot.subtitle = element_text(size = 7), legend.position = "top")
@@ -395,17 +437,18 @@ ggsave(file.path(FIG_DIR, paste0(FIG_STEM_TOT, ".pdf")), fig_tot, width = 8, hei
 ggsave(file.path(FIG_DIR, paste0(FIG_STEM_TOT, ".png")), fig_tot, width = 8, height = 8, dpi = 300)
 
 saveRDS(list(
-  band      = band,
-  week      = week,
-  n_bins    = n_bins,
-  bin_width = BIN_WIDTH,
-  obv       = OBV,
-  effect    = "direct (realised + prevented index deaths; excludes averted onward chains)",
-  draw_idx  = draw_idx,
+  draws_long = draws_long,   # N_POST per-draw median lines per arm/metric/measure
+  central    = central,      # cross-draw median of those per-draw medians
+  week       = week,
+  n_bins     = n_bins,
+  bin_width  = BIN_WIDTH,
+  obv        = OBV,
+  effect     = "direct (realised + prevented index deaths; excludes averted onward chains)",
+  draw_idx   = draw_idx,
   takeoff_frac_per_draw = takeoff_frac_per_draw,
-  config    = list(N_POST = N_POST, N_REPS = N_REPS, sample_seed = SAMPLE_SEED,
-                   base_seed = BASE_SEED, condition_on_takeoff = CONDITION_ON_TAKEOFF,
-                   rds_source = RDS_PATH, scenario_id = SCENARIO_ID)
+  config     = list(N_POST = N_POST, N_REPS = N_REPS, sample_seed = SAMPLE_SEED,
+                    base_seed = BASE_SEED, condition_on_takeoff = CONDITION_ON_TAKEOFF,
+                    rds_source = RDS_PATH, scenario_id = SCENARIO_ID)
 ), file.path(OUT_DIR, paste0(DATA_STEM, ".rds")))
 
 cat("Saved:\n  ",
