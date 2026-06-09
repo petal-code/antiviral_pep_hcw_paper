@@ -1,34 +1,34 @@
 # DRC_posterior_trajectory_bands_decoupled.R
 # =============================================================================
-# Posterior trajectory "spaghetti + bands" plot for the DECOUPLED-efficacy DRC
-# fit (Middle_DRC_ConflictSmoothed_PlusPlus).
+# Obeldesivir (OBV) impact on death trajectories for the DECOUPLED-efficacy DRC
+# fit (Middle_DRC_ConflictSmoothed_PlusPlus): WITH vs WITHOUT OBV.
 #
-# What it does, exactly as requested:
+# What it does:
 #   1. Reads the ABC-SMC result.rds from the decoupled DRC run.
 #   2. Draws N_POST = 250 posterior parameter samples (weighted, with
 #      replacement, by the ABC importance weights).
-#   3. For EACH posterior sample, runs N_REPS = 10 stochastic replicates of the
-#      fiber branching-process model and bins each replicate into a weekly
-#      incidence curve, then takes the element-wise MEDIAN across the 10
-#      replicates -> ONE "median trajectory" per posterior sample (250 of them).
-#   4. Plots:
-#        * every per-sample median trajectory          (thin faint lines)
-#        * the MEDIAN of the 250 median trajectories    (bold central line)
-#        * the inter-quartile range  (25-75%)           (darker band)
-#        * the 95% credible interval (2.5-97.5%)        (lighter band)
-#      ...computed point-wise (per weekly bin) ACROSS the 250 median
-#      trajectories. Curves are shown for both weekly Cases and weekly Deaths
-#      (Deaths is the fitted quantity; Cases is included for context), faceted.
+#   3. For EACH posterior sample, runs N_REPS = 10 stochastic replicates in TWO
+#      arms that share a per-(sample, replicate) seed (paired): a no-OBV baseline
+#      and an OBV arm (obeldesivir PEP, 80% efficacy, coverage 1, adherence 1,
+#      delivered to HCWs exposed in hospital -- the codebase's standard OBV_BASE).
+#      Each replicate yields the day of every death and every HCW death.
+#   4. Bins each replicate into a weekly death-incidence curve (and its running
+#      cumulative), then takes the element-wise MEDIAN across the 10 replicates
+#      -> one median trajectory per posterior sample. Across the 250 medians it
+#      computes, per weekly bin, the median of medians + IQR (25-75%) + 95% CrI.
+#   5. Produces TWO figures, each with two stacked facets (weekly incidence on
+#      top, cumulative on the bottom), overlaying WITH vs WITHOUT OBV:
+#        * Figure 1: HCW deaths
+#        * Figure 2: Total deaths
 #
-# Parallelism: stochastic replicates are run with future / future.apply using a
-# `multisession` plan, which is the Windows-safe (PSOCK) backend -- no forking.
-# Each replicate is made reproducible by an explicit per-(sample, replicate)
-# seed, so results are identical regardless of the number of workers.
+# Pairing: take-off is defined ONCE on the no-OBV baseline (>= TAKEOFF_DEATH_
+# THRESHOLD total deaths) and the SAME (sample, replicate) mask is applied to
+# both arms, so OBV (which lowers deaths) can't selectively drop replicates and
+# bias the comparison.
 #
-# This mirrors the simulation pipeline in section 11 of
-# DRC_run_abc_calibration_decoupled.R (same args-builder, same trajectory
-# extraction, same weekly binning); it only changes the *statistical* layout
-# (10 replicates per draw -> per-draw median -> cross-draw median/IQR/95% CrI).
+# Parallelism: replicates run with future / future.apply on a `multisession`
+# (Windows-safe PSOCK) plan. Each (sample, replicate) is paired across arms by a
+# shared explicit seed, so results are reproducible regardless of worker count.
 #
 # Run from anywhere inside the project (paths resolved with here::here()):
 #   Rscript analyses/02_ABC_model_fits_Final/DRC_posterior_trajectory_bands_decoupled.R
@@ -55,24 +55,28 @@ SCENARIO_ID_DFLT <- "Middle_DRC_ConflictSmoothed_PlusPlus"
 
 # ---- Sampling / replication ----
 N_POST    <- 250L     # posterior parameter samples
-N_REPS    <- 10L      # stochastic replicates per posterior sample
+N_REPS    <- 10L      # stochastic replicates per posterior sample (PER ARM)
 BIN_WIDTH <- 7L       # days per incidence bin (weekly); overridden by run metadata if present
-METRICS   <- c("Deaths", "Cases")   # facet order (Deaths first = the fitted quantity)
+
+# ---- Obeldesivir (OBV) PEP settings for the treated arm ----
+# Standard delivery from the codebase (OBV_BASE): full coverage/adherence,
+# modelled as post-exposure prophylaxis for HCWs exposed in hospital.
+OBV <- list(efficacy = 0.80, coverage = 1.0, adherence = 1.0, dpc = 1L,
+            target_class = "HCW", target_locations = "hospital")
 
 # ---- Seeds (reproducibility) ----
 SAMPLE_SEED <- 2026L  # selects which 250 posterior particles are drawn
-BASE_SEED   <- 10000L # per-(sample, replicate) model seeds start here
+BASE_SEED   <- 10000L # per-(sample, replicate) model seeds start here (shared across arms)
 
 # ---- Model-build constants (must match the calibration run) ----
 SEEDING_CASES           <- 25L
 SETUP_R0_N              <- 100000L   # n for compute_R0_invariants() in the fit
 SETUP_R0_SEED           <- 42L       # seed   for compute_R0_invariants() in the fit
 MODEL_OVERRIDES         <- list(check_final_size = 10000)
-TAKEOFF_DEATH_THRESHOLD <- 100L      # used only for the take-off diagnostic below
+TAKEOFF_DEATH_THRESHOLD <- 100L      # take-off defined on the no-OBV baseline total deaths
 
-# If TRUE, the per-sample median trajectory is taken only over replicates that
-# "took off" (>= TAKEOFF_DEATH_THRESHOLD deaths); samples with no take-off are
-# dropped. Default FALSE = median over all N_REPS replicates, exactly as asked.
+# If TRUE, per-sample medians use only replicates whose (paired) baseline took
+# off; samples with no baseline take-off are dropped. Same mask for both arms.
 CONDITION_ON_TAKEOFF <- TRUE
 
 # ---- Parallel workers (Windows-safe multisession / PSOCK) ----
@@ -80,19 +84,18 @@ CONDITION_ON_TAKEOFF <- TRUE
 N_WORKERS_OVERRIDE <- NULL
 
 # ---- Outputs ----
-FIG_DIR <- here::here("figures")
-OUT_DIR <- here::here("outputs", "02_ABC_model_fits_Final")
-FIG_STEM <- "DRC_decoupled_posterior_trajectory_bands"
+FIG_DIR  <- here::here("figures")
+OUT_DIR  <- here::here("outputs", "02_ABC_model_fits_Final")
+FIG_STEM_HCW <- "DRC_decoupled_obv_HCW_deaths"
+FIG_STEM_TOT <- "DRC_decoupled_obv_total_deaths"
+DATA_STEM    <- "DRC_decoupled_obv_trajectory_bands"
 
 # ---- Plot aesthetics ----
-BAND_FILL       <- "#3182BD"
-CI95_ALPHA      <- 0.18    # lighter band  (95% CrI)
-IQR_ALPHA       <- 0.40    # darker band   (IQR)
-SPAGHETTI_COL   <- "grey25"
-SPAGHETTI_ALPHA <- 0.08
-SPAGHETTI_LWD   <- 0.20
-MEDIAN_COL      <- "#08306B"
-MEDIAN_LWD      <- 1.10
+ARM_COLS   <- c("Without OBV" = "#D55E00", "With OBV" = "#0072B2")  # Okabe-Ito (colourblind-safe)
+CI95_ALPHA <- 0.15    # lighter band  (95% CrI)
+IQR_ALPHA  <- 0.30    # darker band   (IQR)
+MEDIAN_LWD <- 1.05
+XLIM       <- 500     # x-axis (days) display cap; zoom only, data not dropped
 
 
 # -----------------------------------------------------------------------------
@@ -147,8 +150,10 @@ if (is.null(weights) || length(weights) != nrow(posterior)) {
 cat(sprintf("Loaded %d posterior particles from:\n  %s\n", nrow(posterior), RDS_PATH))
 cat("Scenario        : ", SCENARIO_ID, "\n", sep = "")
 cat("Fitted params   : ", paste(PARAM_NAMES, collapse = ", "), "\n", sep = "")
-cat(sprintf("Sampling %d draws x %d replicates = %d simulations; bin width = %d days.\n",
-            N_POST, N_REPS, N_POST * N_REPS, BIN_WIDTH))
+cat(sprintf("OBV arm         : efficacy %.0f%%, coverage %.1f, adherence %.1f, target %s/%s\n",
+            100 * OBV$efficacy, OBV$coverage, OBV$adherence, OBV$target_class, OBV$target_locations))
+cat(sprintf("Sampling %d draws x %d replicates x 2 arms = %d simulations; bin width = %d days.\n",
+            N_POST, N_REPS, N_POST * N_REPS * 2L, BIN_WIDTH))
 
 
 # -----------------------------------------------------------------------------
@@ -163,21 +168,22 @@ R0_invariants <- compute_R0_invariants(args = mp$args, n = SETUP_R0_N, seed = SE
 
 
 # -----------------------------------------------------------------------------
-# 5. DRAW 250 POSTERIOR SAMPLES + BUILD THE (sample, replicate) JOB LIST
+# 5. DRAW 250 POSTERIOR SAMPLES + BUILD THE (sample, replicate, arm) JOB LIST
 # -----------------------------------------------------------------------------
 set.seed(SAMPLE_SEED)
 draw_idx <- sample(seq_len(nrow(posterior)), size = N_POST, replace = TRUE, prob = weights)
 
-# One job per (posterior sample k, replicate r) with a unique, reproducible seed.
-jobs <- vector("list", N_POST * N_REPS)
+ARMS_RUN <- c("noobv", "obv")   # both arms; share the per-(sample, rep) seed
+
+jobs <- vector("list", N_POST * N_REPS * length(ARMS_RUN))
 jj <- 1L
 for (k in seq_len(N_POST)) {
   for (r in seq_len(N_REPS)) {
-    jobs[[jj]] <- list(draw     = k,                 # 1..N_POST
-                       draw_row = draw_idx[k],       # row in `posterior`
-                       rep      = r,                 # 1..N_REPS
-                       seed     = BASE_SEED + (k - 1L) * N_REPS + r)
-    jj <- jj + 1L
+    seed_dr <- BASE_SEED + (k - 1L) * N_REPS + r   # shared across arms (paired)
+    for (arm in ARMS_RUN) {
+      jobs[[jj]] <- list(draw = k, draw_row = draw_idx[k], rep = r, arm = arm, seed = seed_dr)
+      jj <- jj + 1L
+    }
   }
 }
 
@@ -185,11 +191,11 @@ for (k in seq_len(N_POST)) {
 # -----------------------------------------------------------------------------
 # 6. RUN ALL REPLICATES IN PARALLEL (future / multisession; Windows-safe)
 # -----------------------------------------------------------------------------
-# Worker builds the full fiber arg list from the posterior draw (same pipeline as
-# section 11 of the calibration script), sets the explicit per-replicate seed,
-# runs ONE branching-process replicate, and returns the floored absolute day of
-# every infection (cases) and every death. fiber is loaded on each worker via
-# future.packages; all other objects/functions are exported automatically.
+# Worker builds the fiber arg list from the posterior draw (same pipeline as
+# section 11 of the calibration script); for the OBV arm it additionally switches
+# on obeldesivir PEP. Returns the floored absolute day of every death and of
+# every HCW death. fiber is loaded on each worker via future.packages; all other
+# objects/functions are exported automatically.
 run_traj_job <- function(job) {
   full <- assemble_decoupled_theta(as.numeric(posterior[job$draw_row, PARAM_NAMES]),
                                    PARAM_NAMES, fixed_values)
@@ -200,16 +206,28 @@ run_traj_job <- function(job) {
     general_hospital_quarantine_efficacy = GEN_HOSP_EFF,
     safe_funeral_efficacy = SAFE_FUN_EFF,
     hcw_base_prob = HCW_BASE_PROB, seeding_cases = SEEDING_CASES)
+
+  if (identical(job$arm, "obv")) {                 # switch obeldesivir PEP on
+    a$obv_pep_enabled          <- TRUE
+    a$obv_pep_coverage         <- OBV$coverage
+    a$obv_pep_adherence        <- OBV$adherence
+    a$obv_pep_efficacy         <- OBV$efficacy
+    a$obv_pep_dpc              <- OBV$dpc
+    a$obv_pep_target_class     <- OBV$target_class
+    a$obv_pep_target_locations <- OBV$target_locations
+  }
   a$seed <- job$seed
 
   tdf <- do.call(branching_process_main, a)$tdf
   tdf <- tdf[!is.na(tdf$time_infection_absolute), , drop = FALSE]
   died <- !is.na(tdf$outcome) & tdf$outcome
+  hcw  <- !is.na(tdf$class) & tdf$class == "HCW"
 
   list(draw       = job$draw,
        rep        = job$rep,
-       case_days  = as.integer(floor(tdf$time_infection_absolute)),
-       death_days = as.integer(floor(tdf$time_outcome_absolute[died])))
+       arm        = job$arm,
+       total_days = as.integer(floor(tdf$time_outcome_absolute[died])),
+       hcw_days   = as.integer(floor(tdf$time_outcome_absolute[died & hcw])))
 }
 
 N_CLUSTER <- if (parallel::detectCores() > 120) {
@@ -232,41 +250,40 @@ cat("Simulation time: "); print(Sys.time() - start_time)
 
 
 # -----------------------------------------------------------------------------
-# 7. BIN TO WEEKLY INCIDENCE -> PER-SAMPLE MEDIAN TRAJECTORIES
+# 7. BIN TO WEEKLY INCIDENCE (+ CUMULATIVE) -> PER-SAMPLE MEDIAN TRAJECTORIES
 # -----------------------------------------------------------------------------
-# Common weekly grid across ALL replicates (absolute model time, from day 0).
-max_day <- max(c(unlist(lapply(results, function(r) c(r$case_days, r$death_days))), 0L))
+# Common weekly grid across ALL replicates / arms (absolute model time, day 0).
+max_day <- max(c(unlist(lapply(results, function(r) c(r$total_days, r$hcw_days))), 0L))
 n_bins  <- max(1L, ceiling((max_day + 1L) / BIN_WIDTH))
 week    <- ((seq_len(n_bins) - 1L) + 0.5) * BIN_WIDTH
 
-# inc[[metric]] is a [N_POST x N_REPS x n_bins] array of weekly counts.
-inc <- list(
-  Cases  = array(0L, dim = c(N_POST, N_REPS, n_bins)),
-  Deaths = array(0L, dim = c(N_POST, N_REPS, n_bins))
-)
-# took[draw, rep] = did that replicate reach the take-off death threshold?
+ARM_LABELS  <- c(noobv = "Without OBV", obv = "With OBV")
+METRIC_KEYS <- c(hcw = "HCW deaths", tot = "Total deaths")
+MEASURES    <- c(inc = "Weekly incidence", cum = "Cumulative")
+
+# A[[arm]][[metric]]$inc / $cum : [N_POST x N_REPS x n_bins] weekly counts.
+mk_arr <- function() array(0L, dim = c(N_POST, N_REPS, n_bins))
+A <- setNames(lapply(names(ARM_LABELS), function(ak)
+  setNames(lapply(names(METRIC_KEYS), function(mk) list(inc = mk_arr(), cum = mk_arr())),
+           names(METRIC_KEYS))), names(ARM_LABELS))
+
+# took[draw, rep] = did the NO-OBV baseline replicate reach take-off? Applied to
+# BOTH arms so the with/without comparison stays paired.
 took <- matrix(FALSE, N_POST, N_REPS)
-for (r in results) {
-  inc$Cases [r$draw, r$rep, ] <- bin_counts(r$case_days,  BIN_WIDTH, n_bins)
-  inc$Deaths[r$draw, r$rep, ] <- bin_counts(r$death_days, BIN_WIDTH, n_bins)
-  took[r$draw, r$rep] <- length(r$death_days) >= TAKEOFF_DEATH_THRESHOLD
+for (res in results) {
+  for (mk in names(METRIC_KEYS)) {
+    days <- if (mk == "hcw") res$hcw_days else res$total_days
+    b <- bin_counts(days, BIN_WIDTH, n_bins)
+    A[[res$arm]][[mk]]$inc[res$draw, res$rep, ] <- b
+    A[[res$arm]][[mk]]$cum[res$draw, res$rep, ] <- cumsum(b)
+  }
+  if (identical(res$arm, "noobv"))
+    took[res$draw, res$rep] <- length(res$total_days) >= TAKEOFF_DEATH_THRESHOLD
 }
 
-# Take-off diagnostic (informational; does not change the plot unless
-# CONDITION_ON_TAKEOFF = TRUE).
 takeoff_frac_per_draw <- rowMeans(took)
-cat(sprintf("Take-off (>= %d deaths): %.1f%% of all replicates; per-sample take-off fraction median = %.2f.\n",
+cat(sprintf("Baseline take-off (>= %d deaths): %.1f%% of replicates; per-sample take-off fraction median = %.2f.\n",
             TAKEOFF_DEATH_THRESHOLD, 100 * mean(took), median(takeoff_frac_per_draw)))
-
-# Per-sample median trajectory: element-wise median across the N_REPS replicates.
-median_traj <- lapply(METRICS, function(m) {
-  arr <- inc[[m]]                          # [N_POST, N_REPS, n_bins]
-  if (CONDITION_ON_TAKEOFF) arr[!took] <- NA_integer_   # recycles over the bin dim
-  mt <- apply(arr, c(1, 3), median, na.rm = CONDITION_ON_TAKEOFF)  # [N_POST, n_bins]
-  mt[!is.finite(mt)] <- NA_real_           # samples with no take-off -> NA rows
-  mt
-})
-names(median_traj) <- METRICS
 
 
 # -----------------------------------------------------------------------------
@@ -274,88 +291,102 @@ names(median_traj) <- METRICS
 # -----------------------------------------------------------------------------
 qfun <- function(x, p) stats::quantile(x, p, names = FALSE, na.rm = TRUE)
 
-band <- do.call(rbind, lapply(METRICS, function(m) {
-  mt <- median_traj[[m]]                   # [N_POST, n_bins]
+# arr3d -> point-wise cross-sample summary of the per-sample median trajectories.
+summarise_arr <- function(arr3d) {
+  if (CONDITION_ON_TAKEOFF) arr3d[!took] <- NA_integer_          # mask non-take-off (recycles over bins)
+  mt <- apply(arr3d, c(1, 3), median, na.rm = CONDITION_ON_TAKEOFF)  # [N_POST, n_bins] per-sample medians
+  mt[!is.finite(mt)] <- NA_real_                                 # samples with no take-off -> NA rows
   data.frame(
-    metric = m, week = week,
+    week = week,
     med  = apply(mt, 2, median, na.rm = TRUE),
     q25  = apply(mt, 2, qfun, 0.25),
     q75  = apply(mt, 2, qfun, 0.75),
     lo95 = apply(mt, 2, qfun, 0.025),
     hi95 = apply(mt, 2, qfun, 0.975)
   )
-}))
+}
 
-spaghetti <- do.call(rbind, lapply(METRICS, function(m) {
-  mt <- median_traj[[m]]                   # [N_POST, n_bins], column-major -> draw fastest
-  data.frame(
-    metric = m,
-    draw   = rep(seq_len(N_POST), times = n_bins),
-    week   = rep(week, each = N_POST),
-    value  = as.vector(mt)
-  )
-}))
-spaghetti <- spaghetti[is.finite(spaghetti$value), , drop = FALSE]
+band <- do.call(rbind, lapply(names(ARM_LABELS), function(ak)
+  do.call(rbind, lapply(names(METRIC_KEYS), function(mk)
+    do.call(rbind, lapply(names(MEASURES), function(meas) {
+      d <- summarise_arr(A[[ak]][[mk]][[meas]])
+      d$arm     <- ARM_LABELS[[ak]]
+      d$metric  <- METRIC_KEYS[[mk]]
+      d$measure <- MEASURES[[meas]]
+      d
+    }))))))
 
-# Stable facet order (Deaths first).
-band$metric      <- factor(band$metric,      levels = METRICS)
-spaghetti$metric <- factor(spaghetti$metric, levels = METRICS)
+band$arm     <- factor(band$arm,     levels = ARM_LABELS)
+band$measure <- factor(band$measure, levels = MEASURES)   # Weekly incidence on top
 
-
-# -----------------------------------------------------------------------------
-# 9. PLOT: spaghetti + median-of-medians + IQR (dark) + 95% CrI (light)
-# -----------------------------------------------------------------------------
-p <- ggplot() +
-  # bands first (drawn underneath): lighter 95% CrI, then darker IQR on top
-  geom_ribbon(data = band, aes(week, ymin = lo95, ymax = hi95),
-              fill = BAND_FILL, alpha = CI95_ALPHA) +
-  geom_ribbon(data = band, aes(week, ymin = q25, ymax = q75),
-              fill = BAND_FILL, alpha = IQR_ALPHA) +
-  # every per-sample median trajectory
-  geom_line(data = spaghetti, aes(week, value, group = draw),
-            colour = SPAGHETTI_COL, alpha = SPAGHETTI_ALPHA, linewidth = SPAGHETTI_LWD) +
-  # median of the 250 median trajectories
-  geom_line(data = band, aes(week, med), colour = MEDIAN_COL, linewidth = MEDIAN_LWD) +
-  facet_wrap(~ metric, ncol = 1, scales = "free_y") +
-  labs(
-    x = "Days since outbreak seeding",
-    y = sprintf("Incidence per %d-day bin", BIN_WIDTH),
-    title = sprintf("DRC decoupled fit: posterior trajectories (%d draws x %d replicates)",
-                    N_POST, N_REPS),
-    subtitle = paste0("Thin grey lines: per-sample median trajectories.  ",
-                      "Bold line: median of medians.  ",
-                      "Dark band: IQR (25-75%).  Light band: 95% CrI (2.5-97.5%).")
-  ) +
-  theme_bw(base_size = 12) +
-  theme(plot.subtitle = element_text(size = 8))
-
-if (interactive()) print(p)
+# Headline diagnostic: median (of per-sample medians) cumulative deaths at the
+# final week, with vs without OBV.
+for (mlab in METRIC_KEYS) {
+  d  <- band[band$metric == mlab & band$measure == "Cumulative", ]
+  fw <- max(d$week)
+  no <- d$med[d$arm == "Without OBV" & d$week == fw]
+  ob <- d$med[d$arm == "With OBV"    & d$week == fw]
+  cat(sprintf("%-12s cumulative deaths (median of medians): without OBV = %.0f, with OBV = %.0f (%.1f%% lower)\n",
+              mlab, no, ob, if (no > 0) 100 * (no - ob) / no else NA_real_))
+}
 
 
 # -----------------------------------------------------------------------------
-# 10. SAVE FIGURE + UNDERLYING DATA
+# 9. PLOT: two facets (incidence top, cumulative bottom), WITH vs WITHOUT OBV
+# -----------------------------------------------------------------------------
+make_fig <- function(metric_label) {
+  d <- band[band$metric == metric_label, , drop = FALSE]
+  ggplot(d, aes(week, med, colour = arm, fill = arm)) +
+    geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = CI95_ALPHA, colour = NA) +
+    geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = IQR_ALPHA,  colour = NA) +
+    geom_line(linewidth = MEDIAN_LWD) +
+    facet_wrap(~ measure, ncol = 1, scales = "free_y") +
+    scale_colour_manual(values = ARM_COLS) +
+    scale_fill_manual(values = ARM_COLS) +
+    coord_cartesian(xlim = c(0, XLIM)) +
+    labs(
+      x = "Days since outbreak seeding", y = metric_label,
+      colour = NULL, fill = NULL,
+      title = sprintf("DRC decoupled fit: %s, with vs without obeldesivir", tolower(metric_label)),
+      subtitle = sprintf(paste0("OBV PEP %.0f%% efficacy, coverage %.0f, adherence %.0f (HCW in hospital).  ",
+                                "Line: median of per-sample medians; dark band: IQR; light band: 95%% CrI.  ",
+                                "%d draws x %d reps."),
+                         100 * OBV$efficacy, OBV$coverage, OBV$adherence, N_POST, N_REPS)
+    ) +
+    theme_bw(base_size = 12) +
+    theme(plot.subtitle = element_text(size = 7), legend.position = "top")
+}
+
+fig_hcw <- make_fig("HCW deaths")
+fig_tot <- make_fig("Total deaths")
+if (interactive()) { print(fig_hcw); print(fig_tot) }
+
+
+# -----------------------------------------------------------------------------
+# 10. SAVE FIGURES + UNDERLYING DATA
 # -----------------------------------------------------------------------------
 if (!dir.exists(FIG_DIR)) dir.create(FIG_DIR, recursive = TRUE, showWarnings = FALSE)
 if (!dir.exists(OUT_DIR)) dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-ggsave(file.path(FIG_DIR, paste0(FIG_STEM, ".pdf")), p, width = 8, height = 8)
-ggsave(file.path(FIG_DIR, paste0(FIG_STEM, ".png")), p, width = 8, height = 8, dpi = 300)
+ggsave(file.path(FIG_DIR, paste0(FIG_STEM_HCW, ".pdf")), fig_hcw, width = 8, height = 8)
+ggsave(file.path(FIG_DIR, paste0(FIG_STEM_HCW, ".png")), fig_hcw, width = 8, height = 8, dpi = 300)
+ggsave(file.path(FIG_DIR, paste0(FIG_STEM_TOT, ".pdf")), fig_tot, width = 8, height = 8)
+ggsave(file.path(FIG_DIR, paste0(FIG_STEM_TOT, ".png")), fig_tot, width = 8, height = 8, dpi = 300)
 
 saveRDS(list(
-  band        = band,
-  spaghetti   = spaghetti,
-  median_traj = median_traj,
-  week        = week,
-  n_bins      = n_bins,
-  bin_width   = BIN_WIDTH,
-  metrics     = METRICS,
-  draw_idx    = draw_idx,
+  band      = band,
+  week      = week,
+  n_bins    = n_bins,
+  bin_width = BIN_WIDTH,
+  obv       = OBV,
+  draw_idx  = draw_idx,
   takeoff_frac_per_draw = takeoff_frac_per_draw,
-  config      = list(N_POST = N_POST, N_REPS = N_REPS, sample_seed = SAMPLE_SEED,
-                     base_seed = BASE_SEED, condition_on_takeoff = CONDITION_ON_TAKEOFF,
-                     rds_source = RDS_PATH, scenario_id = SCENARIO_ID)
-), file.path(OUT_DIR, paste0(FIG_STEM, ".rds")))
+  config    = list(N_POST = N_POST, N_REPS = N_REPS, sample_seed = SAMPLE_SEED,
+                   base_seed = BASE_SEED, condition_on_takeoff = CONDITION_ON_TAKEOFF,
+                   rds_source = RDS_PATH, scenario_id = SCENARIO_ID)
+), file.path(OUT_DIR, paste0(DATA_STEM, ".rds")))
 
-cat("Saved:\n  ", file.path(FIG_DIR, paste0(FIG_STEM, ".pdf")),
-    "\n  ", file.path(FIG_DIR, paste0(FIG_STEM, ".png")),
-    "\n  ", file.path(OUT_DIR, paste0(FIG_STEM, ".rds")), "\n", sep = "")
+cat("Saved:\n  ",
+    file.path(FIG_DIR, paste0(FIG_STEM_HCW, ".pdf")), " (+ .png)\n  ",
+    file.path(FIG_DIR, paste0(FIG_STEM_TOT, ".pdf")), " (+ .png)\n  ",
+    file.path(OUT_DIR, paste0(DATA_STEM, ".rds")), "\n", sep = "")
