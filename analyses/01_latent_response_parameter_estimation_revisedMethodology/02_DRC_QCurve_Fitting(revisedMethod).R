@@ -73,23 +73,35 @@ param_meta <- drc_anchors %>%
   mutate(param_id = match(parameter, PARAM_LEVELS)) %>%
   arrange(param_id)
 
-# Lock the endpoints. latent_IPC uses a LATER evidence window (from day 275)
-# than the other parameters, matching the revised-methodology DRC specification;
-# the unsafe-funeral parameters get the terminal-zero treatment where an explicit
-# zero is observed. (See lock_endpoints() in helpers for the full rule.)
+# Lock the endpoints from early/late literature-window extrema (the same rule as
+# West Africa). The unsafe-funeral parameters get the terminal-zero treatment
+# where an explicit zero is observed. (See lock_endpoints() in helpers.)
 endpoint_table <- lock_endpoints(
   drc_anchors,
-  scenario_duration_days  = drc_max_day,
-  early_window_day        = 50,
-  late_start_day          = 325,
-  late_start_day_by_param = c(latent_IPC = 275)
+  scenario_duration_days = drc_max_day,
+  early_window_day       = 50,
+  late_start_day         = 325
 )
 
 param_meta <- param_meta %>%
   left_join(endpoint_table, by = c("parameter", "direction")) %>%
   arrange(param_id)
 
-message("DRC locked endpoints (latent_IPC start/end IS the q-scaled IPC range):")
+# REVISED-METHODOLOGY IPC RULE. The DRC IPC/PPE index is q-scaled across its FULL
+# literature range, not the early/late anchor window: the authoritative revised
+# output uses ipc_helper(t) = 0.071 + (0.746 - 0.071) * q_value(t), where
+# 0.071-0.746 is exactly latent_IPC's DRC summary range (its lower_bound /
+# upper_bound from 00). So override the locked latent_IPC endpoints with that
+# range. (latent_IPC is increasing, so start = low, end = high.) Mapping the
+# shared Q onto these endpoints in step 3 then reproduces the q-scaled IPC rule,
+# and the conflict++ collapse (Q -> 0 over days 200-300) drives it to ipc_low.
+param_meta <- param_meta %>%
+  mutate(
+    theta_start = if_else(parameter == "latent_IPC", lower_bound, theta_start),
+    theta_end   = if_else(parameter == "latent_IPC", upper_bound, theta_end)
+  )
+
+message("DRC locked endpoints (latent_IPC overridden to its q-scaling range):")
 print(param_meta %>% select(parameter, direction, theta_start, theta_end,
                             endpoint_day_for_tau, start_source, end_source))
 
