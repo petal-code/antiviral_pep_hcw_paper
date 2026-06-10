@@ -40,6 +40,7 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(readr)
   library(tibble)
+  library(ggplot2)   # display-only grid plot of the combined scenarios at the end
 })
 
 source(here::here("analyses", "01_latent_response_parameter_estimation", "helpers.R"))
@@ -284,3 +285,50 @@ write_csv(combined, file.path(DIR_PROCESSED, "combined_original_methodology_outp
 message("\n03_Combine_QCurves.R complete. Wrote combined_original_methodology_outputs.csv ",
         "to data-processed/ (", nrow(combined), " rows, ",
         length(unique(combined$scenario_key)), " scenarios).")
+
+# ----------------------------------------------------------------------------
+# Plot the combined output: parameter (row) x scenario (column)   (display only)
+# ----------------------------------------------------------------------------
+# A quick visual check of everything just written to the CSV. Each cell is one
+# parameter's trajectory over the 0..730 day horizon for one scenario, laid out
+# as parameter rows x scenario columns. The bottom row is the diagnostic q_value
+# index. NOTE: these are the native output columns of `combined` (probabilities,
+# the delay in days, the IPC index) -- the per-parameter normalised Q_j curves
+# are not stored in the combined matrix, only the single q_value index is. The
+# plot is printed to the graphics device and deliberately NOT saved.
+
+# Scenario columns and parameter rows in a sensible reading order.
+scenario_order <- c("worst_west_africa", "middle_drc_conflict", "middle_drc_conflict_plusplus",
+                    "worst_west_africa_conflict", "worst_west_africa_conflict_plusplus")
+scenario_labels <- c(
+  worst_west_africa                    = "WA",
+  middle_drc_conflict                  = "DRC conflict",
+  middle_drc_conflict_plusplus         = "DRC conflict++",
+  worst_west_africa_conflict           = "WA conflict",
+  worst_west_africa_conflict_plusplus  = "WA conflict++"
+)
+quantity_order <- c("prob_hosp", "delay_hosp", "prob_unsafe_funeral_comm",
+                    "prob_unsafe_funeral_hosp", "prob_unsafe_funeral_etu",
+                    "prop_etu", "ipc_helper", "q_value")
+
+# Reshape the wide combined matrix to one row per (scenario, parameter, day).
+combined_long <- combined %>%
+  select(scenario_key, relative_day, all_of(quantity_order)) %>%
+  pivot_longer(cols = all_of(quantity_order), names_to = "quantity", values_to = "value") %>%
+  mutate(scenario_key = factor(scenario_key, levels = scenario_order),
+         quantity     = factor(quantity,     levels = quantity_order))
+
+p_grid <- ggplot(combined_long, aes(relative_day, value)) +
+  geom_line(linewidth = 0.6, colour = "#1f77b4") +
+  # free y per ROW (shared within a row across scenarios, so a parameter is
+  # comparable left-to-right; delay_hosp is in days, the rest are in [0,1]).
+  facet_grid(quantity ~ scenario_key, scales = "free_y", switch = "y",
+             labeller = labeller(scenario_key = scenario_labels)) +
+  labs(title = "Combined scenario curves: parameter (row) x scenario (column)",
+       x = "Relative outbreak day", y = NULL) +
+  theme_bw(base_size = 9) +
+  theme(strip.text.y.left = element_text(angle = 0),
+        strip.placement = "outside",
+        panel.grid.minor = element_blank())
+
+print(p_grid)   # display only; not saved
