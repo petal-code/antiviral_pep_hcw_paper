@@ -296,3 +296,55 @@ plot_drc_fit <- function(fit, qseries, label) {
 
 print(plot_drc_fit(drc_conflict_fit,          drc_conflict_qseries,          "conflict"))     # display only
 print(plot_drc_fit(drc_conflict_plusplus_fit, drc_conflict_plusplus_qseries, "conflict++"))   # display only
+
+# ----------------------------------------------------------------------------
+# 6. Overlay both scenarios on one graph  (display only)
+# ----------------------------------------------------------------------------
+# Same faceting as section 5, but the conflict and conflict++ posterior-MEAN
+# curves are drawn together in a single figure, coloured by scenario, so the
+# extra forced collapse baked into "++" can be read straight off each panel.
+# As in plot_drc_fit(), the community unsafe-funeral ribbon is collapsed to its
+# mean (its fitted q5/q95 are stale after the deterministic Warsame override).
+# The literature anchors are identical across scenarios, so they are drawn once
+# in black for context.
+
+# Tag a fitted scenario with its label and collapse the stale community ribbon
+# (the same per-fit prep that plot_drc_fit() does before plotting).
+prep_overlay_df <- function(fit, scenario_label) {
+  fit$curve_summ %>%
+    mutate(
+      q5       = if_else(parameter == "p_unsafe_funeral_comm", mean, q5),
+      q95      = if_else(parameter == "p_unsafe_funeral_comm", mean, q95),
+      scenario = scenario_label,
+      panel    = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP))
+    )
+}
+
+overlay_curve_df <- bind_rows(
+  prep_overlay_df(drc_conflict_fit,          "conflict"),
+  prep_overlay_df(drc_conflict_plusplus_fit, "conflict++")
+) %>%
+  mutate(scenario = factor(scenario, levels = c("conflict", "conflict++")))
+
+# Literature anchors are shared by both fits, so plot them once (neutral black).
+anchor_overlay_df <- drc_anchors %>%
+  mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
+
+scenario_cols <- c("conflict" = "#1f77b4", "conflict++" = "#d62728")
+
+overlay_plot <- ggplot(overlay_curve_df,
+                       aes(relative_day, mean, colour = scenario, fill = scenario)) +
+  geom_ribbon(aes(ymin = q5, ymax = q95), colour = NA, alpha = 0.15) +
+  geom_line(linewidth = 0.9) +
+  geom_point(data = anchor_overlay_df, aes(relative_day, value_used),
+             inherit.aes = FALSE, colour = "black", size = 1.6, alpha = 0.8) +
+  facet_wrap(~ panel, scales = "free_y", ncol = 2) +
+  scale_colour_manual(values = scenario_cols, name = "Scenario") +
+  scale_fill_manual(values = scenario_cols, name = "Scenario") +
+  labs(title = "DRC: conflict vs conflict++ fitted parameter curves",
+       subtitle = "Lines = posterior mean + 90% interval, coloured by scenario; black = shared literature anchors",
+       x = "Relative outbreak day", y = NULL) +
+  theme_bw(base_size = 11) +
+  theme(strip.text = element_text(face = "bold"), legend.position = "top")
+
+print(overlay_plot)   # display only
