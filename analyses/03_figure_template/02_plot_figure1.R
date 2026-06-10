@@ -12,8 +12,8 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 results <- load_results()
 
-x_max_weeks <- function(sc) if (sc == "WestAfrica") 365 / 7 else 450 / 7
-
+# x_max_weeks <- function(sc) if (sc == "WestAfrica") 60 else 80
+x_max_weeks <- function(sc) SCENARIO_X_MAX_DAYS[sc] / 7
 
 # Build panels ----
 # Weekly infections in entire population -- without OBV (v1 top panels)

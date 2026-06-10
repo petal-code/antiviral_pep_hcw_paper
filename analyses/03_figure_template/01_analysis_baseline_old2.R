@@ -1,16 +1,14 @@
 # =============================================================================
 # 01_analysis_baseline.R
 #
-# Runs baseline simulations with OBV enabled at 100% coverage across all
-# locations. The prevented_completed output captures individuals whose
-# infections were prevented by OBV -- these are added back to reconstruct
-# the counterfactual "no OBV" scenario in downstream figure scripts.
-#
-# Takeoff condition: if n_deaths < TAKEOFF_DEATH_THRESHOLD, retry with
-# seed + 1 until the condition is met (max MAX_RETRIES attempts).
+# Runs baseline (no OBV) simulations only.
+# OBV efficacy and coverage effects are applied post-hoc in helper functions.
 #
 # Both scenarios use the DECOUPLED fit:
 #   (R0, prop_funeral, etu_efficacy, ppe_efficacy, hcw_risk_scalar)
+#
+# Jobs are split by posterior particle -- each worker handles a slice of
+# particles and runs all (scenario x rep) combinations for them.
 #
 # N_WORKERS must be a divisor of N_PARTICLES (e.g. 1,2,4,5,10,20,25,50,100).
 # =============================================================================
@@ -39,22 +37,11 @@ N_WORKERS        <- 10L
 N_PARTICLES      <- 200
 N_REPS           <- 10
 SEEDING_CASES    <- 25
+CHECK_FINAL_SIZE <- 50000
 RESAMPLE_SEED    <- 42L
 SEED_BASE        <- 20260601L
 
 HCW_BASE_PROB <- 0.25
-
-# Takeoff threshold: consistent with ABC fitting scheme
-TAKEOFF_DEATH_THRESHOLD <- 100L
-MAX_RETRIES             <- 50L   # max seed increments before giving up
-
-# OBV settings: full coverage across all locations
-OBV_COVERAGE         <- 1.0
-OBV_ADHERENCE        <- 1.0
-OBV_DPC              <- 0
-OBV_EFFICACY         <- 0.8
-OBV_TARGET_CLASS     <- "HCW"
-OBV_TARGET_LOCATIONS <- c("hospital", "community", "funeral")
 
 stopifnot(N_PARTICLES %% N_WORKERS == 0L)
 PARTICLES_PER_WORKER <- N_PARTICLES %/% N_WORKERS
@@ -128,17 +115,7 @@ scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
       hcw_base_prob   = HCW_BASE_PROB,
       seeding_cases   = SEEDING_CASES
     )
-    args$check_final_size <- sc$check_final_size
-    
-    # Add OBV settings: full coverage across all locations
-    args$obv_pep_enabled          <- TRUE
-    args$obv_pep_coverage         <- OBV_COVERAGE
-    args$obv_pep_adherence        <- OBV_ADHERENCE
-    args$obv_pep_dpc              <- OBV_DPC
-    args$obv_pep_efficacy         <- OBV_EFFICACY
-    args$obv_pep_target_class     <- OBV_TARGET_CLASS
-    args$obv_pep_target_locations <- OBV_TARGET_LOCATIONS
-    
+    args$check_final_size <- CHECK_FINAL_SIZE
     args
   })
   
@@ -152,7 +129,7 @@ scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
 names(scenario_setups) <- names(SCENARIOS)
 
 # =============================================================================
-# Build job list
+# Build job list: one job = one particle slice
 # =============================================================================
 jobs <- lapply(seq_len(N_WORKERS), function(w) {
   p_from <- (w - 1L) * PARTICLES_PER_WORKER + 1L
@@ -166,7 +143,7 @@ message(sprintf(
 ))
 
 # =============================================================================
-# Run in parallel
+# Run in parallel — baseline only, no OBV args set
 # =============================================================================
 n_workers <- min(N_WORKERS, future::availableCores(), length(jobs))
 plan(multisession, workers = n_workers)
@@ -183,69 +160,42 @@ future_lapply(jobs, function(job) {
         out_path <- file.path(OUT_DIR, fname)
         if (file.exists(out_path)) next
         
-        base_seed <- SEED_BASE +
+        seed <- SEED_BASE +
           (sc_idx - 1L) * N_PARTICLES * N_REPS +
           (p      - 1L) * N_REPS +
           (r      - 1L)
         
-        args <- setup$particle_args[[p]]
+        args      <- setup$particle_args[[p]]
+        args$seed <- seed
         
-        # Retry with seed+1 until takeoff condition is met
-        out        <- NULL
-        retry      <- 0L
-        current_seed <- base_seed
-        repeat {
-          args$seed <- current_seed
-          out       <- do.call(fiber::branching_process_main, args)
-          tdf_all   <- out$tdf[!is.na(out$tdf$time_infection_absolute), ]
-          n_deaths  <- sum(!is.na(tdf_all$outcome) & tdf_all$outcome)
-          
-          if (n_deaths >= TAKEOFF_DEATH_THRESHOLD) break
-          
-          retry        <- retry + 1L
-          current_seed <- current_seed + 1L
-          
-          if (retry >= MAX_RETRIES) {
-            message(sprintf(
-              "  [w%02d | p%03d | %s | r%d] WARNING: max retries reached (best n_deaths=%d)",
-              job$worker_id, p, sc_name, r, n_deaths
-            ))
-            break
-          }
-        }
+        out   <- do.call(fiber::branching_process_main, args)
+        tdf   <- out$tdf
+        cases <- tdf[!is.na(tdf$time_infection_absolute), ]
         
-        tdf   <- out$tdf[!is.na(out$tdf$time_infection_absolute), ]
-        is_hcw <- tdf$class == "HCW"
-        died   <- !is.na(tdf$outcome) & tdf$outcome
+        is_hcw <- cases$class == "HCW"
+        died   <- !is.na(cases$outcome) & cases$outcome
         
         result <- list(
-          scenario            = sc_name,
-          particle_id         = p,
-          rep                 = r,
-          seed_used           = current_seed,
-          n_retries           = retry,
-          R0                  = setup$theta$R0[p],
-          prop_funeral        = setup$theta$prop_funeral[p],
-          etu_efficacy        = setup$theta$etu_efficacy[p],
-          ppe_efficacy        = setup$theta$ppe_efficacy[p],
-          hcw_risk_scalar     = setup$theta$hcw_risk_scalar[p],
-          tdf                 = tdf,
-          prevented_completed = out$prevented_completed,
-          n_infections        = nrow(tdf),
-          n_hcw_infections    = sum(is_hcw),
-          n_deaths            = sum(died),
-          n_hcw_deaths        = sum(died & is_hcw),
-          n_prevented         = nrow(out$prevented_completed),
-          duration            = max(tdf$time_outcome_absolute, na.rm = TRUE)
+          scenario         = sc_name,
+          particle_id      = p,
+          rep              = r,
+          R0               = setup$theta$R0[p],
+          prop_funeral     = setup$theta$prop_funeral[p],
+          etu_efficacy     = setup$theta$etu_efficacy[p],
+          ppe_efficacy     = setup$theta$ppe_efficacy[p],
+          hcw_risk_scalar  = setup$theta$hcw_risk_scalar[p],
+          tdf              = cases,
+          n_infections     = nrow(cases),
+          n_hcw_infections = sum(is_hcw),
+          n_deaths         = sum(died),
+          n_hcw_deaths     = sum(died & is_hcw),
+          duration         = max(cases$time_outcome_absolute, na.rm = TRUE)
         )
         
         saveRDS(result, out_path)
-        message(sprintf(
-          "  [w%02d | p%03d | %s | r%d] seed=%d retries=%d -> %d inf, %d HCW deaths, %d prevented",
-          job$worker_id, p, sc_name, r,
-          current_seed, retry,
-          result$n_infections, result$n_hcw_deaths, result$n_prevented
-        ))
+        message(sprintf("  [w%02d | p%03d | %s | r%d] -> %d inf, %d HCW deaths",
+                        job$worker_id, p, sc_name, r,
+                        result$n_infections, result$n_hcw_deaths))
       }
     }
   }
@@ -255,13 +205,11 @@ future_lapply(jobs, function(job) {
   NULL
 },
 future.globals = list(
-  scenario_setups         = scenario_setups,
-  OUT_DIR                 = OUT_DIR,
-  N_PARTICLES             = N_PARTICLES,
-  N_REPS                  = N_REPS,
-  SEED_BASE               = SEED_BASE,
-  TAKEOFF_DEATH_THRESHOLD = TAKEOFF_DEATH_THRESHOLD,
-  MAX_RETRIES             = MAX_RETRIES
+  scenario_setups = scenario_setups,
+  OUT_DIR         = OUT_DIR,
+  N_PARTICLES     = N_PARTICLES,
+  N_REPS          = N_REPS,
+  SEED_BASE       = SEED_BASE
 ),
 future.packages = c("fiber", "here"),
 future.seed     = TRUE)

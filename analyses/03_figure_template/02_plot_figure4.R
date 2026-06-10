@@ -24,7 +24,8 @@ baseline_rows <- build_run_df_obv(results, "baseline")
 grid_rows <- do.call(rbind, lapply(names(OBV_EFFICACY_VALUES), function(eff_name) {
   eff <- OBV_EFFICACY_VALUES[[eff_name]]
   do.call(rbind, lapply(COVERAGE_GRID, function(cov) {
-    cov_spec  <- list(times = c(0, 1), values = c(cov, cov))
+    # cov_spec  <- list(times = c(0, 1), values = c(cov, cov))
+    cov_spec <- list(fn = function(t) rep(cov, length(t)))
     cov_label <- sprintf("cov%02d", round(cov * 100))
 
     do.call(rbind, lapply(results, function(x) {
