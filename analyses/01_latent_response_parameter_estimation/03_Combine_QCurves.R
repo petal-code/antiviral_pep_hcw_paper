@@ -9,10 +9,10 @@
 #
 # THE COMMON GRID
 #   Every scenario is reported on integer days 0..730 (731 rows) with
-#   tau = relative_day / 730. Each fit produced a curve on its own normalised
-#   tau in [0,1]; here that curve is simply STRETCHED onto 0..730 days (tau is
-#   reused as day/730), so a scenario's whole response plays out over the full
-#   horizon.
+#   tau = relative_day / 730. Each fitted curve is placed on its REAL outbreak-day
+#   axis and held flat (last value repeated) beyond its own support out to day 730
+#   -- it is NOT stretched to fill the horizon. (West Africa data reach ~day 357,
+#   the DRC conflict curve ~day 457; both plateau from there to 730.)
 #
 # FIVE scenarios are produced (the DRC no-conflict scenario is intentionally held
 # out pending the Model A vs Model B decision; see DRC_no_conflict_checking.R):
@@ -23,15 +23,15 @@
 #   5. worst_west_africa_conflict_plusplus   (constructed here from 4)
 #
 # Two construction steps are folded in here (rather than as post-hoc patches):
-#   * the West-Africa-with-conflict hybrid Q + time stretch (scenario 4), and
+#   * the West-Africa-with-conflict hybrid Q on real days (scenario 4), and
 #   * the conflict++ collapse (scenario 5): force parameters to poor-response
-#     endpoints over days 200-300, with q_value forced to 0 there.
+#     endpoints over days 200-300 -- the same window where scenario 4's conflict
+#     dip falls -- with q_value forced to 0 there.
 # Note: under the ORIGINAL methodology ipc_helper IS the fitted latent_IPC; no
 # separate q-scaling of IPC is applied (that is a revised-methodology step).
 #
 # Inputs : data-processed/WestAfrica_QCurve/WestAfrica_QCurve_Fit.rds,
-#          DRC_QCurve/DRC_QCurve_Conflict_Fit.rds, DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds,
-#          DRC_QCurve/DRC_QCurve_PreppedData.rds (uses $durations)
+#          DRC_QCurve/DRC_QCurve_Conflict_Fit.rds, DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds
 # Output : data-processed/combined_original_methodology_outputs.csv
 # ============================================================================
 
@@ -53,23 +53,26 @@ tau_out <- days / HORIZON_DAYS
 # Generic assembly helpers
 # ----------------------------------------------------------------------------
 
-# Interpolate a fitted curve (columns: parameter, tau, mean) onto the day grid.
-# Each parameter is interpolated separately from its own tau onto tau_out.
+# Interpolate a fitted curve (columns: parameter, relative_day, mean) onto the
+# 0..730 grid ON ITS REAL DAY AXIS, holding the last value flat beyond the
+# curve's own support out to day 730 (make_interp uses rule = 2). NO stretching:
+# a fit that only reaches day 357 plateaus from 357 to 730.
 # Returns long format: parameter, relative_day, value.
 curve_to_daygrid_long <- function(curve_summ) {
   curve_summ %>%
     group_by(parameter) %>%
     group_modify(function(g, ...) {
-      f <- make_interp(g$tau, g$mean)                           # interpolant for this parameter
-      tibble(relative_day = days, value = as.numeric(f(tau_out)))
+      f <- make_interp(g$relative_day, g$mean)                  # interpolant on real outbreak days
+      tibble(relative_day = days, value = as.numeric(f(days)))  # eval 0..730; hold flat past support
     }) %>%
     ungroup()
 }
 
-# Interpolate a q_value curve (columns: tau, q_value) onto the day grid.
+# Interpolate a q_value curve (columns: relative_day, q_value) onto the 0..730
+# grid on its real day axis, holding flat past its support.
 qvalue_to_daygrid <- function(q_curve) {
-  f <- make_interp(q_curve$tau, q_curve$q_value)
-  clip01(f(tau_out))
+  f <- make_interp(q_curve$relative_day, q_curve$q_value)
+  clip01(f(days))
 }
 
 # Turn per-parameter day-grid values (long: parameter, relative_day, value) plus
@@ -112,7 +115,6 @@ qvalue_from_param_Q <- function(param_Q_wide) {
 wa_fit                    <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_Fit.rds"))
 drc_conflict_fit          <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_Conflict_Fit.rds"))
 drc_conflict_plusplus_fit <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds"))
-drc_durations             <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_PreppedData.rds"))$durations
 
 # ----------------------------------------------------------------------------
 # Scenario 1: worst_west_africa
@@ -120,10 +122,10 @@ drc_durations             <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QC
 # Straight read-out of the Model A fit. q_value is the diagnostic mean of the six
 # estimated per-parameter Q_j curves (each runs 0 -> 1), rescaled to [0,1].
 wa_q_value_curve <- wa_fit$q_summ %>%
-  select(parameter, tau, mean) %>%
+  select(parameter, relative_day, mean) %>%
   pivot_wider(names_from = parameter, values_from = mean) %>%
   mutate(q_value = qvalue_from_param_Q(.)) %>%
-  select(tau, q_value)
+  select(relative_day, q_value)
 
 scen_wa <- assemble_scenario(
   "worst_west_africa", "Worst_WestAfrica",
@@ -151,51 +153,36 @@ scen_drc_conflict_pp <- assemble_scenario(
 # ----------------------------------------------------------------------------
 # Scenario 4: worst_west_africa_conflict  (constructed)
 # ----------------------------------------------------------------------------
-# Idea: keep the West Africa response MAGNITUDES, but reshape the TIMING with the
-# DRC conflict disruption and stretch the timeline. Concretely, for each
-# parameter j we build a hybrid response-quality curve
+# Idea: keep the West Africa response MAGNITUDES, but disrupt its TIMING with the
+# DRC conflict. For each parameter j we build a hybrid response-quality curve on
+# REAL outbreak days (no stretching):
 #
-#     Q_hybrid_j(t) = Q_WA_j(WA clock)  x  Q_DRC_conflict(extended clock)
+#     Q_hybrid_j(day) = Q_WA_j(day)  x  Q_DRC_conflict(day)
 #
-# where the West Africa response matures on its ORIGINAL clock (then plateaus)
-# while the DRC conflict modulator runs across the full, stretched window. The
-# hybrid Q is then mapped back onto the West Africa fitted start/end magnitudes.
+# Both factors are evaluated on the real day axis and held flat beyond their own
+# support out to day 730 (West Africa reaches ~357, the DRC conflict curve ~457).
+# So the DRC conflict dip lands at its REAL time (~days 200-300) -- which means
+# the conflict in this scenario coincides with the conflict++ collapse window
+# applied below. The hybrid Q is then mapped onto the WA fitted start/end magnitudes.
 
-# Time-stretch multiplier = duration(DRC conflict) / duration(DRC no-conflict):
-# how much longer the conflict response drags on than the no-conflict one.
-dur <- setNames(drc_durations$max_day, drc_durations$scenario)
-duration_multiplier <- dur[["drc_conflict"]] / dur[["drc_no_conflict"]]
-if (!is.finite(duration_multiplier) || duration_multiplier < 1) {
-  warning("Invalid duration multiplier; falling back to 1.50.")
-  duration_multiplier <- 1.50
-}
-message("West Africa conflict time-stretch multiplier = ", round(duration_multiplier, 3))
-
-# Two clocks on the reporting grid:
-#   tau_wa_progress : the West Africa response clock. It reaches 1 (full maturity)
-#                     partway through the window (at 1/multiplier) and then holds.
-#   tau_drc         : the conflict modulator clock, running across the whole window.
-tau_wa_progress <- pmin(tau_out * duration_multiplier, 1)
-tau_drc         <- tau_out
-
-# Interpolant for the DRC conflict shared Q over the (whole-window) clock.
-drcQ_f <- make_interp(drc_conflict_fit$q_grid$tau, drc_conflict_fit$q_grid$q_value)
+# DRC conflict shared Q on the real day axis (held flat past its ~457-day support).
+drcQ_f <- make_interp(drc_conflict_fit$q_grid$relative_day, drc_conflict_fit$q_grid$q_value)
 
 # West Africa fitted start/end magnitudes per parameter (the endpoints the hybrid
-# Q interpolates between): theta_start at the earliest tau, theta_end at the latest.
+# Q interpolates between): theta_start at the earliest day, theta_end at the latest.
 theta_bounds <- wa_fit$curve_summ %>%
   group_by(parameter) %>%
-  summarise(theta_start = mean[which.min(tau)],
-            theta_end   = mean[which.max(tau)], .groups = "drop")
+  summarise(theta_start = mean[which.min(relative_day)],
+            theta_end   = mean[which.max(relative_day)], .groups = "drop")
 
 # Build the per-parameter hybrid Q and the resulting native-unit trajectory.
 hybrid <- lapply(PARAM_LEVELS, function(p) {
   wq    <- filter(wa_fit$q_summ, parameter == p)
-  waQ_f <- make_interp(wq$tau, wq$mean)               # WA Q_j on its own clock
+  waQ_f <- make_interp(wq$relative_day, wq$mean)     # WA Q_j on the real day axis
 
-  # Pointwise product of the WA response curve (on the WA clock) and the DRC
-  # conflict modulator (on the whole-window clock).
-  q_raw   <- clip01(waQ_f(tau_wa_progress)) * clip01(drcQ_f(tau_drc))
+  # Pointwise product of the WA response and the DRC conflict modulator, both on
+  # real days (each held flat past its own support).
+  q_raw   <- clip01(waQ_f(days)) * clip01(drcQ_f(days))
   q_scale <- max(q_raw, na.rm = TRUE)
   if (!is.finite(q_scale) || q_scale <= 0) stop("Hybrid Q non-positive for ", p)
   q_hybrid <- clip01(q_raw / q_scale)        # per-parameter max-scaling (NO min-subtraction,
