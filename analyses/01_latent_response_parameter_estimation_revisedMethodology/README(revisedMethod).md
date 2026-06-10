@@ -30,10 +30,12 @@ The six response parameters (fixed canonical order; see `helpers(revisedMethod).
      conflict-interrupted shape, the same reason Model B never smoothed `Q`).
 2. **q-scaled IPC for DRC.** Under the revised methodology `ipc_helper` for the
    DRC conflict scenarios is the q-scaled endpoint mapping
-   `ipc_helper(t) = ipc_low + (ipc_high − ipc_low)·q_value(t)` (≈ `0.071 → 0.746`).
-   This is **not** a separate patch here — it falls out of treating `latent_IPC`
-   as an ordinary increasing parameter in `02`. (Under the original methodology
-   `ipc_helper` is the Model B fitted `latent_IPC` instead.)
+   `ipc_helper(t) = ipc_low + (ipc_high − ipc_low)·q_value(t)` with
+   `0.071 → 0.746` — exactly `latent_IPC`'s DRC summary range in the
+   parameter-table workbook. `02` sets `latent_IPC`'s DRC endpoints to that full
+   range, so mapping the shared `Q` reproduces the rule (and the `++` collapse
+   drives it to `ipc_low`). (Under the original methodology `ipc_helper` is the
+   Model B fitted `latent_IPC` instead.)
 
 ## Pipeline (run in order)
 
@@ -58,8 +60,13 @@ the success→0 collapse over days 200–300 already baked into the `Q` series b
 Inputs and outputs live at the **repository top level** (shared across analyses),
 not inside this folder:
 
-- `obv_hcw_paper/data-raw/` — the two source workbooks (curve anchors; DRC SDB
-  line-list). These are the **same** inputs the original methodology reads.
+- `obv_hcw_paper/data-raw/` — the source workbooks. The revised methodology reads
+  its anchors and literature ranges from the **parameter-table workbook**
+  (`filovirus_model_parameter_table_4_scenarios_with_etu_baseline.xlsx`, sheets
+  "Worst West Africa" / "DRC conflict-smoothed") — the same workbook the
+  github_upload revised scripts use — plus the shared DRC SDB line-list. (The
+  original methodology reads a *different* anchor workbook, so the two
+  methodologies' locked endpoints differ.)
 - `obv_hcw_paper/data-processed/` — cleaned inputs, fitted `.rds`, and the final
   CSV. The revised pipeline writes into its **own** subfolders
   (`WestAfrica_QCurve_revisedMethod/`, `DRC_QCurve_revisedMethod/`) and
@@ -78,7 +85,9 @@ Inside this analysis folder:
 
 - Requires `cmdstanr` + a working CmdStan toolchain (for `01` only — `02` is pure
   R), and `readxl`, `dplyr`, `tidyr`, `readr`, `tibble`, `ggplot2`.
-- `00` here is intentionally a near-twin of the original-methodology `00`: the
-  raw evidence is identical, so only the output paths differ.
+- `00`'s SDB reconstruction (PART 2) is identical to the original-methodology
+  `00`; its anchor reader (PART 1) differs because the revised methodology reads
+  the parameter-table workbook's layout (summary ranges + description-encoded
+  anchors) rather than the original's flat anchor sheet.
 - The DRC no-conflict scenario is prepared by `00` but, as in the original
   methodology, is **not** built into the combined output.

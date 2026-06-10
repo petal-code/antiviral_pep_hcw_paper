@@ -7,51 +7,49 @@
 #   reconstructs and saves. The two fitting scripts (01, 02) and the combine
 #   script (03) all read ONLY from data-processed/.
 #
-# IS THIS DIFFERENT FROM THE ORIGINAL-METHODOLOGY 00?  NO - DELIBERATELY.
-#   The raw evidence (literature anchors + the Warsame SDB line-list) is the same
-#   for both methodologies; the methodologies only diverge LATER, at the fitting
-#   step (01/02) and the combine step (03). So this script is a faithful twin of
-#   the original-methodology 00_DataPreparation_and_Cleaning.R. The ONLY
-#   differences are cosmetic plumbing:
-#     * it sources helpers(revisedMethod).R, and
-#     * it writes its bundled objects into REVISED-method-specific subfolders
-#       (WestAfrica_QCurve_revisedMethod/, DRC_QCurve_revisedMethod/) so the two
-#       methodologies' processed data sit side by side without clobbering.
-#   Keeping a self-contained 00 here means the revised folder runs standalone.
+# HOW THIS DIFFERS FROM THE ORIGINAL-METHODOLOGY 00
+#   The SDB reconstruction (PART 2) is IDENTICAL - the Warsame line-list is the
+#   same for both methodologies. What differs is PART 1, the literature anchors:
+#   the REVISED methodology reads its anchors and per-parameter literature ranges
+#   from the parameter-table workbook
+#       filovirus_model_parameter_table_4_scenarios_with_etu_baseline.xlsx
+#   (sheets "Worst West Africa" and "DRC conflict-smoothed"), exactly as the
+#   github_upload revised-methodology scripts do. That workbook is the authoritative
+#   source for the revised endpoints (e.g. the DRC IPC/PPE q-scaling range 0.071-
+#   0.746 is its DRC "ipc_helper" summary range). The original methodology instead
+#   reads filovirus_three_scenario_curve_inputs_bestcase_recreate.xlsx; the two
+#   workbooks carry different anchor sets, so the locked endpoints differ.
 #
-# WHAT IT PRODUCES
-#   Two bundled R objects (named lists), so data-processed/ stays tidy instead of
-#   filling up with many loose CSVs. Every downstream script reads one of these:
+#   The parameter-table workbook has a very different LAYOUT from the flat anchor
+#   sheets, so PART 1 below has its own parser (read_parameter_table_sheet):
+#     * a "Time-varying response" section gives each parameter's summary
+#       literature low-high range (-> lower_bound / upper_bound, the endpoint
+#       fallbacks and, for DRC IPC, the q-scaling range); and
+#     * a "Time-varying curve anchors" section lists one row per orange-point
+#       anchor, with the day:value encoded in the "Value / range" cell and the
+#       fit role / parameter encoded in the description.
+#   Parameters are identified by the clean Symbol column (d_hosp(t), p_hosp(t), ...).
 #
+# WHAT IT PRODUCES  (same bundles + paths as before, revised-method subfolders)
 #   WestAfrica_QCurve_revisedMethod/WestAfrica_QCurve_PreppedData(revisedMethod).rds
-#                 list(anchors = <cleaned West Africa literature anchors>)
-#
+#                 list(anchors = <cleaned WA anchors>)
 #   DRC_QCurve_revisedMethod/DRC_QCurve_PreppedData(revisedMethod).rds  list(
-#                   anchors                   = <cleaned DRC literature anchors>,
-#                   conflict_qseries          = <empirical "conflict" Q(t) curve>,
-#                   conflict_plusplus_qseries = <conflict Q with a forced collapse
-#                                                (success -> 0) over days 200-300>,
-#                   no_conflict_qseries       = <counterfactual no-conflict Q(t):
-#                                                monthly, plateaued, tail removed>,
-#                   durations                 = <scenario horizons (max day)>,
-#                   province_weekly_qc        = <per-province weekly reconstruction;
-#                                                diagnostic only, not used in fits>
-#                 )
+#                 anchors, conflict_qseries, conflict_plusplus_qseries,
+#                 no_conflict_qseries, durations, province_weekly_qc)
 #
-# KEY IDEA - the "response-quality curve" Q(t)
-#   For the DRC scenarios, Q(t) is NOT estimated. It is the empirical fraction of
-#   safe-and-dignified burials (SDB) that were successful over time (the Warsame
-#   et al. line-list), reconstructed here and then (in the revised methodology)
-#   mapped directly onto each parameter's LOCKED endpoints. Q is a relative 0-1
-#   index: Q = success(t) / max(success). The community-unsafe-funeral parameter,
-#   by contrast, is kept on the ABSOLUTE Warsame scale (1 - success(t)), because
-#   its floor is 1 - max(success), not 0.
+# KEY IDEA - the "response-quality curve" Q(t)  (unchanged from the original 00)
+#   For the DRC scenarios Q(t) is NOT estimated; it is the empirical fraction of
+#   safe-and-dignified burials that were successful over time (the Warsame
+#   line-list), reconstructed here and (in the revised methodology) mapped onto
+#   each parameter's LOCKED endpoints. Community unsafe funerals stay on the
+#   ABSOLUTE Warsame scale (1 - success), floor 1 - max(success).
 # ============================================================================
 
 suppressPackageStartupMessages({
   library(readxl)
   library(dplyr)
   library(tidyr)
+  library(stringr)
   library(readr)
   library(tibble)
 })
@@ -60,66 +58,32 @@ source(here::here("analyses", "01_latent_response_parameter_estimation_revisedMe
                   "helpers(revisedMethod).R"))
 
 dir.create(DIR_PROCESSED, showWarnings = FALSE, recursive = TRUE)
-# Per-analysis subfolders that 00/01/02 write their bundled objects into (so a
-# fresh data-processed/ does not error on saveRDS). These are REVISED-method
-# specific so they sit alongside the original-methodology subfolders.
 dir.create(file.path(DIR_PROCESSED, "WestAfrica_QCurve_revisedMethod"), showWarnings = FALSE, recursive = TRUE)
 dir.create(file.path(DIR_PROCESSED, "DRC_QCurve_revisedMethod"),        showWarnings = FALSE, recursive = TRUE)
 
 # ----------------------------------------------------------------------------
-# Settings that define the SDB reconstruction
-# These are the choices actually used to produce the published curves. They are
-# written out explicitly (rather than buried as optional toggles) so the reader
-# can see exactly how the empirical curve is built.
+# Settings that define the SDB reconstruction  (identical to the original 00)
 # ----------------------------------------------------------------------------
-
-# Provinces whose province-specific SDB success curves are averaged to form the
-# shared DRC response curve.
 PROVINCES_TO_AVERAGE <- c("North Kivu", "Ituri")
-
-# "Successful response" follows Warsame Fig. 3: a burial counts as a successful
-# response if it was a literal success OR an SDB turned out not to be needed.
-# The performance denominator adds failures. False alerts / unclear are excluded.
 SUCCESS_OUTCOMES <- c("success", "sdb not needed")
 FAILURE_OUTCOMES <- c("failure")
-
-# Early, tiny-sample success spikes are artefacts. A weekly bin in the first
-# INITIAL_SPIKE_MAX_DAY days, with fewer than INITIAL_SPIKE_MIN_ELIGIBLE eligible
-# burials and an implausibly high success proportion, is set to zero success.
 INITIAL_SPIKE_MAX_DAY        <- 75
 INITIAL_SPIKE_MIN_ELIGIBLE   <- 10
 INITIAL_SPIKE_SUCCESS_THRESH <- 0.50
-
-# A bin must have at least this many eligible burials to contribute to Q.
 MIN_ELIGIBLE_FOR_Q <- 1
-
-# Rolling-average window (weeks) used to smooth the weekly conflict reconstruction.
 ROLLING_WINDOW_WEEKS <- 4
-
-# The DRC "++" scenario forces a complete response collapse (SDB success -> 0,
-# and therefore community unsafe funerals -> 1) over this day window. Because the
-# collapse is applied to the shared Q itself, every response parameter collapses
-# with it.
 PLUSPLUS_WINDOW_DAY        <- c(200, 300)
 PLUSPLUS_SUCCESS_VALUE     <- 0
 PLUSPLUS_UNSAFE_FUNERAL    <- 1
-
-# The no-conflict counterfactual is truncated at the first data-rich maximum of
-# the bridged success line. A bin counts as "data-rich" if it has at least this
-# many eligible burials.
 NO_CONFLICT_END_MIN_ELIGIBLE <- 25
-
-# Anchors superseded by the line-list reconstruction (a community-unsafe-funeral
-# summary that would otherwise double-count the SDB evidence, and a start anchor
-# inconsistent with "begin at 1"). Held out of all DRC fits.
-DRC_SUPERSEDED_ANCHORS <- c("DRC_UFC_00", "DRC_UFC_01")
 
 # ----------------------------------------------------------------------------
 # Locate the raw workbooks
 # ----------------------------------------------------------------------------
-curve_workbook <- resolve_input_file(
-  "filovirus_three_scenario_curve_inputs_bestcase_recreate.xlsx",
-  "curve-anchor workbook"
+# REVISED methodology: anchors come from the parameter-table workbook.
+parameter_workbook <- resolve_input_file(
+  "filovirus_model_parameter_table_4_scenarios_with_etu_baseline.xlsx",
+  "parameter-table workbook"
 )
 sdb_workbook <- resolve_input_file(
   c("evd_drc_sdb_performance_datasets_pub.xlsx",
@@ -129,69 +93,119 @@ sdb_workbook <- resolve_input_file(
 )
 
 # ============================================================================
-# PART 1 - Clean the literature anchor tables
+# PART 1 - Read the literature anchors from the parameter-table workbook
 # ============================================================================
-# Both the West Africa and DRC sheets share the same layout (two header rows to
-# skip, then one row per anchor). We keep only the rows flagged for fitting and
-# coerce the columns to sensible types.
 
-REQUIRED_ANCHOR_COLS <- c(
-  "anchor_id", "parameter", "relative_day", "value_used",
-  "fit_role", "include_in_fit", "weight", "direction",
-  "lower_bound", "upper_bound"
+# Each of the six modelled parameters is identified by its Symbol-column tag in
+# the workbook (the cleanest, most stable key). p_UF,ETU(t) (ETU funerals) is
+# intentionally omitted - it is fixed at 0 and not modelled.
+SYMBOL_MAP <- c(
+  "d_hosp(t)"    = "delay_hosp",
+  "p_hosp(t)"    = "p_hosp",
+  "p_ETU(t)"     = "p_ETU",
+  "I_IPC(t)"     = "latent_IPC",
+  "p_UF,comm(t)" = "p_unsafe_funeral_comm",
+  "p_UF,hosp(t)" = "p_unsafe_funeral_hosp"
 )
 
-# read_anchor_sheet() returns a cleaned anchor table: one row per literature data
-# point kept for fitting, with these columns ---------------------------------
-#   anchor_id      unique id of the anchor (e.g. "WA_UFC_01")
-#   parameter      which response parameter it informs (one of PARAM_LEVELS)
-#   relative_day   outbreak day the anchor refers to (days since response start)
-#   value_used     the observed / derived value of that parameter at that day
-#   fit_role       the anchor's role label from the workbook (e.g. "main_fit");
-#                  in the revised methodology lock_endpoints() also reads this to
-#                  exclude reference_only / plot_only rows from endpoint selection
-#   include_in_fit "YES" for rows used in the fit (others are filtered out here)
-#   weight         relative trust in the anchor; higher = fit it more tightly
-#   direction      "up" if the parameter improves upward over the response,
-#                  "down" if it improves downward
-#   lower_bound    workbook low end of the parameter -> the revised methodology
-#                  uses this as the FALLBACK start/end endpoint when a literature
-#                  window is empty (see lock_endpoints() in helpers)
-#   upper_bound    workbook high end of the parameter -> the other fallback endpoint
-read_anchor_sheet <- function(path, sheet) {
-  raw <- read_excel(path, sheet = sheet, skip = 2)
+# Direction each parameter improves over the response (revised-methodology
+# convention: "up" = increasing toward a better response, "down" = decreasing).
+DIRECTION_MAP <- c(
+  delay_hosp            = "down",
+  p_hosp                = "up",
+  p_ETU                 = "up",
+  latent_IPC            = "up",
+  p_unsafe_funeral_comm = "down",
+  p_unsafe_funeral_hosp = "down"
+)
 
-  missing <- setdiff(REQUIRED_ANCHOR_COLS, names(raw))
-  if (length(missing) > 0) {
-    stop("Sheet '", sheet, "' is missing columns: ", paste(missing, collapse = ", "))
+# Parse a numeric (low, high) pair out of a "low-high [unit]" summary range cell,
+# e.g. "0.324-0.905" or "1.843-6.316 days" or "0-0". The range separator is an
+# en-dash; split on it first, then read the first number from each side (so a
+# leading minus in subtraction-looking text is never mistaken for a negative).
+extract_range <- function(x) {
+  x <- as.character(x)
+  x <- str_replace_all(x, "[−—]", "–")     # minus / em-dash -> en-dash
+  first_num <- function(s) {
+    n <- str_extract_all(s, "[0-9]*\\.?[0-9]+")[[1]]
+    if (length(n) == 0) NA_real_ else as.numeric(n[1])
   }
-
-  raw %>%
-    transmute(
-      anchor_id      = as.character(anchor_id),
-      parameter      = as.character(parameter),
-      relative_day   = as.numeric(relative_day),
-      value_used     = as.numeric(value_used),
-      fit_role       = trimws(as.character(fit_role)),
-      include_in_fit = toupper(trimws(as.character(include_in_fit))),
-      weight         = as.numeric(weight),
-      direction      = tolower(trimws(as.character(direction))),
-      lower_bound    = as.numeric(lower_bound),
-      upper_bound    = as.numeric(upper_bound)
-    ) %>%
-    # Keep only the parameters we model, the rows marked for fitting, and rows
-    # with a usable value and time.
-    filter(parameter %in% PARAM_LEVELS,
-           include_in_fit == "YES",
-           !is.na(value_used),
-           !is.na(relative_day))
+  if (str_detect(x, "–")) {
+    parts <- str_split_fixed(x, "–", 2)
+    return(c(first_num(parts[1]), first_num(parts[2])))
+  }
+  if (str_detect(x, "[0-9]\\s*-\\s*[0-9]")) {
+    parts <- str_split_fixed(x, "\\s*-\\s*", 2)
+    return(c(first_num(parts[1]), first_num(parts[2])))
+  }
+  v <- first_num(x)
+  c(v, v)
 }
 
-wa_anchors  <- read_anchor_sheet(curve_workbook, "Worst_WestAfrica")
+# Parse "relative day NNN: VVV [unit]" -> (relative_day, value_used).
+parse_anchor_value <- function(x) {
+  x   <- as.character(x)
+  day <- as.numeric(str_match(x, "relative\\s+day\\s+([0-9.]+)\\s*:")[, 2])
+  val <- as.numeric(str_match(x, ":\\s*([0-9.]+)")[, 2])
+  list(relative_day = day, value_used = val)
+}
 
-drc_anchors <- read_anchor_sheet(curve_workbook, "Middle_DRC_2018_2019") %>%
-  # Drop the SDB-summary anchors that the line-list reconstruction supersedes.
-  filter(!(anchor_id %in% DRC_SUPERSEDED_ANCHORS))
+# Parse a "key: value;" field out of an anchor's description (e.g. fit role).
+parse_field <- function(x, key) {
+  trimws(str_match(as.character(x), paste0(key, ":\\s*([^;]+)"))[, 2])
+}
+
+# read_parameter_table_sheet() returns a cleaned anchor table with EXACTLY the
+# columns the rest of the revised pipeline expects (the same schema the original
+# methodology's read_anchor_sheet produced), so 01/02/lock_endpoints are unchanged:
+#   anchor_id, parameter (internal name), relative_day, value_used, fit_role,
+#   weight, direction, lower_bound, upper_bound
+# The parameter-table format carries no per-anchor weight, so weight is uniform 1
+# (this reproduces the revised reference, which scales observation noise by the
+# endpoint span only, not by anchor weights).
+read_parameter_table_sheet <- function(path, sheet) {
+  raw <- read_excel(path, sheet = sheet, col_names = FALSE)
+  nm  <- c("Section", "Parameter", "Symbol", "Description", "Value_range", "Reference", "URL")
+  names(raw)[seq_along(nm)] <- nm
+  raw <- raw %>% mutate(across(everything(), as.character))
+
+  # Per-parameter summary literature range (the "Time-varying response" rows).
+  summary_ranges <- raw %>%
+    filter(Section == "Time-varying response", Symbol %in% names(SYMBOL_MAP)) %>%
+    mutate(
+      parameter   = unname(SYMBOL_MAP[Symbol]),
+      rng         = lapply(Value_range, extract_range),
+      lower_bound = vapply(rng, function(z) min(z, na.rm = TRUE), numeric(1)),
+      upper_bound = vapply(rng, function(z) max(z, na.rm = TRUE), numeric(1))
+    ) %>%
+    select(parameter, lower_bound, upper_bound) %>%
+    distinct(parameter, .keep_all = TRUE)
+
+  # One row per orange-point anchor (the "Time-varying curve anchors" rows).
+  anchors <- raw %>%
+    filter(Section == "Time-varying curve anchors",
+           Symbol %in% names(SYMBOL_MAP),
+           !is.na(Parameter), Parameter != "Orange-point fitted anchors") %>%
+    mutate(
+      anchor_id    = Parameter,
+      parameter    = unname(SYMBOL_MAP[Symbol]),
+      fit_role     = parse_field(Description, "fit role"),
+      av           = lapply(Value_range, parse_anchor_value),
+      relative_day = vapply(av, function(z) z$relative_day, numeric(1)),
+      value_used   = vapply(av, function(z) z$value_used,   numeric(1))
+    ) %>%
+    filter(is.finite(relative_day), is.finite(value_used)) %>%
+    left_join(summary_ranges, by = "parameter") %>%
+    mutate(direction = unname(DIRECTION_MAP[parameter]), weight = 1) %>%
+    select(anchor_id, parameter, relative_day, value_used, fit_role,
+           weight, direction, lower_bound, upper_bound)
+
+  if (nrow(anchors) == 0) stop("No usable anchors parsed from sheet '", sheet, "'.")
+  anchors
+}
+
+wa_anchors  <- read_parameter_table_sheet(parameter_workbook, "Worst West Africa")
+drc_anchors <- read_parameter_table_sheet(parameter_workbook, "DRC conflict-smoothed")
 
 message("West Africa anchors per parameter:")
 print(table(wa_anchors$parameter))
@@ -200,6 +214,7 @@ print(table(drc_anchors$parameter))
 
 # ============================================================================
 # PART 2 - Reconstruct the empirical SDB success time series
+# (IDENTICAL to the original-methodology 00: same Warsame line-list, same rules)
 # ============================================================================
 
 # ---- 2a. Read and filter the SDB line-list ---------------------------------
@@ -212,30 +227,19 @@ sdb_linelist <- read_excel(sdb_workbook, sheet = "sdb_dataset") %>%
     hz            = as.character(hz),
     outcome_lshtm = tolower(trimws(as.character(outcome_lshtm))),
     origin_cat    = tolower(trimws(as.character(origin_cat))),
-    # readxl usually returns date-formatted cells as Date already; guard against
-    # the case where the column arrives as a raw Excel serial number.
     date          = if (is.numeric(date)) as.Date(date, origin = "1899-12-30") else as.Date(date)
   ) %>%
   left_join(admin_units, by = "hz") %>%
   filter(province %in% PROVINCES_TO_AVERAGE) %>%
-  # Some line-list rows carry epi_year/epi_week but no actual date. If kept, they
-  # form NA-date bins that can spuriously become the empirical maximum used to
-  # scale Q. Drop them so the scaling maximum matches the dated, plotted curve.
   filter(!is.na(date))
 
 if (nrow(sdb_linelist) == 0) stop("No SDB rows after filtering to the requested provinces.")
 
-# The outbreak clock for the SDB series starts at the first dated burial.
 sdb_start_date <- min(sdb_linelist$date, na.rm = TRUE)
 
 # ---- 2b. Bin into time periods and compute per-province success ------------
-# aggregation_unit: "epi_week" (Monday-start weeks; recreates the step-like
-# Warsame curve) for the conflict scenarios, or "monthly" for the smoother
-# no-conflict counterfactual.
 bin_provinces <- function(linelist, aggregation_unit) {
-  # Assign each burial to a time bin and timestamp it with the bin's mid-date.
   if (aggregation_unit == "epi_week") {
-    # Monday-start week; use the mid-week (Thursday) as the bin date.
     monday <- linelist$date - (as.integer(format(linelist$date, "%u")) - 1L)
     linelist$bin_mid_date <- monday + 3L
   } else if (aggregation_unit == "monthly") {
@@ -244,7 +248,7 @@ bin_provinces <- function(linelist, aggregation_unit) {
     stop("aggregation_unit must be 'epi_week' or 'monthly'.")
   }
 
-  binned <- linelist %>%
+  linelist %>%
     group_by(province, bin_mid_date) %>%
     summarise(
       n_successful_response = sum(outcome_lshtm %in% SUCCESS_OUTCOMES, na.rm = TRUE),
@@ -256,7 +260,6 @@ bin_provinces <- function(linelist, aggregation_unit) {
       n_eligible   = n_successful_response + n_failure,
       prop_success = if_else(n_eligible > 0, n_successful_response / n_eligible, NA_real_)
     ) %>%
-    # Suppress early tiny-sample success spikes (set them to zero success).
     mutate(
       is_initial_spike = relative_day <= INITIAL_SPIKE_MAX_DAY &
                          n_eligible   <  INITIAL_SPIKE_MIN_ELIGIBLE &
@@ -265,13 +268,8 @@ bin_provinces <- function(linelist, aggregation_unit) {
     ) %>%
     filter(!is.na(prop_success)) %>%
     arrange(province, relative_day)
-
-  binned
 }
 
-# Per-province "no-conflict bridge": each province rises to its data-rich maximum
-# success and then plateaus (holds flat). Removing the later decline is what
-# turns the observed curve into a no-conflict counterfactual.
 apply_province_plateau <- function(binned, min_eligible) {
   binned %>%
     group_by(province) %>%
@@ -289,13 +287,12 @@ apply_province_plateau <- function(binned, min_eligible) {
     ungroup()
 }
 
-# Average the province curves (unweighted mean) into the single shared line.
 average_provinces <- function(binned, value_col) {
   binned %>%
     group_by(bin_mid_date) %>%
     summarise(
-      relative_day  = first(relative_day),
-      success_avg   = mean(.data[[value_col]], na.rm = TRUE),
+      relative_day   = first(relative_day),
+      success_avg    = mean(.data[[value_col]], na.rm = TRUE),
       n_eligible_sum = sum(n_eligible, na.rm = TRUE),
       .groups = "drop"
     ) %>%
@@ -304,14 +301,11 @@ average_provinces <- function(binned, value_col) {
 }
 
 # ---- 2c. Turn an averaged success line into a finalised Q series -----------
-# Steps: (optionally smooth), prepend a forced Q(0)=0 start, max-scale to get the
-# relative 0-1 Q, and compute the absolute community-unsafe-funeral proxy.
 finalise_q_series <- function(avg, smooth, drc_anchor_max_day,
                               collapse_window = NULL, end_day = NULL) {
 
   s <- avg %>% arrange(relative_day)
 
-  # Smooth (centred 4-week rolling mean) or pass through unchanged.
   s$success_smoothed <- if (smooth) {
     sm <- clip01(rolling_mean_centered(s$success_avg, k = ROLLING_WINDOW_WEEKS))
     sm[!is.finite(sm)] <- s$success_avg[!is.finite(sm)]
@@ -320,23 +314,17 @@ finalise_q_series <- function(avg, smooth, drc_anchor_max_day,
     s$success_avg
   }
 
-  # "++" collapse: force success to zero across the collapse window. Applied
-  # before normalisation so the shared Q (and therefore every parameter) drops.
   if (!is.null(collapse_window)) {
     in_win <- s$relative_day >= collapse_window[1] & s$relative_day <= collapse_window[2]
     s$success_smoothed[in_win] <- PLUSPLUS_SUCCESS_VALUE
   }
 
-  # No-conflict truncation: cut the conflict-deterioration tail at the supplied
-  # end day, then renormalise the horizon to that endpoint.
   if (!is.null(end_day)) {
     s <- s %>% filter(relative_day <= end_day)
   }
 
-  # The shared horizon spans the workbook anchors and the SDB series.
   max_day <- max(c(drc_anchor_max_day, s$relative_day), na.rm = TRUE)
 
-  # Prepend the forced outbreak-start support point: success = 0 at day 0.
   s <- bind_rows(
     tibble(relative_day = 0, success_smoothed = 0, n_eligible_sum = 0),
     s %>% select(relative_day, success_smoothed, n_eligible_sum)
@@ -347,26 +335,12 @@ finalise_q_series <- function(avg, smooth, drc_anchor_max_day,
   scale_max <- max(s$success_smoothed, na.rm = TRUE)
   if (!is.finite(scale_max) || scale_max <= 0) stop("Q scaling maximum is not positive.")
 
-  # The returned Q series has one row per support point (the forced day-0 start
-  # first, then each retained SDB bin), with these columns -------------------
-  #   relative_day               outbreak day of the support point
-  #   tau_q                      relative_day / max_day  (normalised time, 0-1)
-  #   q_value                    the shared response-quality index Q in [0,1]
-  #                              (= success / max success); in the revised
-  #                              methodology this is mapped onto the locked
-  #                              endpoints and used as the scenario's q_value
-  #   unsafe_funeral_comm_proxy  ABSOLUTE community unsafe-funeral level (1 - success);
-  #                              floor is 1 - max(success), not 0
-  #   success_smoothed           the smoothed SDB success proportion behind Q
-  #   n_eligible_sum             eligible burials behind the bin (0 at the start row)
+  # Columns: relative_day, tau_q, q_value (= success / max success, the shared Q),
+  # unsafe_funeral_comm_proxy (= 1 - success, absolute), success_smoothed, n_eligible_sum.
   s %>%
     mutate(
       tau_q = relative_day / max_day,
-      # Q is RELATIVE: divide by the maximum only (no min subtraction). The best
-      # achieved response is Q = 1; later dips stay partial unless success hits 0.
       q_value = clip01(success_smoothed / scale_max),
-      # The community unsafe-funeral proxy is ABSOLUTE: 1 - success (its floor is
-      # 1 - max(success), not 0).
       unsafe_funeral_comm_proxy = clip01(1 - success_smoothed)
     ) %>%
     select(relative_day, tau_q, q_value, unsafe_funeral_comm_proxy,
@@ -376,21 +350,17 @@ finalise_q_series <- function(avg, smooth, drc_anchor_max_day,
 # ---- 2d. Build the three DRC Q series --------------------------------------
 drc_anchor_max_day <- max(drc_anchors$relative_day, na.rm = TRUE)
 
-# CONFLICT and CONFLICT++ : weekly reconstruction, no plateau.
 weekly_binned <- bin_provinces(sdb_linelist, "epi_week")
 weekly_avg    <- average_provinces(weekly_binned, "prop_success")
 
 drc_conflict_qseries <- finalise_q_series(
   weekly_avg, smooth = TRUE, drc_anchor_max_day = drc_anchor_max_day
 )
-
 drc_conflict_plusplus_qseries <- finalise_q_series(
   weekly_avg, smooth = TRUE, drc_anchor_max_day = drc_anchor_max_day,
   collapse_window = PLUSPLUS_WINDOW_DAY
 )
 
-# NO-CONFLICT : monthly reconstruction, per-province plateau, conflict tail
-# removed at the first data-rich maximum of the averaged plateaued line.
 monthly_binned <- bin_provinces(sdb_linelist, "monthly") %>%
   apply_province_plateau(min_eligible = NO_CONFLICT_END_MIN_ELIGIBLE)
 monthly_avg    <- average_provinces(monthly_binned, "prop_success_plateau")
@@ -406,10 +376,6 @@ drc_no_conflict_qseries <- finalise_q_series(
 )
 
 # ---- 2e. Bundle everything into two tidy .rds objects ----------------------
-# drc_durations: one row per scenario giving the largest day on its curve. (In
-# the original methodology this fed the West-Africa-with-conflict time-stretch.
-# The revised pipeline does not build those hypothetical scenarios, but the table
-# is carried for parity and context.)
 drc_durations <- tibble(
   scenario = c("drc_conflict", "drc_conflict_plusplus", "drc_no_conflict", "wa_anchor_max_day"),
   max_day  = c(
@@ -420,20 +386,17 @@ drc_durations <- tibble(
   )
 )
 
-# Save exactly two bundled lists (see the header for their full contents).
-wa_prep <- list(
-  anchors = wa_anchors                          # cleaned WA anchors   (01)
-)
+wa_prep <- list(anchors = wa_anchors)
 saveRDS(wa_prep, file.path(DIR_PROCESSED,
         "WestAfrica_QCurve_revisedMethod/WestAfrica_QCurve_PreppedData(revisedMethod).rds"))
 
 drc_prep <- list(
-  anchors                   = drc_anchors,                   # cleaned DRC anchors          (02)
-  conflict_qseries          = drc_conflict_qseries,          # shared Q, "conflict"         (02)
-  conflict_plusplus_qseries = drc_conflict_plusplus_qseries, # shared Q, "conflict++"       (02)
-  no_conflict_qseries       = drc_no_conflict_qseries,       # shared Q, no-conflict        (checks)
-  durations                 = drc_durations,                 # scenario horizons            (context)
-  province_weekly_qc        = weekly_binned                  # per-province reconstruction  (diagnostic only)
+  anchors                   = drc_anchors,
+  conflict_qseries          = drc_conflict_qseries,
+  conflict_plusplus_qseries = drc_conflict_plusplus_qseries,
+  no_conflict_qseries       = drc_no_conflict_qseries,
+  durations                 = drc_durations,
+  province_weekly_qc        = weekly_binned
 )
 saveRDS(drc_prep, file.path(DIR_PROCESSED,
         "DRC_QCurve_revisedMethod/DRC_QCurve_PreppedData(revisedMethod).rds"))
@@ -441,4 +404,4 @@ saveRDS(drc_prep, file.path(DIR_PROCESSED,
 message("\nDRC scenario horizons (max day):")
 print(drc_durations)
 message("\n00_DataPreparation_and_Cleaning(revisedMethod).R complete. ",
-        "Wrote WestAfrica_QCurve_revisedMethod/ and DRC_QCurve_revisedMethod/ prepped data.")
+        "Anchors read from the parameter-table workbook; SDB Q reconstructed as in the original 00.")

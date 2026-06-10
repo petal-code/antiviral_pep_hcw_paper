@@ -155,9 +155,9 @@ q_norm <- function(tau, t50, k) {
 # In the revised methodology a parameter's two magnitude endpoints are not
 # estimated; they are LOCKED to literature-supported extrema, and only the curve
 # shape (or, for DRC, nothing at all) is left to the model. lock_endpoints()
-# implements that rule on a cleaned anchor table (the SAME anchors prepared in
-# 00 and used by the original-methodology fits), so both methodologies start
-# from identical evidence.
+# implements that rule on the cleaned anchor table prepared in 00 from the
+# parameter-table workbook (the revised methodology's own authoritative source;
+# see 00's header), so the locked endpoints match the github_upload revised scripts.
 #
 # THE RULE, per parameter:
 #   * INCREASING parameter (direction "up"): start at the EARLIEST-window MINIMUM
@@ -184,8 +184,8 @@ q_norm <- function(tau, t50, k) {
 #   early_window_day         anchors on/before this day form the "early" window.
 #   late_start_day           anchors on/after this day form the "late" window.
 #   late_start_day_by_param  optional named override of late_start_day for chosen
-#                            parameters (e.g. latent_IPC uses a later evidence
-#                            window than the other parameters).
+#                            parameters (NULL = none; the same late window applies
+#                            to every parameter).
 #   zero_endpoint_params     parameters eligible for the terminal-zero override.
 #   zero_tol                 |value| <= zero_tol counts as an observed zero.
 #
@@ -198,7 +198,7 @@ lock_endpoints <- function(anchors,
                            scenario_duration_days,
                            early_window_day        = 50,
                            late_start_day          = 325,
-                           late_start_day_by_param = c(latent_IPC = 275),
+                           late_start_day_by_param = NULL,
                            zero_endpoint_params    = c("p_unsafe_funeral_comm",
                                                        "p_unsafe_funeral_hosp"),
                            zero_tol                = 1e-12) {
