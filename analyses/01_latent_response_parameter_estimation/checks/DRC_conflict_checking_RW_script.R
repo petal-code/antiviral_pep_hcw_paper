@@ -68,7 +68,7 @@ set.seed(123)
 RW_ORDER   <- 2L
 # Exponential prior rate on the RW innovation sd (smoothness knob). RW2 wants a
 # tighter innovation scale than RW1, hence a larger rate (smaller mean).
-SIGMA_RATE <- if (RW_ORDER == 1L) 2 else 5
+SIGMA_RATE <- if (RW_ORDER == 1L) 2 else 15
 
 PLUSPLUS_WINDOW <- c(200, 300)   # day window over which conflict++ forces success -> 0
 
