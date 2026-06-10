@@ -23,15 +23,17 @@
 #   5. worst_west_africa_conflict_plusplus   (constructed here from 4)
 #
 # Two construction steps are folded in here (rather than as post-hoc patches):
-#   * the West-Africa-with-conflict hybrid Q on real days (scenario 4), and
+#   * the West-Africa-with-conflict hybrid Q (scenario 4): West Africa's response
+#     disrupted by the DRC conflict, translated onto West Africa's slower clock so
+#     the conflict hits at the same PROPORTIONAL point (later in absolute days), and
 #   * the conflict++ collapse (scenario 5): force parameters to poor-response
-#     endpoints over days 200-300 -- the same window where scenario 4's conflict
-#     dip falls -- with q_value forced to 0 there.
+#     endpoints over that same translated conflict window, with q_value forced to 0.
 # Note: under the ORIGINAL methodology ipc_helper IS the fitted latent_IPC; no
 # separate q-scaling of IPC is applied (that is a revised-methodology step).
 #
 # Inputs : data-processed/WestAfrica_QCurve/WestAfrica_QCurve_Fit.rds,
-#          DRC_QCurve/DRC_QCurve_Conflict_Fit.rds, DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds
+#          DRC_QCurve/DRC_QCurve_Conflict_Fit.rds, DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds,
+#          DRC_QCurve/DRC_QCurve_PreppedData.rds (uses $durations)
 # Output : data-processed/combined_original_methodology_outputs.csv
 # ============================================================================
 
@@ -115,6 +117,7 @@ qvalue_from_param_Q <- function(param_Q_wide) {
 wa_fit                    <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_Fit.rds"))
 drc_conflict_fit          <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_Conflict_Fit.rds"))
 drc_conflict_plusplus_fit <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_ConflictPlusPlus_Fit.rds"))
+drc_durations             <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_PreppedData.rds"))$durations
 
 # ----------------------------------------------------------------------------
 # Scenario 1: worst_west_africa
@@ -153,19 +156,45 @@ scen_drc_conflict_pp <- assemble_scenario(
 # ----------------------------------------------------------------------------
 # Scenario 4: worst_west_africa_conflict  (constructed)
 # ----------------------------------------------------------------------------
-# Idea: keep the West Africa response MAGNITUDES, but disrupt its TIMING with the
-# DRC conflict. For each parameter j we build a hybrid response-quality curve on
-# REAL outbreak days (no stretching):
+# Idea: keep the West Africa response MAGNITUDES, but inject a DRC-style conflict,
+# translated onto West Africa's OWN (different, slower) timescale. DRC and West
+# Africa run on different calendars, so the conflict -- which hit DRC partway
+# through ITS response -- must land at the SAME PROPORTIONAL point of West
+# Africa's response, NOT at the same absolute day.
 #
-#     Q_hybrid_j(day) = Q_WA_j(day)  x  Q_DRC_conflict(day)
+#     Q_hybrid_j(d) = Q_WA_j(d)  x  Q_DRC_conflict(d / dayscale)
 #
-# Both factors are evaluated on the real day axis and held flat beyond their own
-# support out to day 730 (West Africa reaches ~357, the DRC conflict curve ~457).
-# So the DRC conflict dip lands at its REAL time (~days 200-300) -- which means
-# the conflict in this scenario coincides with the conflict++ collapse window
-# applied below. The hybrid Q is then mapped onto the WA fitted start/end magnitudes.
+# West Africa matures on its own real clock (Q_WA_j held flat past ~day 357). The
+# DRC conflict modulator is read on DRC's real calendar but mapped onto West
+# Africa's clock by
+#     dayscale = T_WA / T_drc_no_conflict
+# i.e. how much longer West Africa's natural response runs than DRC's no-conflict
+# one. Because West Africa runs slower, the conflict lands LATER in absolute days
+# -- after West Africa has largely matured -- so the dip is VISIBLE (not masked by
+# the early rise) and falls at the same proportional time it did in DRC. (This is
+# the original extended-duration construction, expressed on real days.) The hybrid
+# Q is then mapped onto the West Africa fitted start/end magnitudes.
 
-# DRC conflict shared Q on the real day axis (held flat past its ~457-day support).
+# Translate DRC's conflict timing onto West Africa's (slower) clock.
+T_wa             <- wa_fit$max_day                       # WA natural response duration (~357)
+drc_dur          <- setNames(drc_durations$max_day, drc_durations$scenario)
+T_drc_noconflict <- drc_dur[["drc_no_conflict"]]         # DRC no-conflict response duration
+dayscale         <- T_wa / T_drc_noconflict              # WA day = DRC day x dayscale
+if (!is.finite(dayscale) || dayscale <= 0) {
+  warning("Invalid WA/DRC dayscale; falling back to 1.85.")
+  dayscale <- 1.85
+}
+message("WA conflict dayscale (T_wa / T_drc_no_conflict) = ", round(dayscale, 3))
+
+# The DRC conflict window (days 200-300 in DRC) translated onto the WA clock.
+# Scenario 5 collapses over this SAME window, so the conflict++ collapse coincides
+# with the conflict dip built here.
+DRC_CONFLICT_DAYS  <- c(200, 300)
+wa_conflict_window <- round(DRC_CONFLICT_DAYS * dayscale)
+message("WA conflict window on the WA clock (days) = ",
+        wa_conflict_window[1], "-", wa_conflict_window[2])
+
+# DRC conflict shared Q on DRC's real-day axis (held flat past its ~457-day support).
 drcQ_f <- make_interp(drc_conflict_fit$q_grid$relative_day, drc_conflict_fit$q_grid$q_value)
 
 # West Africa fitted start/end magnitudes per parameter (the endpoints the hybrid
@@ -178,15 +207,15 @@ theta_bounds <- wa_fit$curve_summ %>%
 # Build the per-parameter hybrid Q and the resulting native-unit trajectory.
 hybrid <- lapply(PARAM_LEVELS, function(p) {
   wq    <- filter(wa_fit$q_summ, parameter == p)
-  waQ_f <- make_interp(wq$relative_day, wq$mean)     # WA Q_j on the real day axis
+  waQ_f <- make_interp(wq$relative_day, wq$mean)     # WA Q_j on its own real-day clock
 
-  # Pointwise product of the WA response and the DRC conflict modulator, both on
-  # real days (each held flat past its own support).
-  q_raw   <- clip01(waQ_f(days)) * clip01(drcQ_f(days))
+  # WA response on its own clock x the DRC conflict modulator translated onto the
+  # WA clock (DRC day = WA day / dayscale). Both held flat past their support.
+  q_raw   <- clip01(waQ_f(days)) * clip01(drcQ_f(days / dayscale))
   q_scale <- max(q_raw, na.rm = TRUE)
   if (!is.finite(q_scale) || q_scale <= 0) stop("Hybrid Q non-positive for ", p)
   q_hybrid <- clip01(q_raw / q_scale)        # per-parameter max-scaling (NO min-subtraction,
-                                             # so late dips are preserved, not floored to 0)
+                                             # so the conflict dip is preserved, not floored to 0)
   q_hybrid[days == 0] <- 0                    # force the response to start at 0 on day 0
 
   tibble(parameter = p, relative_day = days, q_hybrid = q_hybrid)
@@ -213,12 +242,12 @@ scen_wa_conflict <- assemble_scenario(
 # ----------------------------------------------------------------------------
 # Scenario 5: worst_west_africa_conflict_plusplus  (constructed from scenario 4)
 # ----------------------------------------------------------------------------
-# The "++" scenario adds a hard temporary response collapse over days 200-300:
-# every patched parameter is forced to its WORST value seen on the WA-conflict
-# trajectory (minimum for good-response params, maximum for adverse params), and
-# q_value is forced to 0. prob_unsafe_funeral_etu is left untouched (it is 0).
-# (This is the corrected "deterioration, not improvement" collapse direction.)
-PLUSPLUS_WINDOW <- c(200, 300)
+# The "++" scenario adds a hard temporary response collapse over the SAME window
+# as scenario 4's conflict dip (wa_conflict_window, the WA-translated conflict
+# window computed above): every patched parameter is forced to its WORST value
+# seen on the WA-conflict trajectory (minimum for good-response params, maximum
+# for adverse params), and q_value is forced to 0. prob_unsafe_funeral_etu is left
+# untouched (it is 0). (Corrected "deterioration, not improvement" direction.)
 good_response_params <- c("prob_hosp", "prop_etu", "ipc_helper")             # worst = minimum
 adverse_params       <- c("delay_hosp", "prob_unsafe_funeral_comm", "prob_unsafe_funeral_hosp")  # worst = maximum
 
@@ -236,10 +265,10 @@ scen_wa_conflict_pp <- scen_wa_conflict %>%
     scenario     = "Worst_WestAfrica_Conflict_PlusPlus"
   )
 
-# Inside days 200-300: force each patched parameter to its poor endpoint, and
-# force q_value to 0. Outside the window, the scenario-4 trajectory is kept.
-in_window <- scen_wa_conflict_pp$relative_day >= PLUSPLUS_WINDOW[1] &
-             scen_wa_conflict_pp$relative_day <= PLUSPLUS_WINDOW[2]
+# Inside the WA-translated conflict window: force each patched parameter to its
+# poor endpoint, and force q_value to 0. Outside it, the scenario-4 trajectory is kept.
+in_window <- scen_wa_conflict_pp$relative_day >= wa_conflict_window[1] &
+             scen_wa_conflict_pp$relative_day <= wa_conflict_window[2]
 for (p in names(poor_endpoint)) {
   scen_wa_conflict_pp[[p]][in_window] <- poor_endpoint[[p]]
 }
