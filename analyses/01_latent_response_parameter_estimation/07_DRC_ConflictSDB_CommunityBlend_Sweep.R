@@ -27,10 +27,12 @@ set.seed(123)
 DEPTH_GRID      <- c(0.7, 0.8, 0.9, 1.0)
 TAPER_GRID      <- c(10L, 25L, 40L, 50L, 100L)
 
-CONFLICT_WINDOW <- c(200L, 300L)
-CONFLICT_MID    <- as.integer(mean(CONFLICT_WINDOW))   # 250
-REGISTER_PEAK   <- TRUE
-CD_SMOOTH_K     <- 3L
+CONFLICT_WINDOW  <- c(200L, 300L)
+CONFLICT_MID     <- as.integer(mean(CONFLICT_WINDOW))   # 250
+CD_TO_SDB_OFFSET <- 5L              # SDB day0 (2018-08-06) is 5 days after cd day0 (2018-08-01)
+CONFLICT_SEARCH  <- c(100L, 350L)   # search this SDB-day range for the CONFLICT-ERA cd peak
+REGISTER_TARGET  <- "onset"         # pin the cd peak to: "onset", "middle", or "none"
+CD_SMOOTH_K      <- 3L
 
 # ---- inputs ----------------------------------------------------------------
 drc_prep <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve", "DRC_QCurve_PreppedData.rds"))
@@ -44,17 +46,26 @@ day     <- 0:horizon
 # ---- fixed pieces (independent of DEPTH / TAPER) ---------------------------
 s_raw <- clip01(make_interp(raw$relative_day, raw$success_smoothed)(day))
 
-cd_pts <- cd_obs %>% arrange(relative_day) %>% mutate(p = n_comm / N_deaths)
+# Community series on the SDB clock; CONFLICT-ERA peak found on the RAW proportion
+# inside CONFLICT_SEARCH (so the pre-response Aug-2018 high cannot hijack it), then
+# registered to the target. r(t) = c~(t) / conflict-era peak; same for all DEPTH.
+cd_pts <- cd_obs %>% arrange(relative_day) %>%
+  mutate(relday_sdb = relative_day - CD_TO_SDB_OFFSET, p = n_comm / N_deaths)
 cd_pts$p_s <- if (CD_SMOOTH_K > 1L) {
   sm <- rolling_mean_centered(cd_pts$p, k = CD_SMOOTH_K); sm[!is.finite(sm)] <- cd_pts$p[!is.finite(sm)]; sm
 } else cd_pts$p
 
-t_peak <- cd_pts$relative_day[which.max(cd_pts$p_s)]
-delta  <- if (REGISTER_PEAK) as.integer(CONFLICT_MID - t_peak) else 0L
-c_reg  <- clip01(make_interp(cd_pts$relative_day + delta, cd_pts$p_s)(day))
-r      <- clip01(c_reg / max(c_reg))             # reversion intensity, same for all DEPTH
-message(sprintf("Community-death peak day %d; registration shift %+d; r(t)=c~(t)/max(c~).",
-                t_peak, delta))
+in_search  <- cd_pts$relday_sdb >= CONFLICT_SEARCH[1] & cd_pts$relday_sdb <= CONFLICT_SEARCH[2]
+if (!any(in_search)) stop("No community-death points inside CONFLICT_SEARCH.")
+t_peak     <- cd_pts$relday_sdb[in_search][which.max(cd_pts$p[in_search])]
+c_peak     <- max(cd_pts$p_s[in_search])
+target_day <- switch(REGISTER_TARGET, none = t_peak, onset = CONFLICT_WINDOW[1],
+                     middle = CONFLICT_MID, stop("REGISTER_TARGET must be none/onset/middle"))
+delta      <- as.integer(target_day - t_peak)
+c_reg      <- clip01(make_interp(cd_pts$relday_sdb + delta, cd_pts$p_s)(day))
+r          <- clip01(c_reg / c_peak)             # reversion intensity, same for all DEPTH
+message(sprintf("Conflict-era cd peak at SDB day %d; target '%s' day %d; shift %+d.",
+                t_peak, REGISTER_TARGET, target_day, delta))
 
 conflict_weight <- function(day, win, taper) {
   lo <- win[1]; hi <- win[2]; w <- numeric(length(day))
@@ -83,8 +94,9 @@ blend_df <- bind_rows(lapply(seq_len(nrow(sweep)), function(i) {
 
 saveRDS(list(sweep = blend_df, day = day, s_raw = s_raw, r = r,
              knobs = list(window = CONFLICT_WINDOW, mid = CONFLICT_MID,
-                          register = REGISTER_PEAK, cd_smooth_k = CD_SMOOTH_K,
-                          cd_peak_day = t_peak, delta = delta,
+                          register = REGISTER_TARGET, offset = CD_TO_SDB_OFFSET,
+                          search = CONFLICT_SEARCH, cd_smooth_k = CD_SMOOTH_K,
+                          cd_peak_day = t_peak, c_peak = c_peak, delta = delta,
                           depth_grid = DEPTH_GRID, taper_grid = TAPER_GRID)),
         file.path(DIR_PROCESSED, "DRC_QCurve", "DRC_ConflictSDB_CommunityBlend_Sweep.rds"))
 message("Saved DRC_ConflictSDB_CommunityBlend_Sweep.rds")
@@ -112,7 +124,7 @@ print(
     labs(title = "Conflict-SDB community blend: DEPTH x TAPER_DAYS sweep",
          subtitle = sprintf(paste("blended safe-burial success; grey = raw SDB,",
                                    "dashed = community-implied (w=1) limit; window %d-%d, register=%s (shift %+d)"),
-                            CONFLICT_WINDOW[1], CONFLICT_WINDOW[2], REGISTER_PEAK, delta),
+                            CONFLICT_WINDOW[1], CONFLICT_WINDOW[2], REGISTER_TARGET, delta),
          x = "Relative outbreak day", y = "Safe-burial success") +
     theme_bw(base_size = 11) +
     theme(legend.position = "top", strip.text = element_text(face = "bold"))

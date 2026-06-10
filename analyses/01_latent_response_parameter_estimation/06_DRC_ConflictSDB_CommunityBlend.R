@@ -21,7 +21,7 @@
 #
 # Method (daily timeline):
 #   c(t)   community-death proportion curve (lightly smoothed for shape)
-#   c~(t)  registered so its peak lands at the conflict middle (REGISTER_PEAK)
+#   c~(t)  registered so its conflict-era peak lands on REGISTER_TARGET (onset/middle/none)
 #   r(t)   = c~(t) / max(c~)                       reversion intensity in [0,1]
 #   s_cd   = 1 - DEPTH * r(t)                      community-implied success
 #   w(t)   = 1 on [200,300], cosine taper to 0 over TAPER days outside
@@ -41,12 +41,14 @@ source(here::here("analyses", "01_latent_response_parameter_estimation", "helper
 set.seed(123)
 
 # ---- knobs (EDIT) ----------------------------------------------------------
-CONFLICT_WINDOW <- c(200L, 300L)                 # matches PLUSPLUS_WINDOW_DAY in 00
-CONFLICT_MID    <- as.integer(mean(CONFLICT_WINDOW))  # 250: where the cd peak is pinned
-REGISTER_PEAK   <- TRUE     # shift the community curve so its peak -> CONFLICT_MID
-DEPTH           <- 1.0      # reversion depth at the peak: success -> 1 - DEPTH (1 => 0)
-TAPER_DAYS      <- 75L      # cosine taper half-width outside the window (community -> raw)
-CD_SMOOTH_K     <- 3L       # light rolling mean on the community series (shape, not noise)
+CONFLICT_WINDOW  <- c(200L, 300L)                # matches PLUSPLUS_WINDOW_DAY in 00 (SDB clock)
+CONFLICT_MID     <- as.integer(mean(CONFLICT_WINDOW))  # 250
+CD_TO_SDB_OFFSET <- 5L      # SDB day0 (2018-08-06, first burial) is 5 days after cd day0 (2018-08-01)
+CONFLICT_SEARCH  <- c(100L, 350L)  # search this SDB-day range for the CONFLICT-ERA cd peak
+REGISTER_TARGET  <- "onset" # pin the cd peak to: "onset" (window start), "middle", or "none"
+DEPTH            <- 1.0     # reversion depth at the peak: success -> 1 - DEPTH (1 => 0)
+TAPER_DAYS       <- 75L     # cosine taper half-width outside the window (community -> raw)
+CD_SMOOTH_K      <- 3L      # light rolling mean on the community series (shape, not noise)
 
 # ---- inputs ----------------------------------------------------------------
 drc_prep <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve", "DRC_QCurve_PreppedData.rds"))
@@ -60,22 +62,30 @@ day     <- 0:horizon
 # ---- 1. Raw SDB success on the daily grid ----------------------------------
 s_raw <- clip01(make_interp(raw$relative_day, raw$success_smoothed)(day))
 
-# ---- 2. Community-death shape, registered to the conflict middle -----------
-cd_pts <- cd_obs %>% arrange(relative_day) %>% mutate(p = n_comm / N_deaths)
+# ---- 2. Community-death shape on the SDB clock, registered ------------------
+# Put the community series on the SDB clock (subtract the day0 offset), then pin
+# its CONFLICT-ERA peak to the registration target. The peak is found on the RAW
+# proportion INSIDE CONFLICT_SEARCH, so the pre-response Aug-2018 community-death
+# high (also ~70%, but not a conflict signal) cannot hijack the registration.
+cd_pts <- cd_obs %>% arrange(relative_day) %>%
+  mutate(relday_sdb = relative_day - CD_TO_SDB_OFFSET, p = n_comm / N_deaths)
 cd_pts$p_s <- if (CD_SMOOTH_K > 1L) {
   sm <- rolling_mean_centered(cd_pts$p, k = CD_SMOOTH_K); sm[!is.finite(sm)] <- cd_pts$p[!is.finite(sm)]; sm
 } else cd_pts$p
 
-# peak day on the (unsmoothed-position) smoothed series, then the registration shift
-t_peak <- cd_pts$relative_day[which.max(cd_pts$p_s)]
-delta  <- if (REGISTER_PEAK) as.integer(CONFLICT_MID - t_peak) else 0L
-message(sprintf("Community-death peak at day %d; registration shift delta = %+d (-> peak at day %d)",
-                t_peak, delta, t_peak + delta))
+in_search <- cd_pts$relday_sdb >= CONFLICT_SEARCH[1] & cd_pts$relday_sdb <= CONFLICT_SEARCH[2]
+if (!any(in_search)) stop("No community-death points inside CONFLICT_SEARCH.")
+t_peak     <- cd_pts$relday_sdb[in_search][which.max(cd_pts$p[in_search])]  # raw argmax in-window
+c_peak     <- max(cd_pts$p_s[in_search])         # conflict-era (smoothed) peak -> r = 1 here
+target_day <- switch(REGISTER_TARGET, none = t_peak, onset = CONFLICT_WINDOW[1],
+                     middle = CONFLICT_MID, stop("REGISTER_TARGET must be none/onset/middle"))
+delta      <- as.integer(target_day - t_peak)
+message(sprintf("Conflict-era cd peak at SDB day %d; target '%s' day %d; shift %+d.",
+                t_peak, REGISTER_TARGET, target_day, delta))
 
-# shift the support by delta so the peak lands at CONFLICT_MID, evaluate on the grid
-c_reg <- clip01(make_interp(cd_pts$relative_day + delta, cd_pts$p_s)(day))
-c_max <- max(c_reg)
-r     <- clip01(c_reg / c_max)                   # reversion intensity in [0,1]
+# shift the support by delta so the peak lands on the target, evaluate on the grid
+c_reg <- clip01(make_interp(cd_pts$relday_sdb + delta, cd_pts$p_s)(day))
+r     <- clip01(c_reg / c_peak)                  # reversion intensity in [0,1]
 s_cd  <- clip01(1 - DEPTH * r)                    # community-implied success
 
 # ---- 3. Conflict-window blend weight (1 in core, cosine taper outside) ------
@@ -103,9 +113,11 @@ conflict_cdblend_qseries <- raw %>%
 
 saveRDS(list(qseries = conflict_cdblend_qseries,
              daily = tibble(day, s_raw, s_cd, s_blend, w, r, c_reg),
-             knobs = list(window = CONFLICT_WINDOW, mid = CONFLICT_MID, register = REGISTER_PEAK,
-                          depth = DEPTH, taper = TAPER_DAYS, cd_smooth_k = CD_SMOOTH_K,
-                          cd_peak_day = t_peak, delta = delta)),
+             knobs = list(window = CONFLICT_WINDOW, mid = CONFLICT_MID,
+                          register = REGISTER_TARGET, offset = CD_TO_SDB_OFFSET,
+                          search = CONFLICT_SEARCH, depth = DEPTH, taper = TAPER_DAYS,
+                          cd_smooth_k = CD_SMOOTH_K, cd_peak_day = t_peak, c_peak = c_peak,
+                          delta = delta)),
         file.path(DIR_PROCESSED, "DRC_QCurve", "DRC_ConflictSDB_CommunityBlend.rds"))
 message("Saved DRC_ConflictSDB_CommunityBlend.rds")
 
@@ -113,7 +125,7 @@ message("Saved DRC_ConflictSDB_CommunityBlend.rds")
 # Success curves on one axis: raw SDB, community-implied (1 - DEPTH*r), and the
 # blend; the blend weight w; the conflict window shaded; and the community-death
 # data points (registered onto the grid, mapped to their implied success
-# 1 - DEPTH*p/c_max) sized by denominator.
+# 1 - DEPTH*p/c_peak) sized by denominator.
 curves <- tibble(day, s_raw, s_cd, s_blend, w) %>%
   pivot_longer(c(s_raw, s_cd, s_blend, w), names_to = "series", values_to = "value") %>%
   mutate(series = recode(series,
@@ -123,8 +135,8 @@ curves <- tibble(day, s_raw, s_cd, s_blend, w) %>%
                          w       = "blend weight w"))
 
 cd_implied <- cd_pts %>%
-  transmute(day = relative_day + delta,
-            value = clip01(1 - DEPTH * (p_s / c_max)),
+  transmute(day = relday_sdb + delta,
+            value = clip01(1 - DEPTH * (p_s / c_peak)),
             N_deaths = N_deaths)
 
 print(
@@ -150,9 +162,9 @@ print(
                                       "blended success" = 1.3,
                                       "blend weight w" = 0.6)) +
     labs(title = "Conflict SDB reversion reshaped by the community-death proportion",
-         subtitle = sprintf("window %d-%d, mid %d; register=%s (cd peak day %d, shift %+d); DEPTH=%.2f, taper=%d",
-                            CONFLICT_WINDOW[1], CONFLICT_WINDOW[2], CONFLICT_MID,
-                            REGISTER_PEAK, t_peak, delta, DEPTH, TAPER_DAYS),
+         subtitle = sprintf("window %d-%d; register=%s (cd peak SDB day %d, shift %+d); DEPTH=%.2f, taper=%d",
+                            CONFLICT_WINDOW[1], CONFLICT_WINDOW[2],
+                            REGISTER_TARGET, t_peak, delta, DEPTH, TAPER_DAYS),
          x = "Relative outbreak day", y = "Safe-burial success",
          colour = NULL, linetype = NULL, linewidth = NULL) +
     coord_cartesian(ylim = c(0, 1)) +
