@@ -226,11 +226,11 @@ combined_long <- combined %>%
   filter(quantity != "prob_unsafe_funeral_etu",
          quantity != "prob_unsafe_funeral_hosp")
 
-p_grid <- ggplot(combined_long, aes(relative_day, value)) +
+p_grid <- ggplot(combined_long, aes(relative_day, value, group = scenario_key)) +
   geom_line(linewidth = 0.6, colour = "#1f77b4") +
   # free y per ROW (shared within a row across scenarios, so a parameter is
   # comparable left-to-right; delay_hosp is in days, the rest are in [0,1]).
-  facet_grid(quantity ~ scenario_key, scales = "free_y", switch = "y",
+  facet_grid(quantity ~ ., scales = "free_y", switch = "y",
              labeller = labeller(scenario_key = scenario_labels)) +
   labs(title = "Combined scenario curves: parameter (row) x scenario (column)",
        x = "Relative outbreak day", y = NULL) +
@@ -240,3 +240,13 @@ p_grid <- ggplot(combined_long, aes(relative_day, value)) +
         panel.grid.minor = element_blank())
 
 print(p_grid)   # display only; not saved
+
+library(ggh4x)
+
+p_grid +
+  facetted_pos_scales(
+    y = list(
+      quantity == "delay_hosp" ~ scale_y_continuous(limits = c(0, 6)),
+      quantity != "prob_hosp" ~ scale_y_continuous(limits = c(0, 1))
+    )
+  )
