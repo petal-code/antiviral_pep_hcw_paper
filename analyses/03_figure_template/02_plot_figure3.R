@@ -8,21 +8,27 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 results <- load_results()
 
-# Build panels ----
-# Coverage scenario curves (panels a-c)
+# Coverage curve panels (panels a-c) ----
+# Evaluate spline fn over dense time grid (weeks on x-axis)
 make_coverage_plot <- function(cs) {
-  spec  <- COVERAGE_SPECS[[cs]]
-  df    <- data.frame(time = spec$times, coverage = spec$values * 100)
+  spec   <- COVERAGE_SPECS[[cs]]
+  x_max  <- max(SCENARIO_X_MAX_DAYS)   # use longest scenario as reference
+  t_days <- seq(0, x_max, by = 1)
+  df     <- data.frame(
+    week     = t_days / 7,
+    coverage = coverage_at_time(t_days, spec) * 100
+  )
   color <- COVERAGE_COLORS[cs]
-
-  ggplot(df, aes(x = time, y = coverage)) +
+  
+  ggplot(df, aes(x = week, y = coverage)) +
     geom_line(color = color, linewidth = 1.2) +
     scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
-    scale_x_continuous(breaks = c(0, 30, 60, 90)) +
-    labs(x = "Days since outbreak start", y = "OBV coverage") +
+    scale_x_continuous(breaks = seq(0, x_max / 7, by = 13)) +
+    labs(x = "Weeks since outbreak start", y = "OBV coverage") +
     theme_fig()
 }
 
+# Efficacy x coverage grid ----
 message("Applying post-hoc OBV across efficacy x coverage grid...")
 
 baseline_rows <- build_run_df_obv(results, "baseline")
@@ -50,7 +56,7 @@ make_box_plot <- function(cs, metric, y_label) {
     filter(coverage_scenario == cs, !is.na(.data[[metric]])) %>%
     mutate(fill_group = paste(as.character(scenario_label),
                               as.character(arm_label), sep = "."))
-
+  
   build_sc_fill <- function(sc_key) {
     sc_lbl    <- SCENARIO_LABELS[sc_key]
     base_col  <- SCENARIO_COLORS[sc_key]
@@ -59,13 +65,13 @@ make_box_plot <- function(cs, metric, y_label) {
     cols      <- c(colorRampPalette(c(light_col, base_col))(4), dark_col)
     setNames(cols, paste(sc_lbl, OBV_EFFICACY_LABELS, sep = "."))
   }
-
+  
   fill_vals     <- c(build_sc_fill("WestAfrica"), build_sc_fill("DRC"))
   legend_breaks <- c(
     paste(SCENARIO_LABELS["WestAfrica"], "80%", sep = "."),
     paste(SCENARIO_LABELS["DRC"],        "80%", sep = ".")
   )
-
+  
   ggplot(df, aes(x = arm_label, y = .data[[metric]], fill = fill_group)) +
     geom_boxplot(outlier.size = 0.5, width = 0.6, color = "black", linewidth = 0.4,
                  position = position_dodge(0.75)) +
@@ -102,8 +108,8 @@ p_i <- make_box_plot(COVERAGE_LEVELS[3], "pct_days_lost_averted", "HCW days lost
 # Version 1 - deaths averted only
 figure_3_deaths <- (
   (h1 | h2 | h3) /
-  ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
-  ((p_d | p_e | p_f) + plot_layout(axis_titles = "collect"))
+    ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
+    ((p_d | p_e | p_f) + plot_layout(axis_titles = "collect"))
 ) +
   plot_layout(guides = "collect", heights = c(0.2, 1, 3)) +
   plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
@@ -117,8 +123,8 @@ ggsave(
 # Version 2 - days averted only
 figure_3_days_lost <- (
   (h1 | h2 | h3) /
-  ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
-  ((p_g | p_h | p_i) + plot_layout(axis_titles = "collect"))
+    ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
+    ((p_g | p_h | p_i) + plot_layout(axis_titles = "collect"))
 ) +
   plot_layout(guides = "collect", axes = "collect", heights = c(0.2, 1, 3)) +
   plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &

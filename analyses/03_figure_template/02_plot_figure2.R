@@ -41,10 +41,10 @@ make_bar_plot <- function(summ_df, sc, y_label) {
   base_col   <- SCENARIO_COLORS[sc]
   dark_col   <- rgb(t(col2rgb(base_col) * 0.7), maxColorValue = 255)
   obv_colors <- setNames(
-    c(colorRampPalette(c(light_col, base_col))(4), dark_col), # make sure 80% (baseline) is same hue as fig 1
+    c(colorRampPalette(c(light_col, base_col))(4), dark_col),
     OBV_EFFICACY_LABELS
   )
-
+  
   ggplot(summ_df, aes(x = arm_label, y = median, fill = arm_label)) +
     geom_col(aes(color = arm_label == "80%"), width = 0.8, alpha = 0.85, linewidth = 0.8) +
     scale_color_manual(values = c("TRUE" = "black", "FALSE" = NA), guide = "none") +
@@ -61,26 +61,25 @@ make_bar_plot <- function(summ_df, sc, y_label) {
 }
 
 # Combine panels ----
-make_header <- function(label, angle = 0) {
+make_header <- function(label) {
   ggplot() +
-    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5, angle = angle) +
+    annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
     theme_void()
 }
 
 fig2a <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "WestAfrica"), "WestAfrica", "HCW deaths averted")
-fig2b <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "DRC"),        "DRC",         "HCW deaths averted")
+fig2b <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "DRC"),        "DRC",        "HCW deaths averted")
 fig2c <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted",  "WestAfrica"), "WestAfrica", "HCW days lost averted")
-fig2d <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted",  "DRC"),        "DRC",         "HCW days lost averted")
+fig2d <- make_bar_plot(make_summ(pdf, "pct_days_lost_averted",  "DRC"),        "DRC",        "HCW days lost averted")
 
 fig2_all <- (
   (make_header("West Africa archetype") | make_header("DRC archetype")) /
-  ((fig2a | fig2b) + plot_layout(axis_titles = "collect")) /
-  ((fig2c | fig2d) + plot_layout(axis_titles = "collect"))
+    ((fig2a | fig2b) + plot_layout(axis_titles = "collect")) /
+    ((fig2c | fig2d) + plot_layout(axis_titles = "collect"))
 ) +
   plot_layout(heights = c(0.08, 1, 1)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
 ggsave(file.path(OUT_DIR, "figure_2.png"), fig2_all,
        width = 10, height = 6.5, dpi = 400, units = "in")
-
 message("Figure 2 saved")

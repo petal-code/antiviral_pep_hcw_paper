@@ -38,98 +38,15 @@ COVERAGE_LEVELS <- c("full", "ramp_high", "ramp_low")
 COVERAGE_LABELS <- c("Full (100%)", "Ramp high (20%->100%)", "Ramp low (20%->50%)")
 COVERAGE_COLORS <- c(full = "#1a9641", ramp_high = "#fdae61", ramp_low = "#d7191c")
 
-# Coverage curves
-#
-# full      : 100% throughout
-# ramp_high : clamped cubic spline through (0, 0.20), (26wk, 0.50), (52wk, 0.80)
-#             with zero slope at both endpoints (S-curve); matches MATLAB
-#             spline(t_points, [0, y_points, 0], t) convention
-# ramp_low  : clamped cubic spline through (0, 0.00), (26wk, 0.25), (52wk, 0.50)
-#             same endpoint slope = 0 constraint
-#
-# coverage_at_time() evaluates the appropriate curve given a spec.
-
-.make_clamped_spline <- function(t_knots, y_knots,
-                                 deriv_start = 0, deriv_end = 0) {
-  # Clamped cubic spline: enforce specified end-point derivatives.
-  # Matches MATLAB spline(t_points, [k_start, y_points, k_end], t).
-  # Uses stats::splinefun with "natural" as base, then corrects via
-  # a direct tridiagonal solve for the clamped case.
-  n  <- length(t_knots)
-  h  <- diff(t_knots)
-  
-  # Set up tridiagonal system for clamped spline (Press et al.)
-  rhs <- numeric(n)
-  rhs[1] <- 3 * (y_knots[2] - y_knots[1]) / h[1] - 3 * deriv_start
-  rhs[n] <- 3 * deriv_end - 3 * (y_knots[n] - y_knots[n - 1]) / h[n - 1]
-  for (i in 2:(n - 1)) {
-    rhs[i] <- 3 * ((y_knots[i + 1] - y_knots[i]) / h[i] -
-                     (y_knots[i]     - y_knots[i - 1]) / h[i - 1])
-  }
-  
-  # Tridiagonal matrix (Thomas algorithm)
-  diag_main <- c(2 * h[1], rep(0, n - 2), 2 * h[n - 1])
-  diag_main[1]     <- 2 * h[1]
-  diag_main[n]     <- 2 * h[n - 1]
-  for (i in 2:(n - 1)) diag_main[i] <- 2 * (h[i - 1] + h[i])
-  
-  diag_upper <- h
-  diag_lower <- h
-  
-  # Forward sweep
-  c_vec <- diag_upper
-  d_vec <- rhs
-  c_vec[1] <- c_vec[1] / diag_main[1]
-  d_vec[1] <- d_vec[1] / diag_main[1]
-  for (i in 2:n) {
-    denom    <- diag_main[i] - (if (i > 1) diag_lower[i - 1] else 0) * c_vec[i - 1]
-    if (i < n) c_vec[i] <- diag_upper[i] / denom
-    d_vec[i] <- (d_vec[i] - (if (i > 1) diag_lower[i - 1] else 0) * d_vec[i - 1]) / denom
-  }
-  
-  # Back substitution — M = second derivative at knots
-  M <- numeric(n)
-  M[n] <- d_vec[n]
-  for (i in (n - 1):1) M[i] <- d_vec[i] - c_vec[i] * M[i + 1]
-  
-  # Return evaluator function
-  function(t_eval) {
-    vapply(t_eval, function(t) {
-      if (t <= t_knots[1])  return(y_knots[1])
-      if (t >= t_knots[n])  return(y_knots[n])
-      i <- findInterval(t, t_knots, rightmost.closed = TRUE)
-      i <- min(max(i, 1L), n - 1L)
-      hi <- h[i]
-      a  <- (t_knots[i + 1] - t) / hi
-      b  <- (t - t_knots[i])     / hi
-      a * y_knots[i] + b * y_knots[i + 1] +
-        ((a^3 - a) * M[i] + (b^3 - b) * M[i + 1]) * hi^2 / 6
-    }, numeric(1))
-  }
-}
-
-# Coverage specs: each entry has a $fn evaluator (days -> coverage in [0,1])
+# Piecewise-linear coverage curves: breakpoints in days, values in [0, 1]
 COVERAGE_SPECS <- list(
-  full = list(
-    fn = function(t) rep(1.0, length(t))
-  ),
-  ramp_high = list(
-    fn = .make_clamped_spline(
-      t_knots     = c(0, 26 * 7, 52 * 7),   # weeks -> days
-      y_knots     = c(0.20, 0.50, 0.80),
-      deriv_start = 0,
-      deriv_end   = 0
-    )
-  ),
-  ramp_low = list(
-    fn = .make_clamped_spline(
-      t_knots     = c(0, 26 * 7, 52 * 7),
-      y_knots     = c(0.00, 0.25, 0.50),
-      deriv_start = 0,
-      deriv_end   = 0
-    )
-  )
+  full      = list(times = c(0, 90),           values = c(1.00, 1.00)),
+  ramp_high = list(times = c(0, 30, 60, 90),   values = c(0.20, 0.47, 0.73, 1.00)),
+  ramp_low  = list(times = c(0, 30, 60, 90),   values = c(0.20, 0.30, 0.40, 0.50))
 )
+
+# Days post-recovery before an OBV-treated HCW can return to work
+OBV_RETURN_TO_WORK_DAYS <- 7
 
 # Minimum deaths for a run to be considered "taken off" --
 # must match the ABC fitting scheme (TAKEOFF_DEATH_THRESHOLD in calibration scripts)
@@ -164,13 +81,13 @@ load_results <- function(base_dir = here("outputs", "simulation_baseline"),
 
 # =============================================================================
 # coverage_at_time
-#
-# Evaluates a coverage curve at time t (days) using the $fn evaluator
-# stored in a COVERAGE_SPECS entry. Values are clamped to [0, 1].
 # =============================================================================
-coverage_at_time <- function(t, coverage_spec) {
-  val <- coverage_spec$fn(t)
-  pmin(pmax(val, 0), 1)
+coverage_at_time <- function(t, times, values) {
+  if (t <= times[1])              return(values[1])
+  if (t >= times[length(times)])  return(values[length(values)])
+  i    <- findInterval(t, times)
+  frac <- (t - times[i]) / (times[i + 1L] - times[i])
+  values[i] + frac * (values[i + 1L] - values[i])
 }
 
 # =============================================================================
@@ -179,40 +96,26 @@ coverage_at_time <- function(t, coverage_spec) {
 apply_obv_posthoc <- function(cases, efficacy, coverage_spec, seed = NULL) {
   if (!is.null(seed)) set.seed(seed)
   
-  all_hcw <- cases[!is.na(cases$class) & cases$class == "HCW", ]
-  
-  # Only hospitalised HCW are eligible for OBV PEP
-  # (consistent with obv_pep_target_locations = "hospital" in fiber)
-  eligible <- !is.na(all_hcw$time_hospitalisation_absolute)
-  
-  hcw <- all_hcw[eligible, ]
+  hcw <- cases[!is.na(cases$class) & cases$class == "HCW", ]
   n   <- nrow(hcw)
   
   if (n == 0) {
-    return(list(
-      prevented_hcw      = 0L,
-      counterfactual_hcw = sum(!is.na(all_hcw$outcome) & all_hcw$outcome),
-      obv_received       = rep(FALSE, nrow(all_hcw)),
-      prevented_flag     = rep(FALSE, nrow(all_hcw))
-    ))
+    return(list(prevented_hcw = 0L, counterfactual_hcw = 0L,
+                obv_received = logical(0), prevented_flag = logical(0)))
   }
   
   died <- !is.na(hcw$outcome) & hcw$outcome
   
-  cov_prob <- coverage_at_time(hcw$time_infection_absolute, coverage_spec)
+  cov_prob <- vapply(hcw$time_infection_absolute, function(t) {
+    coverage_at_time(t, coverage_spec$times, coverage_spec$values)
+  }, numeric(1))
   
-  obv_received_eligible   <- runif(n) < cov_prob
-  prevented_flag_eligible <- died & obv_received_eligible & (runif(n) < efficacy)
-  
-  # Expand back to all HCW rows (non-eligible = FALSE)
-  obv_received   <- rep(FALSE, nrow(all_hcw))
-  prevented_flag <- rep(FALSE, nrow(all_hcw))
-  obv_received[eligible]   <- obv_received_eligible
-  prevented_flag[eligible] <- prevented_flag_eligible
+  obv_received   <- runif(n) < cov_prob
+  prevented_flag <- died & obv_received & (runif(n) < efficacy)
   
   list(
-    prevented_hcw      = sum(prevented_flag_eligible),
-    counterfactual_hcw = sum(!is.na(all_hcw$outcome) & all_hcw$outcome),
+    prevented_hcw      = sum(prevented_flag),
+    counterfactual_hcw = sum(died),
     obv_received       = obv_received,
     prevented_flag     = prevented_flag
   )
@@ -220,47 +123,37 @@ apply_obv_posthoc <- function(cases, efficacy, coverage_spec, seed = NULL) {
 
 # =============================================================================
 # compute_hcw_days_lost
-#
-# HCW days lost from time of infection:
-#
-#   Case 1 — Not hospitalised (regardless of OBV):
-#     time_infection_absolute -> duration (simulation end)
-#
-#   Case 2 — Hospitalised, no OBV received:
-#     time_infection_absolute -> duration
-#
-#   Case 3 — Hospitalised, OBV received, survived:
-#     time_infection_absolute -> time_outcome_absolute  (recovery)
-#
-#   Case 4 — Hospitalised, OBV received, died:
-#     time_infection_absolute -> duration
-#
-# Arguments:
-#   cases           - data frame of individual cases (x$tdf)
-#   duration        - simulation end time in days (x$duration)
-#   obv_received    - logical vector aligned to HCW rows, or NULL (all FALSE)
-#   prevented       - logical vector of OBV-prevented deaths, or NULL (all FALSE)
 # =============================================================================
 compute_hcw_days_lost <- function(cases, duration,
-                                  obv_received = NULL,
-                                  prevented    = NULL) {
+                                  obv_received    = NULL,
+                                  prevented       = NULL,
+                                  obv_return_days = OBV_RETURN_TO_WORK_DAYS) {
   hcw <- cases[!is.na(cases$class) & cases$class == "HCW", ]
   if (nrow(hcw) == 0) return(0)
   
-  absence_start   <- hcw$time_infection_absolute
+  absence_start <- ifelse(
+    !is.na(hcw$time_hospitalisation_absolute),
+    hcw$time_hospitalisation_absolute,
+    hcw$time_symptom_onset_absolute
+  )
+  
   died            <- !is.na(hcw$outcome) & hcw$outcome
-  hospitalised    <- !is.na(hcw$time_hospitalisation_absolute)
   received        <- if (!is.null(obv_received)) obv_received else rep(FALSE, nrow(hcw))
   prevented_death <- if (!is.null(prevented))    prevented    else rep(FALSE, nrow(hcw))
   
-  # Effective survival status after OBV
   died_after_obv <- died & !prevented_death
+  absence_end    <- rep(NA_real_, nrow(hcw))
   
-  absence_end <- rep(duration, nrow(hcw))   # default: absent until simulation end
+  absence_end[died_after_obv] <- duration
   
-  # Case 3: hospitalised + OBV received + survived -> absent until recovery only
-  case3 <- hospitalised & received & !died_after_obv
-  absence_end[case3] <- hcw$time_outcome_absolute[case3]
+  surv_no_obv <- !died_after_obv & !received
+  absence_end[surv_no_obv] <- pmin(
+    hcw$time_outcome_absolute[surv_no_obv] + 6 * 30,
+    duration
+  )
+  
+  surv_obv <- !died_after_obv & received
+  absence_end[surv_obv] <- hcw$time_outcome_absolute[surv_obv] + obv_return_days
   
   days_lost <- pmax(absence_end - absence_start, 0)
   sum(days_lost, na.rm = TRUE)
