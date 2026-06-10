@@ -303,7 +303,9 @@ combined_long <- combined %>%
   select(scenario_key, relative_day, all_of(quantity_order)) %>%
   pivot_longer(cols = all_of(quantity_order), names_to = "quantity", values_to = "value") %>%
   mutate(scenario_key = factor(scenario_key, levels = scenario_order),
-         quantity     = factor(quantity,     levels = quantity_order))
+         quantity     = factor(quantity,     levels = quantity_order)) %>%
+  filter(quantity != "prob_unsafe_funeral_etu",
+         quantity != "prob_unsafe_funeral_hosp")
 
 p_grid <- ggplot(combined_long, aes(relative_day, value)) +
   geom_line(linewidth = 0.6, colour = "#1f77b4") +
