@@ -13,7 +13,11 @@
 # Endpoints for the 5 endpoint-parameters are estimated from the literature
 # anchors with the SAME machinery as Model B (original methodology).
 #
-# Fits four variants for comparison: {RW, spline} x {IPC on SDB, IPC on reach}.
+# Fits EIGHT variants for comparison:
+#   {RW, spline} x {IPC on SDB, IPC on reach} x {conflict, conflict++ SDB curve}.
+# Reach is estimated from the community-death data ONLY, so it is invariant to
+# the IPC-clock toggle and to the scenario (which only swaps the SUPPLIED s(t));
+# the scenario therefore moves only the SDB-clock parameter curves, not reach.
 #
 # Prereqs (run first): 00_DataPreparation_and_Cleaning.R (-> DRC_QCurve_PreppedData.rds)
 #                      00b_DataPreparation_CommunityDeaths.R (-> DRC_CommunityDeaths_Prepped.rds)
@@ -31,21 +35,38 @@ source(here::here("analyses", "01_latent_response_parameter_estimation", "helper
 set.seed(123)
 
 # ---- knobs (EDIT) ----------------------------------------------------------
+# NB: RW_SIGMA / SPL_SIGMA / SPLINE_DF control how WIGGLY the latent reach curve
+# is allowed to be. They were loosened (RW 0.30->0.60, spline 0.50->1.00, df
+# 14->20) so the curve has the freedom to rise into the early community-death
+# "shoulder" around day ~150-230 instead of being ironed flat by the smoothness
+# prior. Whether it SHOULD chase those points depends on their denominators -
+# see the denominator-sized points in section 9.
 GRID_DT       <- 14L          # reach-grid spacing (days); G = horizon/GRID_DT + 1
-SPLINE_DF     <- 14L          # B-spline basis size (spline model)
-RW_SIGMA_PSD  <- 0.30         # half-normal scale on the RW step sd (per sqrt-day, logit)
-SPL_SIGMA_PSD <- 0.50         # half-normal scale on the P-spline 2nd-diff sd
+SPLINE_DF     <- 20L          # B-spline basis size (spline model)
+RW_SIGMA_PSD  <- 0.60         # half-normal scale on the RW step sd (per sqrt-day, logit)
+SPL_SIGMA_PSD <- 1.00         # half-normal scale on the P-spline 2nd-diff sd
 SAMP <- list(chains = 4, parallel_chains = 4, iter_warmup = 1500,
              iter_sampling = 1500, adapt_delta = 0.98, max_treedepth = 13, refresh = 200)
-VARIANTS <- expand.grid(model = c("rw", "spline"),
-                        ipc_clock = c("sdb", "reach"), stringsAsFactors = FALSE)
+
+# Two supplied-SDB scenarios (the only thing the scenario changes is s(t)).
+SCENARIOS <- c("conflict", "conflict_plusplus")
+VARIANTS  <- expand.grid(model = c("rw", "spline"),
+                         ipc_clock = c("sdb", "reach"),
+                         scenario  = SCENARIOS, stringsAsFactors = FALSE)
 
 # ---- 1. Inputs -------------------------------------------------------------
 drc_prep <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve", "DRC_QCurve_PreppedData.rds"))
 anchors  <- drc_prep$anchors
-qseries  <- drc_prep$conflict_qseries          # SUPPLIED SDB curve (conflict scenario)
 cd_prep  <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve", "DRC_CommunityDeaths_Prepped.rds"))
 cd_obs   <- cd_prep$obs
+
+# Pick the SUPPLIED SDB curve for a scenario (this is the ONLY scenario lever).
+qseries_for <- function(scenario) {
+  switch(scenario,
+    conflict          = drc_prep$conflict_qseries,
+    conflict_plusplus = drc_prep$conflict_plusplus_qseries,
+    stop("unknown scenario: ", scenario))
+}
 
 # Endpoint parameters = all six EXCEPT community unsafe funerals (now deterministic).
 ENDPOINT_PARAMS <- setdiff(PARAM_LEVELS, "p_unsafe_funeral_comm")
@@ -86,11 +107,14 @@ grid_day <- seq(0L, HORIZON_DAYS, by = GRID_DT)
 G        <- length(grid_day)
 nearest  <- function(day) vapply(day, function(d) which.min(abs(grid_day - d)), integer(1))
 
-# Supplied SDB ACTUAL success on the grid (success, not the normalised q_value):
-#   s_ref = max success  =>  Sclk = s/s_ref = q_value (matches Model B),
-#   and the burial term uses the actual success s.
-s_success_grid <- clip01(make_interp(qseries$relative_day, qseries$success_smoothed)(grid_day))
-s_ref          <- max(qseries$success_smoothed, na.rm = TRUE)
+# Supplied SDB ACTUAL success on the grid for a given scenario (success, not the
+# normalised q_value):  s_ref = max success => Sclk = s/s_ref = q_value (Model B),
+# and the burial term uses the actual success s.
+sdb_on_grid <- function(scenario) {
+  qs <- qseries_for(scenario)
+  list(s_grid = clip01(make_interp(qs$relative_day, qs$success_smoothed)(grid_day)),
+       s_ref  = max(qs$success_smoothed, na.rm = TRUE))
+}
 
 # ---- 3. Anchor -> grid (endpoint params only) ------------------------------
 fit_anchors <- anchors %>%
@@ -112,11 +136,11 @@ if (!is.na(jh)) {
 }
 
 # ---- 5. Common Stan data + per-variant additions ---------------------------
+# s_grid / s_ref are scenario-specific and so are injected per-fit (section 6).
 base_data <- list(
   G = G, Mc = nrow(cd_obs),
   cd_grid = nearest(cd_obs$relative_day), cd_n = cd_obs$n_comm, cd_N = cd_obs$N_deaths,
   c_hi = cd_prep$c_hi, c_lo = cd_prep$c_lo,
-  s_grid = s_success_grid, s_ref = s_ref,
   J = J,
   abs_min = param_meta$abs_min, abs_max = param_meta$abs_max,
   lower_floor = param_meta$lower_floor, lower_cap = param_meta$lower_cap, upper_cap = param_meta$upper_cap,
@@ -138,9 +162,12 @@ mods <- list(
 B_spline <- bs(grid_day, df = SPLINE_DF, intercept = TRUE)   # G x K basis (spline model)
 
 # ---- 6. Fit one variant ----------------------------------------------------
-fit_variant <- function(model, ipc_clock) {
-  message("\n==== Model C [", model, " | IPC on ", ipc_clock, "] ====")
-  sd <- base_data
+fit_variant <- function(model, ipc_clock, scenario) {
+  message("\n==== Model C [", model, " | IPC on ", ipc_clock, " | ", scenario, "] ====")
+  sdb <- sdb_on_grid(scenario)
+  sd  <- base_data
+  sd$s_grid     <- sdb$s_grid
+  sd$s_ref      <- sdb$s_ref
   sd$clock_type <- unname(clock_for(ipc_clock))
   if (model == "rw") {
     sd$grid_dt <- GRID_DT; sd$rw_sigma_prior_sd <- RW_SIGMA_PSD
@@ -169,44 +196,84 @@ fit_variant <- function(model, ipc_clock) {
            relative_day = grid_day[g]) %>%
     select(metric, relative_day, mean, q5, q95)
 
-  list(model = model, ipc_clock = ipc_clock,
+  list(model = model, ipc_clock = ipc_clock, scenario = scenario,
+       curve_type = sprintf("%s_IPC-%s", model, ipc_clock),
        curves = bind_rows(th, ufc), reach = reach, fit = fit)
 }
 
-# ---- 7. Fit all four variants ----------------------------------------------
+# ---- 7. Fit all eight variants ---------------------------------------------
 fits <- lapply(seq_len(nrow(VARIANTS)), function(i)
-  fit_variant(VARIANTS$model[i], VARIANTS$ipc_clock[i]))
-names(fits) <- sprintf("%s_IPC-%s", VARIANTS$model, VARIANTS$ipc_clock)
+  fit_variant(VARIANTS$model[i], VARIANTS$ipc_clock[i], VARIANTS$scenario[i]))
+names(fits) <- sprintf("%s_IPC-%s_%s", VARIANTS$model, VARIANTS$ipc_clock, VARIANTS$scenario)
 
 saveRDS(fits, file.path(DIR_PROCESSED, "DRC_QCurve", "DRC_QCurve_ModelC_fits.rds"))
 message("Saved DRC_QCurve_ModelC_fits.rds")
 
-# ---- 8. Overlay the four variants' parameter curves (display only) ---------
-curve_df <- bind_rows(lapply(names(fits), function(nm)
-  mutate(fits[[nm]]$curves, variant = nm))) %>%
-  mutate(panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
+# ---- 8. Overlay the variants' parameter curves vs the DATA (display only) ---
+# Colour = model x IPC-clock; linetype = scenario. Ribbons are dropped here
+# (eight curves) to keep the panels legible; overlaid on top are the literature
+# anchors the endpoints were fit to (orange) and the SDB-derived community
+# unsafe-funeral proxy (grey) -- the same data overlays used in 02's plots.
+curve_df <- bind_rows(lapply(names(fits), function(nm) {
+  f <- fits[[nm]]
+  mutate(f$curves, variant = nm, curve_type = f$curve_type, scenario = f$scenario)
+})) %>%
+  mutate(panel    = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)),
+         scenario = factor(scenario, levels = SCENARIOS))
+
+# Literature anchors the endpoints were fit to (shared across variants).
+anchor_plot_df <- anchors %>%
+  filter(parameter %in% ENDPOINT_PARAMS) %>%
+  transmute(relative_day, value_used,
+            panel = factor(PANEL_LOOKUP[parameter], levels = unname(PANEL_LOOKUP)))
+
+# SDB community unsafe-funeral data points (1 - success) behind the UFC curve.
+ufc_proxy_df <- qseries_for("conflict") %>%
+  filter(n_eligible_sum > 0) %>%
+  transmute(relative_day, value = unsafe_funeral_comm_proxy,
+            panel = factor(PANEL_LOOKUP[["p_unsafe_funeral_comm"]], levels = unname(PANEL_LOOKUP)))
 
 print(
-  ggplot(curve_df, aes(relative_day, mean, colour = variant, fill = variant)) +
-    geom_ribbon(aes(ymin = q5, ymax = q95), colour = NA, alpha = 0.12) +
+  ggplot(curve_df, aes(relative_day, mean, colour = curve_type,
+                       linetype = scenario, group = variant)) +
     geom_line(linewidth = 0.8) +
+    geom_point(data = ufc_proxy_df, aes(relative_day, value),
+               inherit.aes = FALSE, colour = "grey55", size = 1, alpha = 0.7) +
+    geom_point(data = anchor_plot_df, aes(relative_day, value_used),
+               inherit.aes = FALSE, colour = "#ff7f0e", size = 2) +
     facet_wrap(~ panel, scales = "free_y", ncol = 2) +
-    labs(title = "DRC Model C: parameter curves, four variants",
-         subtitle = "reach estimated (RW vs spline) x latent_IPC on SDB vs reach clock",
+    labs(title = "DRC Model C: parameter curves vs data, eight variants",
+         subtitle = paste("colour = model x IPC-clock; linetype = scenario;",
+                          "orange = literature anchors; grey = SDB community proxy"),
          x = "Relative outbreak day", y = NULL) +
-    theme_bw(base_size = 11) + theme(legend.position = "top")
+    theme_bw(base_size = 11) +
+    theme(legend.position = "top", strip.text = element_text(face = "bold"))
 )
 
 # ---- 9. Reach posterior vs the community-death data (the key check) ---------
-reach_df <- bind_rows(lapply(names(fits), function(nm)
-  filter(fits[[nm]]$reach, metric == "comm_death_p") %>% mutate(variant = nm)))
+# Reach is estimated from the community-death binomial ONLY, so it is identical
+# across the IPC-clock toggle and the scenario; only RW vs spline differ. We
+# therefore draw one representative fit per smoother (conflict / IPC-sdb) and
+# overlay the data with point AREA proportional to the denominator (N_deaths):
+# big points are well-supported, tiny points are near-noise. This is the lens
+# for "is the early shoulder a real peak the curve should chase, or sampling
+# noise it is right to smooth through?".
+reach_df <- bind_rows(lapply(names(fits), function(nm) {
+  f <- fits[[nm]]
+  if (f$scenario != "conflict" || f$ipc_clock != "sdb") return(NULL)
+  filter(f$reach, metric == "comm_death_p") %>% mutate(model = f$model)
+}))
+
 print(
-  ggplot(reach_df, aes(relative_day, mean, colour = variant, fill = variant)) +
-    geom_ribbon(aes(ymin = q5, ymax = q95), colour = NA, alpha = 0.12) +
-    geom_line(linewidth = 0.8) +
-    geom_point(data = cd_obs, aes(relative_day, n_comm / N_deaths),
-               inherit.aes = FALSE, colour = "black", size = 1.6, alpha = 0.7) +
+  ggplot(reach_df, aes(relative_day, mean, colour = model, fill = model)) +
+    geom_ribbon(aes(ymin = q5, ymax = q95), colour = NA, alpha = 0.15) +
+    geom_line(linewidth = 0.9) +
+    geom_point(data = cd_obs, aes(relative_day, n_comm / N_deaths, size = N_deaths),
+               inherit.aes = FALSE, shape = 21, fill = "grey25",
+               colour = "white", stroke = 0.3, alpha = 0.85) +
+    scale_size_area(max_size = 7, name = "deaths (N)") +
     labs(title = "Latent community-death proportion vs data (posterior-predictive check)",
+         subtitle = "reach is scenario- / clock-invariant: only RW vs spline differ; point area = denominator",
          x = "Relative outbreak day", y = "Community-death proportion") +
     theme_bw(base_size = 11) + theme(legend.position = "top")
 )
