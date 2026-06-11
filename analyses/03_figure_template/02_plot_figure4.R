@@ -15,10 +15,10 @@ heatmap_df <- run_df %>%
   group_by(scenario, particle_id, arm, obv_efficacy, obv_coverage) %>%
   summarise(
     n_hcw_deaths       = mean(n_hcw_deaths),
-    hcw_days_lost      = mean(hcw_days_lost),
+    hcw_days_lost      = sum(hcw_days_lost),
     prevented_hcw      = sum(prevented_hcw),
     counterfactual_hcw = sum(counterfactual_hcw),
-    baseline_days_lost = mean(baseline_days_lost),
+    baseline_days_lost = sum(baseline_days_lost),
     .groups = "drop"
   ) %>%
   mutate(
