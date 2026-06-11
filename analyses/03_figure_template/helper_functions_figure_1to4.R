@@ -4,11 +4,14 @@
 # Shared helper functions for figures 1 to 4.
 # Source this at the top of each figure-generation script.
 #
-# Key design: OBV efficacy and coverage are applied post-hoc to baseline
-# simulation output (tdf). No separate OBV simulation runs are needed.
+# Simulation design:
+#   - All runs are with OBV enabled.
+#   - Each RDS file contains out$tdf and out$prevented_completed.
 #
-# Takeoff filter: only runs with n_deaths >= TAKEOFF_DEATH_THRESHOLD are used,
-# consistent with the ABC fitting scheme (aggregate_decoupled / run_abc_particle_decoupled).
+# Scenario reconstruction from a single arm's results:
+#   "Without OBV" : tdf + prevented_completed  (use_prevented = TRUE)
+#   "With OBV X%" : tdf only                   (use_prevented = FALSE)
+#                   averted = deaths in prevented_completed
 # =============================================================================
 
 library(ggplot2)
@@ -29,36 +32,24 @@ SCENARIO_COLORS <- c(
   DRC        = "#1b9e77"
 )
 
-OBV_EFFICACY_LEVELS <- c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
-OBV_EFFICACY_LABELS <- c("50%", "60%", "70%", "80%", "90%")
-OBV_EFFICACY_VALUES <- c(obv_50 = 0.50, obv_60 = 0.60, obv_70 = 0.70,
-                         obv_80 = 0.80, obv_90 = 0.90)
+OBV_EFFICACY_LEVELS <- c("obv_10", "obv_20", "obv_30", "obv_40", "obv_50",
+                         "obv_60", "obv_70", "obv_80", "obv_90")
+OBV_EFFICACY_LABELS <- c("10%", "20%", "30%", "40%", "50%",
+                         "60%", "70%", "80%", "90%")
+OBV_EFFICACY_VALUES <- c(obv_10 = 0.10, obv_20 = 0.20, obv_30 = 0.30,
+                         obv_40 = 0.40, obv_50 = 0.50, obv_60 = 0.60,
+                         obv_70 = 0.70, obv_80 = 0.80, obv_90 = 0.90)
 
 COVERAGE_LEVELS <- c("full", "ramp_high", "ramp_low")
-COVERAGE_LABELS <- c("Full (100%)", "Ramp high (20%->100%)", "Ramp low (20%->50%)")
+COVERAGE_LABELS <- c("Full (100%)", "Ramp high (20%->80%)", "Ramp low (0%->50%)")
 COVERAGE_COLORS <- c(full = "#1a9641", ramp_high = "#fdae61", ramp_low = "#d7191c")
 
 # Coverage curves
-#
-# full      : 100% throughout
-# ramp_high : clamped cubic spline through (0, 0.20), (26wk, 0.50), (52wk, 0.80)
-#             with zero slope at both endpoints (S-curve); matches MATLAB
-#             spline(t_points, [0, y_points, 0], t) convention
-# ramp_low  : clamped cubic spline through (0, 0.00), (26wk, 0.25), (52wk, 0.50)
-#             same endpoint slope = 0 constraint
-#
-# coverage_at_time() evaluates the appropriate curve given a spec.
-
 .make_clamped_spline <- function(t_knots, y_knots,
                                  deriv_start = 0, deriv_end = 0) {
-  # Clamped cubic spline: enforce specified end-point derivatives.
-  # Matches MATLAB spline(t_points, [k_start, y_points, k_end], t).
-  # Uses stats::splinefun with "natural" as base, then corrects via
-  # a direct tridiagonal solve for the clamped case.
   n  <- length(t_knots)
   h  <- diff(t_knots)
   
-  # Set up tridiagonal system for clamped spline (Press et al.)
   rhs <- numeric(n)
   rhs[1] <- 3 * (y_knots[2] - y_knots[1]) / h[1] - 3 * deriv_start
   rhs[n] <- 3 * deriv_end - 3 * (y_knots[n] - y_knots[n - 1]) / h[n - 1]
@@ -67,381 +58,96 @@ COVERAGE_COLORS <- c(full = "#1a9641", ramp_high = "#fdae61", ramp_low = "#d7191
                      (y_knots[i]     - y_knots[i - 1]) / h[i - 1])
   }
   
-  # Tridiagonal matrix (Thomas algorithm)
   diag_main <- c(2 * h[1], rep(0, n - 2), 2 * h[n - 1])
-  diag_main[1]     <- 2 * h[1]
-  diag_main[n]     <- 2 * h[n - 1]
+  diag_main[1] <- 2 * h[1]; diag_main[n] <- 2 * h[n - 1]
   for (i in 2:(n - 1)) diag_main[i] <- 2 * (h[i - 1] + h[i])
   
-  diag_upper <- h
-  diag_lower <- h
-  
-  # Forward sweep
-  c_vec <- diag_upper
-  d_vec <- rhs
+  c_vec <- h; d_vec <- rhs
   c_vec[1] <- c_vec[1] / diag_main[1]
   d_vec[1] <- d_vec[1] / diag_main[1]
   for (i in 2:n) {
-    denom    <- diag_main[i] - (if (i > 1) diag_lower[i - 1] else 0) * c_vec[i - 1]
-    if (i < n) c_vec[i] <- diag_upper[i] / denom
-    d_vec[i] <- (d_vec[i] - (if (i > 1) diag_lower[i - 1] else 0) * d_vec[i - 1]) / denom
+    denom <- diag_main[i] - (if (i > 1) h[i - 1] else 0) * c_vec[i - 1]
+    if (i < n) c_vec[i] <- h[i] / denom
+    d_vec[i] <- (d_vec[i] - (if (i > 1) h[i - 1] else 0) * d_vec[i - 1]) / denom
   }
   
-  # Back substitution — M = second derivative at knots
-  M <- numeric(n)
-  M[n] <- d_vec[n]
+  M <- numeric(n); M[n] <- d_vec[n]
   for (i in (n - 1):1) M[i] <- d_vec[i] - c_vec[i] * M[i + 1]
   
-  # Return evaluator function
   function(t_eval) {
     vapply(t_eval, function(t) {
-      if (t <= t_knots[1])  return(y_knots[1])
-      if (t >= t_knots[n])  return(y_knots[n])
-      i <- findInterval(t, t_knots, rightmost.closed = TRUE)
-      i <- min(max(i, 1L), n - 1L)
-      hi <- h[i]
-      a  <- (t_knots[i + 1] - t) / hi
-      b  <- (t - t_knots[i])     / hi
+      if (t <= t_knots[1]) return(y_knots[1])
+      if (t >= t_knots[n]) return(y_knots[n])
+      i  <- min(max(findInterval(t, t_knots, rightmost.closed = TRUE), 1L), n - 1L)
+      hi <- h[i]; a <- (t_knots[i + 1] - t) / hi; b <- (t - t_knots[i]) / hi
       a * y_knots[i] + b * y_knots[i + 1] +
         ((a^3 - a) * M[i] + (b^3 - b) * M[i + 1]) * hi^2 / 6
     }, numeric(1))
   }
 }
 
-# Coverage specs: each entry has a $fn evaluator (days -> coverage in [0,1])
 COVERAGE_SPECS <- list(
-  full = list(
-    fn = function(t) rep(1.0, length(t))
-  ),
-  ramp_high = list(
-    fn = .make_clamped_spline(
-      t_knots     = c(0, 26 * 7, 52 * 7),   # weeks -> days
-      y_knots     = c(0.20, 0.50, 0.80),
-      deriv_start = 0,
-      deriv_end   = 0
-    )
-  ),
-  ramp_low = list(
-    fn = .make_clamped_spline(
-      t_knots     = c(0, 26 * 7, 52 * 7),
-      y_knots     = c(0.00, 0.25, 0.50),
-      deriv_start = 0,
-      deriv_end   = 0
-    )
-  )
+  full = list(fn = function(t) rep(1.0, length(t))),
+  ramp_high = list(fn = .make_clamped_spline(
+    t_knots = c(0, 26 * 7, 52 * 7), y_knots = c(0.20, 0.50, 0.80)
+  )),
+  ramp_low = list(fn = .make_clamped_spline(
+    t_knots = c(0, 26 * 7, 52 * 7), y_knots = c(0.00, 0.25, 0.50)
+  ))
 )
 
-# Minimum deaths for a run to be considered "taken off" --
-# must match the ABC fitting scheme (TAKEOFF_DEATH_THRESHOLD in calibration scripts)
-TAKEOFF_DEATH_THRESHOLD <- 100L
-
-# x-axis caps per scenario (in days; divide by 7 for weeks in plotting scripts)
 SCENARIO_X_MAX_DAYS <- c(WestAfrica = 60 * 7, DRC = 80 * 7)
+DEFAULT_ARM <- "full_obv80"
 
 # =============================================================================
-# load_results
-#
-# Loads all RDS files from the baseline simulation output directory and
-# filters to taken-off runs only (n_deaths >= TAKEOFF_DEATH_THRESHOLD),
-# consistent with the ABC fitting scheme.
+# Null-coalescing operator
 # =============================================================================
-load_results <- function(base_dir = here("outputs", "simulation_baseline"),
-                         takeoff_threshold = TAKEOFF_DEATH_THRESHOLD) {
-  files <- list.files(base_dir, pattern = "\\.rds$", full.names = TRUE)
-  if (length(files) == 0) stop("No RDS files found in: ", base_dir)
-  message(sprintf("Loading %d baseline files...", length(files)))
-  results <- lapply(files, readRDS)
-  
-  # Filter to taken-off runs only (consistent with ABC fitting)
-  n_before  <- length(results)
-  results   <- Filter(function(x) x$n_deaths >= takeoff_threshold, results)
-  n_after   <- length(results)
-  message(sprintf("  Takeoff filter (n_deaths >= %d): %d / %d runs retained (%.0f%%)",
-                  takeoff_threshold, n_after, n_before,
-                  100 * n_after / max(n_before, 1)))
-  results
-}
+`%||%` <- function(a, b) if (!is.null(a)) a else b
 
 # =============================================================================
 # coverage_at_time
-#
-# Evaluates a coverage curve at time t (days) using the $fn evaluator
-# stored in a COVERAGE_SPECS entry. Values are clamped to [0, 1].
 # =============================================================================
 coverage_at_time <- function(t, coverage_spec) {
-  val <- coverage_spec$fn(t)
-  pmin(pmax(val, 0), 1)
-}
-
-# =============================================================================
-# apply_obv_posthoc
-# =============================================================================
-apply_obv_posthoc <- function(cases, efficacy, coverage_spec, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  
-  all_hcw <- cases[!is.na(cases$class) & cases$class == "HCW", ]
-  
-  # Only hospitalised HCW are eligible for OBV PEP
-  # (consistent with obv_pep_target_locations = "hospital" in fiber)
-  eligible <- !is.na(all_hcw$time_hospitalisation_absolute)
-  
-  hcw <- all_hcw[eligible, ]
-  n   <- nrow(hcw)
-  
-  if (n == 0) {
-    return(list(
-      prevented_hcw      = 0L,
-      counterfactual_hcw = sum(!is.na(all_hcw$outcome) & all_hcw$outcome),
-      obv_received       = rep(FALSE, nrow(all_hcw)),
-      prevented_flag     = rep(FALSE, nrow(all_hcw))
-    ))
-  }
-  
-  died <- !is.na(hcw$outcome) & hcw$outcome
-  
-  cov_prob <- coverage_at_time(hcw$time_infection_absolute, coverage_spec)
-  
-  obv_received_eligible   <- runif(n) < cov_prob
-  prevented_flag_eligible <- died & obv_received_eligible & (runif(n) < efficacy)
-  
-  # Expand back to all HCW rows (non-eligible = FALSE)
-  obv_received   <- rep(FALSE, nrow(all_hcw))
-  prevented_flag <- rep(FALSE, nrow(all_hcw))
-  obv_received[eligible]   <- obv_received_eligible
-  prevented_flag[eligible] <- prevented_flag_eligible
-  
-  list(
-    prevented_hcw      = sum(prevented_flag_eligible),
-    counterfactual_hcw = sum(!is.na(all_hcw$outcome) & all_hcw$outcome),
-    obv_received       = obv_received,
-    prevented_flag     = prevented_flag
-  )
+  pmin(pmax(coverage_spec$fn(t), 0), 1)
 }
 
 # =============================================================================
 # compute_hcw_days_lost
 #
-# HCW days lost from time of infection:
-#
-#   Case 1 — Not hospitalised (regardless of OBV):
-#     time_infection_absolute -> duration (simulation end)
-#
-#   Case 2 — Hospitalised, no OBV received:
-#     time_infection_absolute -> duration
-#
-#   Case 3 — Hospitalised, OBV received, survived:
-#     time_infection_absolute -> time_outcome_absolute  (recovery)
-#
-#   Case 4 — Hospitalised, OBV received, died:
-#     time_infection_absolute -> duration
-#
-# Arguments:
-#   cases           - data frame of individual cases (x$tdf)
-#   duration        - simulation end time in days (x$duration)
-#   obv_received    - logical vector aligned to HCW rows, or NULL (all FALSE)
-#   prevented       - logical vector of OBV-prevented deaths, or NULL (all FALSE)
+# HCW days lost = time_symptom_onset_absolute -> duration for all infected HCW.
 # =============================================================================
-compute_hcw_days_lost <- function(cases, duration,
-                                  obv_received = NULL,
-                                  prevented    = NULL) {
+compute_hcw_days_lost <- function(cases, duration) {
   hcw <- cases[!is.na(cases$class) & cases$class == "HCW", ]
   if (nrow(hcw) == 0) return(0)
-  
-  absence_start   <- hcw$time_infection_absolute
-  died            <- !is.na(hcw$outcome) & hcw$outcome
-  hospitalised    <- !is.na(hcw$time_hospitalisation_absolute)
-  received        <- if (!is.null(obv_received)) obv_received else rep(FALSE, nrow(hcw))
-  prevented_death <- if (!is.null(prevented))    prevented    else rep(FALSE, nrow(hcw))
-  
-  # Effective survival status after OBV
-  died_after_obv <- died & !prevented_death
-  
-  absence_end <- rep(duration, nrow(hcw))   # default: absent until simulation end
-  
-  # Case 3: hospitalised + OBV received + survived -> absent until recovery only
-  case3 <- hospitalised & received & !died_after_obv
-  absence_end[case3] <- hcw$time_outcome_absolute[case3]
-  
-  days_lost <- pmax(absence_end - absence_start, 0)
+  days_lost <- pmax(duration - hcw$time_symptom_onset_absolute, 0)
   sum(days_lost, na.rm = TRUE)
-}
-
-# =============================================================================
-# build_run_df_obv
-# =============================================================================
-build_run_df_obv <- function(results,
-                             efficacy_name = "baseline",
-                             coverage_name = NULL,
-                             seed_offset   = 0L) {
-  is_baseline <- efficacy_name == "baseline"
-  efficacy    <- if (is_baseline) NA_real_ else OBV_EFFICACY_VALUES[[efficacy_name]]
-  cov_spec    <- if (is_baseline || is.null(coverage_name)) NULL
-  else COVERAGE_SPECS[[coverage_name]]
-  
-  do.call(rbind, lapply(results, function(x) {
-    if (is_baseline) {
-      days_lost     <- compute_hcw_days_lost(x$tdf, x$duration)
-      prevented_hcw <- 0L
-    } else {
-      run_seed  <- seed_offset + x$particle_id * 1000L + x$rep
-      obv       <- apply_obv_posthoc(x$tdf, efficacy, cov_spec, seed = run_seed)
-      days_lost <- compute_hcw_days_lost(x$tdf, x$duration,
-                                         obv_received = obv$obv_received,
-                                         prevented    = obv$prevented_flag)
-      prevented_hcw <- obv$prevented_hcw
-    }
-    
-    data.frame(
-      scenario           = x$scenario,
-      particle_id        = x$particle_id,
-      rep                = x$rep,
-      arm                = efficacy_name,
-      coverage_scenario  = if (is_baseline) "baseline" else coverage_name,
-      n_infections       = x$n_infections,
-      n_hcw_deaths       = x$n_hcw_deaths - prevented_hcw,
-      counterfactual_hcw = x$n_hcw_deaths,
-      prevented_hcw      = prevented_hcw,
-      hcw_days_lost      = days_lost,
-      stringsAsFactors   = FALSE
-    )
-  }))
 }
 
 # =============================================================================
 # make_particle_df
 # =============================================================================
 make_particle_df <- function(run_df) {
-  pdf <- run_df %>%
-    group_by(scenario, particle_id, arm, coverage_scenario) %>%
+  run_df %>%
+    group_by(scenario, particle_id, arm) %>%
     summarise(
-      n_infections       = mean(n_infections),
       n_hcw_deaths       = mean(n_hcw_deaths),
-      hcw_days_lost      = mean(hcw_days_lost),
+      hcw_days_lost      = sum(hcw_days_lost),
       prevented_hcw      = sum(prevented_hcw),
       counterfactual_hcw = sum(counterfactual_hcw),
+      baseline_days_lost = sum(baseline_days_lost),
       .groups = "drop"
     ) %>%
     mutate(
       pct_hcw_deaths_averted = ifelse(
-        arm != "baseline" & counterfactual_hcw > 0,
+        counterfactual_hcw > 0,
         100 * prevented_hcw / counterfactual_hcw,
         NA_real_
-      )
-    )
-  
-  base_days <- pdf %>%
-    filter(arm == "baseline") %>%
-    select(scenario, particle_id, baseline_days_lost = hcw_days_lost)
-  
-  pdf %>%
-    left_join(base_days, by = c("scenario", "particle_id")) %>%
-    mutate(
+      ),
       pct_days_lost_averted = ifelse(
-        arm != "baseline" & !is.na(baseline_days_lost) & baseline_days_lost > 0,
+        !is.na(baseline_days_lost) & baseline_days_lost > 0,
         100 * (baseline_days_lost - hcw_days_lost) / baseline_days_lost,
         NA_real_
       )
-    )
-}
-
-# =============================================================================
-# build_weekly_ts
-#
-# Builds a time series of quantiles across posterior particles.
-#
-# Key changes from previous version:
-#   - Only taken-off runs are included (filtered in load_results()).
-#   - max_day is capped at SCENARIO_X_MAX_DAYS per scenario to avoid the
-#     sparse-trailing-zero problem from short-lived runs stretching the grid.
-#   - Quantiles are computed across particle means (mean over reps first),
-#     consistent with ABC averaging over replicates.
-#
-# metric options:
-#   "hcw_deaths"          - cumulative HCW deaths
-#   "hcw_deaths_incidence"- incident HCW deaths per bin
-#   "hcw_infections"      - cumulative HCW infections
-#   "infections"          - incident infections (all population)
-#   "deaths"              - incident deaths (all population)
-# =============================================================================
-build_weekly_ts <- function(results,
-                            metric        = c("hcw_deaths", "hcw_infections",
-                                              "infections", "deaths",
-                                              "hcw_deaths_incidence"),
-                            bin_width     = 28,
-                            efficacy_name = "baseline",
-                            coverage_name = NULL,
-                            seed_offset   = 0L) {
-  metric <- match.arg(metric)
-  
-  is_baseline <- efficacy_name == "baseline"
-  efficacy    <- if (is_baseline) NA_real_ else OBV_EFFICACY_VALUES[[efficacy_name]]
-  cov_spec    <- if (is_baseline || is.null(coverage_name)) NULL
-  else COVERAGE_SPECS[[coverage_name]]
-  
-  # Build per-scenario breaks capped at SCENARIO_X_MAX_DAYS
-  scenarios_present <- unique(sapply(results, function(x) x$scenario))
-  breaks_by_sc <- lapply(setNames(scenarios_present, scenarios_present), function(sc) {
-    cap <- SCENARIO_X_MAX_DAYS[sc]
-    seq(0, ceiling(cap / bin_width) * bin_width, by = bin_width)
-  })
-  
-  rows <- do.call(rbind, lapply(results, function(x) {
-    cases  <- x$tdf
-    is_hcw <- cases$class == "HCW"
-    breaks <- breaks_by_sc[[x$scenario]]
-    died   <- !is.na(cases$outcome) & cases$outcome
-    
-    if (!is_baseline) {
-      run_seed       <- seed_offset + x$particle_id * 1000L + x$rep
-      obv            <- apply_obv_posthoc(cases, efficacy, cov_spec, seed = run_seed)
-      prevented_full <- logical(nrow(cases))
-      prevented_full[which(is_hcw)] <- obv$prevented_flag
-      died <- died & !prevented_full
-    }
-    
-    mids <- breaks[-length(breaks)] + bin_width / 2
-    
-    times <- switch(metric,
-                    hcw_deaths           = cases$time_outcome_absolute[died & is_hcw],
-                    hcw_deaths_incidence = cases$time_outcome_absolute[died & is_hcw],
-                    hcw_infections       = cases$time_infection_absolute[is_hcw],
-                    deaths               = cases$time_outcome_absolute[died],
-                    infections           = cases$time_infection_absolute
-    )
-    
-    # Clip times to the scenario's break range before binning
-    t_clipped <- times[!is.na(times) & times >= 0 & times <= max(breaks)]
-    counts    <- hist(t_clipped, breaks = breaks, plot = FALSE)$counts
-    
-    data.frame(
-      scenario    = x$scenario,
-      arm         = efficacy_name,
-      particle_id = x$particle_id,
-      rep         = x$rep,
-      week        = mids,
-      value       = counts,
-      stringsAsFactors = FALSE
-    )
-  }))
-  
-  is_incidence <- metric %in% c("infections", "deaths", "hcw_deaths_incidence")
-  
-  # Mean over reps per particle, then quantiles over particles
-  rows %>%
-    group_by(scenario, arm, particle_id, week) %>%
-    summarise(value = mean(value), .groups = "drop") %>%
-    arrange(scenario, arm, particle_id, week) %>%
-    group_by(scenario, arm, particle_id) %>%
-    mutate(value = if (is_incidence) value else cumsum(value)) %>%
-    ungroup() %>%
-    group_by(scenario, arm, week) %>%
-    summarise(
-      q025 = quantile(value, 0.025),
-      q25  = quantile(value, 0.25),
-      q50  = quantile(value, 0.50),
-      q75  = quantile(value, 0.75),
-      q975 = quantile(value, 0.975),
-      .groups = "drop"
     )
 }
 
@@ -450,7 +156,228 @@ build_weekly_ts <- function(results,
 # =============================================================================
 theme_fig <- function(base_size = 10) {
   theme_classic(base_size = base_size) +
-    theme(
-      legend.position = "top"
+    theme(legend.position = "top")
+}
+
+# =============================================================================
+# extract_weekly_ts  (Figure 1)
+# =============================================================================
+extract_weekly_ts <- function(arm_dir,
+                              bin_width = 7,
+                              n_workers = 10L,
+                              base_dir  = here("outputs", "simulation")) {
+  library(future)
+  library(future.apply)
+  
+  dir_path <- file.path(base_dir, arm_dir)
+  files    <- list.files(dir_path, pattern = "\\.rds$", full.names = TRUE)
+  if (length(files) == 0) stop("No RDS files found in: ", dir_path)
+  message(sprintf("Extracting weekly ts from %d files in arm '%s'...",
+                  length(files), arm_dir))
+  
+  plan(multisession, workers = min(n_workers, future::availableCores()))
+  on.exit(plan(sequential), add = TRUE)
+  
+  results <- future_lapply(seq_along(files), function(i) {
+    if (i %% 10 == 0)
+      message(sprintf("  Processing file %d / %d...", i, length(files)))
+    
+    f <- files[[i]]
+    x <- readRDS(f)
+    
+    fname <- tools::file_path_sans_ext(basename(f))
+    parts <- regmatches(fname, regexec("^(.+)_p(\\d+)_r(\\d+)$", fname))[[1]]
+    sc    <- if (length(parts) == 4) parts[2] else NA_character_
+    pid   <- if (length(parts) == 4) as.integer(parts[3]) else NA_integer_
+    rep   <- if (length(parts) == 4) as.integer(parts[4]) else NA_integer_
+    
+    cap    <- SCENARIO_X_MAX_DAYS[sc]
+    breaks <- seq(0, ceiling(cap / bin_width) * bin_width, by = bin_width)
+    mids   <- breaks[-length(breaks)] + bin_width / 2
+    
+    .bin <- function(times) {
+      t_clip <- times[!is.na(times) & times >= 0 & times <= max(breaks)]
+      hist(t_clip, breaks = breaks, plot = FALSE)$counts
+    }
+    
+    .extract <- function(cases, arm_label) {
+      is_hcw <- !is.na(cases$class) & cases$class == "HCW"
+      died   <- !is.na(cases$outcome) & cases$outcome
+      metrics <- list(
+        deaths               = cases$time_outcome_absolute[died],
+        infections           = cases$time_infection_absolute,
+        hcw_deaths_incidence = cases$time_outcome_absolute[died & is_hcw],
+        hcw_deaths           = cases$time_outcome_absolute[died & is_hcw]
+      )
+      # All returned as incidence; cumsum for hcw_deaths applied after aggregation
+      do.call(rbind, lapply(names(metrics), function(m) {
+        data.frame(scenario = sc, particle_id = pid, rep = rep,
+                   arm = arm_label, week = mids, metric = m,
+                   value = .bin(metrics[[m]]), stringsAsFactors = FALSE)
+      }))
+    }
+    
+    tdf       <- x$tdf
+    prevented <- x$prevented_completed
+    if (!is.null(prevented) && nrow(prevented) > 0) {
+      missing_cols <- setdiff(names(tdf), names(prevented))
+      for (col in missing_cols) prevented[[col]] <- NA
+      prevented  <- prevented[, names(tdf), drop = FALSE]
+      cases_base <- rbind(tdf, prevented)
+    } else {
+      cases_base <- tdf
+    }
+    
+    rbind(.extract(cases_base, "baseline"), .extract(tdf, "obv"))
+  }, future.packages = c("here"), future.seed = TRUE)
+  
+  do.call(rbind, results)
+}
+
+# =============================================================================
+# extract_run_summary  (Figures 2, 3, 4)
+# =============================================================================
+extract_run_summary <- function(arm_dir,
+                                arm_label = arm_dir,
+                                n_workers = 10L,
+                                base_dir  = here("outputs", "simulation")) {
+  library(future)
+  library(future.apply)
+  
+  dir_path <- file.path(base_dir, arm_dir)
+  files    <- list.files(dir_path, pattern = "\\.rds$", full.names = TRUE)
+  if (length(files) == 0) stop("No RDS files found in: ", dir_path)
+  message(sprintf("Extracting run summaries from %d files in arm '%s'...",
+                  length(files), arm_dir))
+  
+  plan(multisession, workers = min(n_workers, future::availableCores()))
+  on.exit(plan(sequential), add = TRUE)
+  
+  results <- future_lapply(seq_along(files), function(i) {
+    if (i %% 10 == 0)
+      message(sprintf("  Processing file %d / %d...", i, length(files)))
+    
+    f <- files[[i]]
+    x <- readRDS(f)
+    
+    fname <- tools::file_path_sans_ext(basename(f))
+    parts <- regmatches(fname, regexec("^(.+)_p(\\d+)_r(\\d+)$", fname))[[1]]
+    sc    <- if (length(parts) == 4) parts[2] else NA_character_
+    pid   <- if (length(parts) == 4) as.integer(parts[3]) else NA_integer_
+    rep   <- if (length(parts) == 4) as.integer(parts[4]) else NA_integer_
+    
+    tdf       <- x$tdf
+    prevented <- x$prevented_completed
+    duration  <- max(tdf$time_outcome_absolute, na.rm = TRUE)
+    
+    if (!is.null(prevented) && nrow(prevented) > 0) {
+      missing_cols <- setdiff(names(tdf), names(prevented))
+      for (col in missing_cols) prevented[[col]] <- NA
+      prevented  <- prevented[, names(tdf), drop = FALSE]
+      cases_base <- rbind(tdf, prevented)
+    } else {
+      cases_base <- tdf
+    }
+    
+    .hcw_deaths <- function(cases) {
+      is_hcw <- !is.na(cases$class) & cases$class == "HCW"
+      died   <- !is.na(cases$outcome) & cases$outcome
+      sum(died & is_hcw)
+    }
+    .days_lost <- function(cases) {
+      hcw <- cases[!is.na(cases$class) & cases$class == "HCW", ]
+      if (nrow(hcw) == 0) return(0)
+      sum(pmax(duration - hcw$time_symptom_onset_absolute, 0), na.rm = TRUE)
+    }
+    
+    n_base     <- .hcw_deaths(cases_base)
+    n_obv      <- .hcw_deaths(tdf)
+    days_base  <- .days_lost(cases_base)
+    days_obv   <- .days_lost(tdf)
+    
+    # Store baseline and OBV values in a single row per run.
+    # This avoids duplicate baseline rows when multiple arms are combined.
+    data.frame(
+      scenario           = sc,
+      particle_id        = pid,
+      rep                = rep,
+      arm                = arm_label,
+      n_hcw_deaths       = n_obv,
+      hcw_days_lost      = days_obv,
+      counterfactual_hcw = n_base,
+      prevented_hcw      = n_base - n_obv,
+      baseline_days_lost = days_base,
+      stringsAsFactors   = FALSE
     )
+  }, future.packages = c("here"), future.seed = TRUE)
+  
+  do.call(rbind, results)
+}
+
+# =============================================================================
+# extract_dose_summary  (Figure 5)
+# =============================================================================
+extract_dose_summary <- function(arm_dir,
+                                 eff_name,
+                                 n_workers = 10L,
+                                 base_dir  = here("outputs", "simulation")) {
+  library(future)
+  library(future.apply)
+  
+  efficacy <- OBV_EFFICACY_VALUES[[eff_name]]
+  dir_path <- file.path(base_dir, arm_dir)
+  files    <- list.files(dir_path, pattern = "\\.rds$", full.names = TRUE)
+  if (length(files) == 0) stop("No RDS files found in: ", dir_path)
+  message(sprintf("Extracting dose summaries from %d files in arm '%s'...",
+                  length(files), arm_dir))
+  
+  plan(multisession, workers = min(n_workers, future::availableCores()))
+  on.exit(plan(sequential), add = TRUE)
+  
+  results <- future_lapply(seq_along(files), function(i) {
+    if (i %% 10 == 0)
+      message(sprintf("  Processing file %d / %d...", i, length(files)))
+    
+    f <- files[[i]]
+    x <- readRDS(f)
+    
+    fname <- tools::file_path_sans_ext(basename(f))
+    parts <- regmatches(fname, regexec("^(.+)_p(\\d+)_r(\\d+)$", fname))[[1]]
+    sc    <- if (length(parts) == 4) parts[2] else NA_character_
+    pid   <- if (length(parts) == 4) as.integer(parts[3]) else NA_integer_
+    rep   <- if (length(parts) == 4) as.integer(parts[4]) else NA_integer_
+    
+    tdf       <- x$tdf
+    prevented <- x$prevented_completed
+    
+    is_hcw_tdf  <- !is.na(tdf$class) & tdf$class == "HCW"
+    is_hcw_prev <- if (!is.null(prevented) && nrow(prevented) > 0)
+      !is.na(prevented$class) & prevented$class == "HCW"
+    else logical(0)
+    
+    data.frame(
+      scenario        = sc,
+      particle_id     = pid,
+      rep             = rep,
+      eff_name        = eff_name,
+      efficacy        = efficacy,
+      doses_B         = sum(is_hcw_tdf) + sum(is_hcw_prev),
+      n_prevented_hcw = sum(is_hcw_prev),
+      stringsAsFactors = FALSE
+    )
+  }, future.packages = c("here"), future.seed = TRUE)
+  
+  do.call(rbind, results)
+}
+
+# =============================================================================
+# save_figure_data
+# =============================================================================
+save_figure_data <- function(df, filename,
+                             out_dir = here("output_figgen")) {
+  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(out_dir, filename)
+  write.csv(df, path, row.names = FALSE)
+  message(sprintf("Saved figure data: %s", path))
+  invisible(path)
 }

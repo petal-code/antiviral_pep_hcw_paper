@@ -1,18 +1,25 @@
 # =============================================================================
-# 01_analysis_baseline.R
+# 01_analysis_simulation.R
 #
-# Runs baseline simulations with OBV enabled at 100% coverage across all
-# locations. The prevented_completed output captures individuals whose
-# infections were prevented by OBV -- these are added back to reconstruct
-# the counterfactual "no OBV" scenario in downstream figure scripts.
+# Runs OBV simulations across all required efficacy x coverage arm combinations.
+# Each arm is saved to a separate subdirectory under outputs/simulation/.
 #
-# Takeoff condition: if n_deaths < TAKEOFF_DEATH_THRESHOLD, retry with
-# seed + 1 until the condition is met (max MAX_RETRIES attempts).
+# Arms (44 total):
+#   full_obv10 ~ full_obv90         (9) : 100% coverage, 10-90% efficacy  -- Figures 1, 2, 5
+#   ramp_high_obv50 ~ ramp_high_obv90  (5) : ramp-high coverage, 50-90%   -- Figure 3
+#   ramp_low_obv50  ~ ramp_low_obv90   (5) : ramp-low coverage, 50-90%    -- Figure 3
+#   const{cov}_obv{eff}            (25) : constant coverage grid           -- Figure 4
 #
-# Both scenarios use the DECOUPLED fit:
-#   (R0, prop_funeral, etu_efficacy, ppe_efficacy, hcw_risk_scalar)
+# Coverage splines (consistent with helper COVERAGE_SPECS):
+#   full      : 100% throughout
+#   ramp_high : clamped cubic spline (0wk,0.20)->(26wk,0.50)->(52wk,0.80)
+#   ramp_low  : clamped cubic spline (0wk,0.00)->(26wk,0.25)->(52wk,0.50)
 #
-# N_WORKERS must be a divisor of N_PARTICLES (e.g. 1,2,4,5,10,20,25,50,100).
+# Each RDS file contains the full fiber output (out$tdf + out$prevented_completed
+# + out$sim_info). "Without OBV" is reconstructed post-hoc by combining
+# tdf + prevented_completed from any arm.
+#
+# N_WORKERS must be a divisor of N_PARTICLES.
 # =============================================================================
 
 library(here)
@@ -32,33 +39,125 @@ sys.source(here("functions", "abc_calibration_functions_decoupled.R"), envir = e
 # =============================================================================
 # Configuration
 # =============================================================================
-
-# >>> SET THIS: must be a divisor of N_PARTICLES (1,2,4,5,10,20,25,50,100)
-N_WORKERS        <- 10L
-
-N_PARTICLES      <- 200
-N_REPS           <- 10
-SEEDING_CASES    <- 25
-RESAMPLE_SEED    <- 42L
-SEED_BASE        <- 20260601L
-
+N_WORKERS    <- 50L
+N_PARTICLES  <- 200
+N_REPS       <- 10
+SEEDING_CASES <- 25L
+RESAMPLE_SEED <- 42L
+SEED_BASE     <- 20260701L
 HCW_BASE_PROB <- 0.25
 
-# Takeoff threshold: consistent with ABC fitting scheme
 TAKEOFF_DEATH_THRESHOLD <- 100L
-MAX_RETRIES             <- 50L   # max seed increments before giving up
-
-# OBV settings: full coverage across all locations
-OBV_COVERAGE         <- 1.0
-OBV_ADHERENCE        <- 1.0
-OBV_DPC              <- 0
-OBV_EFFICACY         <- 0.8
-OBV_TARGET_CLASS     <- "HCW"
-OBV_TARGET_LOCATIONS <- c("hospital", "community", "funeral")
+MAX_RETRIES             <- 50L
 
 stopifnot(N_PARTICLES %% N_WORKERS == 0L)
 PARTICLES_PER_WORKER <- N_PARTICLES %/% N_WORKERS
 
+# =============================================================================
+# Coverage spline builder (consistent with helper COVERAGE_SPECS)
+# =============================================================================
+make_clamped_spline_fn <- function(t_knots, y_knots,
+                                   deriv_start = 0, deriv_end = 0) {
+  n <- length(t_knots)
+  h <- diff(t_knots)
+  
+  rhs <- numeric(n)
+  rhs[1] <- 3 * (y_knots[2] - y_knots[1]) / h[1] - 3 * deriv_start
+  rhs[n] <- 3 * deriv_end - 3 * (y_knots[n] - y_knots[n - 1]) / h[n - 1]
+  for (i in 2:(n - 1)) {
+    rhs[i] <- 3 * ((y_knots[i + 1] - y_knots[i]) / h[i] -
+                     (y_knots[i]     - y_knots[i - 1]) / h[i - 1])
+  }
+  
+  diag_main <- numeric(n)
+  diag_main[1] <- 2 * h[1]
+  diag_main[n] <- 2 * h[n - 1]
+  for (i in 2:(n - 1)) diag_main[i] <- 2 * (h[i - 1] + h[i])
+  
+  c_vec <- h; d_vec <- rhs
+  c_vec[1] <- c_vec[1] / diag_main[1]
+  d_vec[1] <- d_vec[1] / diag_main[1]
+  for (i in 2:n) {
+    denom <- diag_main[i] - (if (i > 1) h[i - 1] else 0) * c_vec[i - 1]
+    if (i < n) c_vec[i] <- h[i] / denom
+    d_vec[i] <- (d_vec[i] - (if (i > 1) h[i - 1] else 0) * d_vec[i - 1]) / denom
+  }
+  
+  M <- numeric(n)
+  M[n] <- d_vec[n]
+  for (i in (n - 1):1) M[i] <- d_vec[i] - c_vec[i] * M[i + 1]
+  
+  function(t) {
+    pmin(pmax(vapply(t, function(tv) {
+      if (tv <= t_knots[1])  return(y_knots[1])
+      if (tv >= t_knots[n])  return(y_knots[n])
+      i  <- min(max(findInterval(tv, t_knots, rightmost.closed = TRUE), 1L), n - 1L)
+      hi <- h[i]
+      a  <- (t_knots[i + 1] - tv) / hi
+      b  <- (tv - t_knots[i])     / hi
+      a * y_knots[i] + b * y_knots[i + 1] +
+        ((a^3 - a) * M[i] + (b^3 - b) * M[i + 1]) * hi^2 / 6
+    }, numeric(1)), 0), 1)
+  }
+}
+
+# Coverage curve functions (days as input)
+COVERAGE_FNS <- list(
+  full      = function(t) rep(1.0, length(t)),
+  ramp_high = make_clamped_spline_fn(
+    t_knots = c(0, 26 * 7, 52 * 7),
+    y_knots = c(0.20, 0.50, 0.80)
+  ),
+  ramp_low  = make_clamped_spline_fn(
+    t_knots = c(0, 26 * 7, 52 * 7),
+    y_knots = c(0.00, 0.25, 0.50)
+  )
+)
+
+# =============================================================================
+# Arm definitions
+#
+# full_obv10 ~ full_obv90     (9 arms) : 100% coverage, 10-90% efficacy  -- Figures 1, 2, 5
+# ramp_high_obv50~obv90       (5 arms) : ramp-high coverage, 50-90%      -- Figure 3
+# ramp_low_obv50~obv90        (5 arms) : ramp-low coverage, 50-90%       -- Figure 3
+# const{cov}_obv{eff}        (25 arms) : constant coverage grid           -- Figure 4
+# =============================================================================
+FULL_EFFICACIES  <- c(0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90)
+RAMP_EFFICACIES  <- c(0.50, 0.60, 0.70, 0.80, 0.90)
+CONST_COVERAGES  <- c(0.10, 0.30, 0.50, 0.70, 0.90)
+CONST_EFFICACIES <- c(0.50, 0.60, 0.70, 0.80, 0.90)
+
+ARMS_FULL <- do.call(rbind, lapply(FULL_EFFICACIES, function(eff) {
+  data.frame(arm_name  = sprintf("full_obv%02d", round(eff * 100)),
+             coverage  = "full", efficacy = eff, const_cov = NA_real_,
+             stringsAsFactors = FALSE)
+}))
+
+ARMS_RAMP <- do.call(rbind, lapply(c("ramp_high", "ramp_low"), function(cov) {
+  do.call(rbind, lapply(RAMP_EFFICACIES, function(eff) {
+    data.frame(arm_name  = sprintf("%s_obv%02d", cov, round(eff * 100)),
+               coverage  = cov, efficacy = eff, const_cov = NA_real_,
+               stringsAsFactors = FALSE)
+  }))
+}))
+
+ARMS_CONST <- do.call(rbind, lapply(CONST_COVERAGES, function(cov) {
+  do.call(rbind, lapply(CONST_EFFICACIES, function(eff) {
+    data.frame(arm_name  = sprintf("const%02d_obv%02d", round(cov * 100), round(eff * 100)),
+               coverage  = "const", efficacy = eff, const_cov = cov,
+               stringsAsFactors = FALSE)
+  }))
+}))
+
+ARMS <- rbind(ARMS_FULL, ARMS_RAMP, ARMS_CONST)
+
+message(sprintf("Total arms: %d (full: %d, ramp: %d, const grid: %d)",
+                nrow(ARMS), nrow(ARMS_FULL), nrow(ARMS_RAMP), nrow(ARMS_CONST)))
+print(ARMS$arm_name)
+
+# =============================================================================
+# Scenarios
+# =============================================================================
 SCENARIOS <- list(
   WestAfrica = list(
     id           = "Worst_WestAfrica",
@@ -78,19 +177,22 @@ SCENARIOS <- list(
   )
 )
 
-OUT_DIR <- here("outputs", "simulation_baseline")
-dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+# Create output directories
+OUT_BASE <- here("outputs", "simulation")
+for (arm_name in ARMS$arm_name) {
+  dir.create(file.path(OUT_BASE, arm_name), recursive = TRUE, showWarnings = FALSE)
+}
 
 check_model_function_version()
 
 # =============================================================================
-# Pre-compute particle args in main session
+# Pre-compute particle args per scenario
 # =============================================================================
 message("Pre-computing particle args...")
 
 scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
   sc <- SCENARIOS[[sc_name]]
-  message(sprintf("  %s (decoupled fit)...", sc_name))
+  message(sprintf("  %s...", sc_name))
   
   res       <- readRDS(sc$rds)
   posterior <- data.frame(weight = res$weights)
@@ -99,7 +201,6 @@ scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
   }
   theta <- downsample_posterior(posterior, n_sets = N_PARTICLES,
                                 seed = RESAMPLE_SEED, param_names = sc$param_names)
-  message(sprintf("    Posterior: %d particles -> resampled %d", nrow(posterior), N_PARTICLES))
   
   scenario_matrix <- read_scenario_matrix(sc$scenario_csv)
   mp <- make_model_parameters(
@@ -108,12 +209,12 @@ scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
     overrides       = list(seeding_cases    = SEEDING_CASES,
                            check_final_size = sc$check_final_size)
   )
-  
   inv <- compute_R0_invariants(args = mp$args, n = 50000, seed = 42L)
   
   build_decoupled <- env_decoupled$build_abc_model_args_decoupled
   
-  particle_args <- lapply(seq_len(N_PARTICLES), function(p) {
+  # Base args per particle (no OBV settings yet)
+  base_particle_args <- lapply(seq_len(N_PARTICLES), function(p) {
     args <- build_decoupled(
       R0              = theta$R0[p],
       prop_funeral    = theta$prop_funeral[p],
@@ -129,24 +230,14 @@ scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
       seeding_cases   = SEEDING_CASES
     )
     args$check_final_size <- sc$check_final_size
-    
-    # Add OBV settings: full coverage across all locations
-    args$obv_pep_enabled          <- TRUE
-    args$obv_pep_coverage         <- OBV_COVERAGE
-    args$obv_pep_adherence        <- OBV_ADHERENCE
-    args$obv_pep_dpc              <- OBV_DPC
-    args$obv_pep_efficacy         <- OBV_EFFICACY
-    args$obv_pep_target_class     <- OBV_TARGET_CLASS
-    args$obv_pep_target_locations <- OBV_TARGET_LOCATIONS
-    
     args
   })
   
   list(
-    sc_name       = sc_name,
-    sc_idx        = match(sc_name, names(SCENARIOS)),
-    theta         = theta,
-    particle_args = particle_args
+    sc_name           = sc_name,
+    sc_idx            = match(sc_name, names(SCENARIOS)),
+    theta             = theta,
+    base_particle_args = base_particle_args
   )
 })
 names(scenario_setups) <- names(SCENARIOS)
@@ -161,8 +252,10 @@ jobs <- lapply(seq_len(N_WORKERS), function(w) {
 })
 
 message(sprintf(
-  "%d workers | %d particles each | %d scenarios x %d reps",
-  N_WORKERS, PARTICLES_PER_WORKER, length(SCENARIOS), N_REPS
+  "%d workers | %d particles each | %d scenarios x %d arms x %d reps = %d total runs",
+  N_WORKERS, PARTICLES_PER_WORKER,
+  length(SCENARIOS), nrow(ARMS), N_REPS,
+  length(SCENARIOS) * nrow(ARMS) * N_PARTICLES * N_REPS
 ))
 
 # =============================================================================
@@ -178,85 +271,87 @@ future_lapply(jobs, function(job) {
       setup  <- scenario_setups[[sc_name]]
       sc_idx <- setup$sc_idx
       
-      for (r in seq_len(N_REPS)) {
-        fname    <- sprintf("%s_p%03d_r%d.rds", sc_name, p, r)
-        out_path <- file.path(OUT_DIR, fname)
-        if (file.exists(out_path)) next
+      for (arm_idx in seq_len(nrow(ARMS))) {
+        arm      <- ARMS[arm_idx, ]
+        efficacy <- arm$efficacy
+        arm_name <- arm$arm_name
         
-        base_seed <- SEED_BASE +
-          (sc_idx - 1L) * N_PARTICLES * N_REPS +
-          (p      - 1L) * N_REPS +
-          (r      - 1L)
-        
-        args <- setup$particle_args[[p]]
-        
-        # Retry with seed+1 until takeoff condition is met
-        out        <- NULL
-        retry      <- 0L
-        current_seed <- base_seed
-        repeat {
-          args$seed <- current_seed
-          out       <- do.call(fiber::branching_process_main, args)
-          tdf_all   <- out$tdf[!is.na(out$tdf$time_infection_absolute), ]
-          n_deaths  <- sum(!is.na(tdf_all$outcome) & tdf_all$outcome)
-          
-          if (n_deaths >= TAKEOFF_DEATH_THRESHOLD) break
-          
-          retry        <- retry + 1L
-          current_seed <- current_seed + 1L
-          
-          if (retry >= MAX_RETRIES) {
-            message(sprintf(
-              "  [w%02d | p%03d | %s | r%d] WARNING: max retries reached (best n_deaths=%d)",
-              job$worker_id, p, sc_name, r, n_deaths
-            ))
-            break
-          }
+        # Resolve coverage function
+        if (arm$coverage == "const") {
+          local_cov_val <- arm$const_cov  # capture value to avoid lazy eval issue
+          cov_fn <- local(function(t) rep(local_cov_val, length(t)),
+                          envir = list2env(list(local_cov_val = arm$const_cov)))
+        } else {
+          cov_fn <- COVERAGE_FNS[[arm$coverage]]
         }
         
-        tdf   <- out$tdf[!is.na(out$tdf$time_infection_absolute), ]
-        is_hcw <- tdf$class == "HCW"
-        died   <- !is.na(tdf$outcome) & tdf$outcome
-        
-        result <- list(
-          scenario            = sc_name,
-          particle_id         = p,
-          rep                 = r,
-          seed_used           = current_seed,
-          n_retries           = retry,
-          R0                  = setup$theta$R0[p],
-          prop_funeral        = setup$theta$prop_funeral[p],
-          etu_efficacy        = setup$theta$etu_efficacy[p],
-          ppe_efficacy        = setup$theta$ppe_efficacy[p],
-          hcw_risk_scalar     = setup$theta$hcw_risk_scalar[p],
-          tdf                 = tdf,
-          prevented_completed = out$prevented_completed,
-          n_infections        = nrow(tdf),
-          n_hcw_infections    = sum(is_hcw),
-          n_deaths            = sum(died),
-          n_hcw_deaths        = sum(died & is_hcw),
-          n_prevented         = nrow(out$prevented_completed),
-          duration            = max(tdf$time_outcome_absolute, na.rm = TRUE)
-        )
-        
-        saveRDS(result, out_path)
-        message(sprintf(
-          "  [w%02d | p%03d | %s | r%d] seed=%d retries=%d -> %d inf, %d HCW deaths, %d prevented",
-          job$worker_id, p, sc_name, r,
-          current_seed, retry,
-          result$n_infections, result$n_hcw_deaths, result$n_prevented
-        ))
+        for (r in seq_len(N_REPS)) {
+          fname    <- sprintf("%s_p%03d_r%02d.rds", sc_name, p, r)
+          out_path <- file.path(OUT_BASE, arm_name, fname)
+          if (file.exists(out_path)) next
+          
+          seed <- SEED_BASE +
+            (sc_idx  - 1L) * N_PARTICLES * nrow(ARMS) * N_REPS +
+            (arm_idx - 1L) * N_PARTICLES * N_REPS +
+            (p       - 1L) * N_REPS +
+            (r       - 1L)
+          
+          args <- setup$base_particle_args[[p]]
+          
+          # OBV settings
+          args$obv_pep_enabled          <- TRUE
+          args$obv_pep_coverage         <- cov_fn   # function(t)
+          args$obv_pep_adherence        <- 1.0
+          args$obv_pep_dpc              <- 0
+          args$obv_pep_efficacy         <- efficacy
+          args$obv_pep_target_class     <- "HCW"
+          args$obv_pep_target_locations <- c("hospital", "community", "funeral")
+          
+          # Retry until takeoff
+          out          <- NULL
+          retry        <- 0L
+          current_seed <- seed
+          repeat {
+            args$seed <- current_seed
+            out       <- do.call(fiber::branching_process_main, args)
+            tdf_all   <- out$tdf[!is.na(out$tdf$time_infection_absolute), ]
+            n_deaths  <- sum(!is.na(tdf_all$outcome) & tdf_all$outcome)
+            
+            if (n_deaths >= TAKEOFF_DEATH_THRESHOLD) break
+            
+            retry        <- retry + 1L
+            current_seed <- current_seed + 1L
+            if (retry >= MAX_RETRIES) {
+              message(sprintf(
+                "  [w%02d | %s | %s | p%03d | r%02d] WARNING: max retries (n_deaths=%d)",
+                job$worker_id, sc_name, arm_name, p, r, n_deaths
+              ))
+              break
+            }
+          }
+          
+          saveRDS(out, out_path)
+          message(sprintf(
+            "  [w%02d | %s | %s | p%03d | r%02d] seed=%d retries=%d -> %d deaths, %d prevented",
+            job$worker_id, sc_name, arm_name, p, r,
+            current_seed, retry,
+            sum(!is.na(out$tdf$outcome) & out$tdf$outcome),
+            if (!is.null(out$sim_info$obv_pep_num_treated))
+              out$sim_info$obv_pep_num_treated$prevented else NA
+          ))
+        }
       }
     }
   }
   
-  message(sprintf("Worker %d done (particles %d-%d).",
-                  job$worker_id, job$p_from, job$p_to))
+  message(sprintf("Worker %d done (particles %d-%d).", job$worker_id, job$p_from, job$p_to))
   NULL
 },
 future.globals = list(
   scenario_setups         = scenario_setups,
-  OUT_DIR                 = OUT_DIR,
+  OUT_BASE                = OUT_BASE,
+  ARMS                    = ARMS,
+  COVERAGE_FNS            = COVERAGE_FNS,
   N_PARTICLES             = N_PARTICLES,
   N_REPS                  = N_REPS,
   SEED_BASE               = SEED_BASE,
@@ -269,6 +364,6 @@ future.seed     = TRUE)
 plan(sequential)
 
 elapsed <- proc.time() - t_start
-n_files <- length(list.files(OUT_DIR, pattern = "\\.rds$"))
-message(sprintf("Done in %.1f minutes. Total files: %d",
-                elapsed["elapsed"] / 60, n_files))
+n_files <- sum(sapply(ARMS$arm_name, function(a)
+  length(list.files(file.path(OUT_BASE, a), pattern = "\\.rds$"))))
+message(sprintf("Done in %.1f minutes. Total files: %d", elapsed["elapsed"] / 60, n_files))
