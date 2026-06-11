@@ -14,7 +14,7 @@ run_df <- do.call(rbind, lapply(COVERAGE_GRID, function(cov) {
   do.call(rbind, lapply(EFFICACY_GRID, function(eff) {
     arm_dir   <- sprintf("const%02d_obv%02d", round(cov * 100), round(eff * 100))
     arm_label <- sprintf("cov%02d_obv%02d", round(cov * 100), round(eff * 100))
-    df <- extract_run_summary(arm_dir, arm_label = arm_label, n_workers = 10L)
+    df <- extract_run_summary(arm_dir, arm_label = arm_label, n_workers = 10L, obv_return = TRUE)
     df$obv_efficacy <- eff
     df$obv_coverage <- cov
     df

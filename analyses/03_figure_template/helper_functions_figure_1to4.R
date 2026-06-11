@@ -240,6 +240,7 @@ extract_weekly_ts <- function(arm_dir,
 extract_run_summary <- function(arm_dir,
                                 arm_label = arm_dir,
                                 n_workers = 10L,
+                                obv_return = FALSE,
                                 base_dir  = here("outputs", "simulation")) {
   library(future)
   library(future.apply)
@@ -284,16 +285,40 @@ extract_run_summary <- function(arm_dir,
       died   <- !is.na(cases$outcome) & cases$outcome
       sum(died & is_hcw)
     }
-    .days_lost <- function(cases) {
+    .days_lost <- function(cases, is_prevented = FALSE) {
       hcw <- cases[!is.na(cases$class) & cases$class == "HCW", ]
       if (nrow(hcw) == 0) return(0)
-      sum(pmax(duration - hcw$time_symptom_onset_absolute, 0), na.rm = TRUE)
+      if (obv_return) {
+        # OBV recipients who survived return to work at time_outcome_absolute.
+        # prevented_completed HCW are all OBV recipients who survived.
+        # tdf HCW with obv_pep_received=TRUE and survived also return early.
+        died         <- !is.na(hcw$outcome) & hcw$outcome
+        obv_recv     <- is_prevented | (!is.na(hcw$obv_pep_received) & hcw$obv_pep_received)
+        early_return <- obv_recv & !died
+        absence_end  <- ifelse(early_return, hcw$time_outcome_absolute, duration)
+      } else {
+        # Default: all infected HCW absent until simulation end
+        absence_end <- rep(duration, nrow(hcw))
+      }
+      sum(pmax(absence_end - hcw$time_symptom_onset_absolute, 0), na.rm = TRUE)
     }
     
-    n_base     <- .hcw_deaths(cases_base)
-    n_obv      <- .hcw_deaths(tdf)
-    days_base  <- .days_lost(cases_base)
-    days_obv   <- .days_lost(tdf)
+    n_base    <- .hcw_deaths(cases_base)
+    n_obv     <- .hcw_deaths(tdf)
+    # Baseline: prevented HCW are NOT OBV recipients (counterfactual world)
+    days_base <- .days_lost(cases_base, is_prevented = FALSE)
+    # OBV arm: tdf as-is; prevented HCW counted separately as early returners
+    days_obv  <- .days_lost(tdf, is_prevented = FALSE) +
+      if (obv_return && !is.null(x$prevented_completed) &&
+          nrow(x$prevented_completed) > 0) {
+        prev_hcw <- x$prevented_completed[
+          !is.na(x$prevented_completed$class) &
+            x$prevented_completed$class == "HCW", ]
+        if (nrow(prev_hcw) > 0)
+          sum(pmax(prev_hcw$time_outcome_absolute -
+                     prev_hcw$time_symptom_onset_absolute, 0), na.rm = TRUE)
+        else 0
+      } else 0
     
     # Store baseline and OBV values in a single row per run.
     # This avoids duplicate baseline rows when multiple arms are combined.
