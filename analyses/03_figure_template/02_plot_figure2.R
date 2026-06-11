@@ -1,28 +1,28 @@
 # =============================================================================
 # 02_plot_figure2.R
-# OBV efficacy comparison at full coverage -- post-hoc applied to baseline runs
+# OBV efficacy comparison at full coverage (50-90%)
+# Reads pre-computed CSV from output_figgen/figure_2_run_summary.csv
+# Run 02_extract_figure2.R first.
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-results <- load_results()
+FIG2_EFFICACY_LEVELS <- c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
+FIG2_EFFICACY_LABELS <- c("50%", "60%", "70%", "80%", "90%")
 
-# Build panels ----
-run_df <- do.call(rbind, c(
-  list(build_run_df_obv(results, "baseline")),
-  lapply(OBV_EFFICACY_LEVELS, function(eff) {
-    build_run_df_obv(results, eff, "full")
-  })
-))
+run_df <- read.csv(here("output_figgen", "figure_2_run_summary.csv"),
+                   stringsAsFactors = FALSE)
 
 pdf <- make_particle_df(run_df) %>%
-  filter(arm %in% OBV_EFFICACY_LEVELS) %>%
+  filter(arm %in% FIG2_EFFICACY_LEVELS) %>%
   mutate(
-    arm_label      = factor(OBV_EFFICACY_LABELS[match(arm, OBV_EFFICACY_LEVELS)],
-                            levels = OBV_EFFICACY_LABELS),
+    arm_label      = factor(FIG2_EFFICACY_LABELS[match(arm, FIG2_EFFICACY_LEVELS)],
+                            levels = FIG2_EFFICACY_LABELS),
     scenario_label = SCENARIO_LABELS[scenario]
   )
+
+save_figure_data(pdf, "figure_2_particle_df.csv")
 
 make_summ <- function(df, metric, sc) {
   df %>%
@@ -41,26 +41,21 @@ make_bar_plot <- function(summ_df, sc, y_label) {
   base_col   <- SCENARIO_COLORS[sc]
   dark_col   <- rgb(t(col2rgb(base_col) * 0.7), maxColorValue = 255)
   obv_colors <- setNames(
-    c(colorRampPalette(c(light_col, base_col))(4), dark_col),
-    OBV_EFFICACY_LABELS
+    colorRampPalette(c(light_col, dark_col))(length(FIG2_EFFICACY_LABELS)),
+    FIG2_EFFICACY_LABELS
   )
-  
   ggplot(summ_df, aes(x = arm_label, y = median, fill = arm_label)) +
     geom_col(aes(color = arm_label == "80%"), width = 0.8, alpha = 0.85, linewidth = 0.8) +
     scale_color_manual(values = c("TRUE" = "black", "FALSE" = NA), guide = "none") +
     geom_errorbar(aes(ymin = lo95, ymax = hi95), color = "black", width = 0.2, linewidth = 0.8) +
     geom_point(color = "black", size = 2) +
     scale_fill_manual(values = obv_colors, guide = "none") +
-    scale_y_continuous(
-      expand = expansion(mult = c(0, 0)),
-      limits = c(0, 100),
-      labels = function(x) paste0(x, "%")
-    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), limits = c(0, 100),
+                       labels = function(x) paste0(x, "%")) +
     labs(x = "OBV efficacy", y = y_label) +
     theme_fig()
 }
 
-# Combine panels ----
 make_header <- function(label) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +

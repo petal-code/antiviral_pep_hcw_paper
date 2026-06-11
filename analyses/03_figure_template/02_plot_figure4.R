@@ -1,88 +1,32 @@
 # =============================================================================
 # 02_plot_figure4.R
-# Efficacy x coverage heatmap -- fully post-hoc, no separate simulation needed
+# Efficacy x coverage heatmap
+# Reads pre-computed CSV from output_figgen/figure_4_run_summary.csv
+# Run 02_extract_figure4.R first.
 # =============================================================================
-source(here::here(
-  "analyses",
-  "03_figure_template",
-  "helper_functions_figure_1to4.R"
-))
+source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-# Build panels ----
-# Five scalar coverage levels (not ramp curves)
-COVERAGE_GRID <- c(0.10, 0.30, 0.50, 0.70, 0.90)
+run_df <- read.csv(here("output_figgen", "figure_4_run_summary.csv"),
+                   stringsAsFactors = FALSE)
 
-message("Loading baseline results...")
-results <- load_results()
-
-message("Applying post-hoc OBV across efficacy x coverage grid...")
-
-baseline_rows <- build_run_df_obv(results, "baseline")
-
-grid_rows <- do.call(rbind, lapply(names(OBV_EFFICACY_VALUES), function(eff_name) {
-  eff <- OBV_EFFICACY_VALUES[[eff_name]]
-  do.call(rbind, lapply(COVERAGE_GRID, function(cov) {
-    # cov_spec  <- list(times = c(0, 1), values = c(cov, cov))
-    cov_spec <- list(fn = function(t) rep(cov, length(t)))
-    cov_label <- sprintf("cov%02d", round(cov * 100))
-
-    do.call(rbind, lapply(results, function(x) {
-      run_seed <- x$particle_id * 1000L + x$rep
-      obv      <- apply_obv_posthoc(x$tdf, eff, cov_spec, seed = run_seed)
-
-      # Use prevented_flag from apply_obv_posthoc to keep prevented individuals
-      # consistent with the prevented count.
-      days_lost <- compute_hcw_days_lost(
-        x$tdf, x$duration,
-        obv_received = obv$obv_received,
-        prevented    = obv$prevented_flag
-      )
-
-      data.frame(
-        scenario           = x$scenario,
-        particle_id        = x$particle_id,
-        rep                = x$rep,
-        arm                = eff_name,
-        coverage_scenario  = cov_label,
-        obv_efficacy       = eff,
-        obv_coverage       = cov,
-        n_infections       = x$n_infections,
-        n_hcw_deaths       = x$n_hcw_deaths - obv$prevented_hcw,
-        counterfactual_hcw = x$n_hcw_deaths,
-        prevented_hcw      = obv$prevented_hcw,
-        hcw_days_lost      = days_lost,
-        stringsAsFactors   = FALSE
-      )
-    }))
-  }))
-}))
-
-base_particle <- baseline_rows %>%
-  group_by(scenario, particle_id) %>%
-  summarise(baseline_days_lost = mean(hcw_days_lost), .groups = "drop")
-
-heatmap_df <- grid_rows %>%
-  group_by(scenario, particle_id, obv_efficacy, obv_coverage) %>%
+heatmap_df <- run_df %>%
+  group_by(scenario, particle_id, arm, obv_efficacy, obv_coverage) %>%
   summarise(
+    n_hcw_deaths       = mean(n_hcw_deaths),
+    hcw_days_lost      = mean(hcw_days_lost),
     prevented_hcw      = sum(prevented_hcw),
     counterfactual_hcw = sum(counterfactual_hcw),
-    hcw_days_lost      = mean(hcw_days_lost),
+    baseline_days_lost = mean(baseline_days_lost),
     .groups = "drop"
   ) %>%
-  left_join(base_particle, by = c("scenario", "particle_id")) %>%
   mutate(
     pct_hcw_deaths_averted = ifelse(
-      counterfactual_hcw > 0,
-      100 * prevented_hcw / counterfactual_hcw,
-      NA_real_
-    ),
+      counterfactual_hcw > 0, 100 * prevented_hcw / counterfactual_hcw, NA_real_),
     pct_days_lost_averted = ifelse(
       !is.na(baseline_days_lost) & baseline_days_lost > 0,
-      100 * (baseline_days_lost - hcw_days_lost) / baseline_days_lost,
-      NA_real_
-    )
+      100 * (baseline_days_lost - hcw_days_lost) / baseline_days_lost, NA_real_)
   ) %>%
   group_by(scenario, obv_efficacy, obv_coverage) %>%
   summarise(
@@ -91,35 +35,30 @@ heatmap_df <- grid_rows %>%
     .groups = "drop"
   ) %>%
   mutate(
-    coverage_label = factor(paste0(round(obv_coverage * 100), "%"), levels = paste0(c(10, 30, 50, 70, 90), "%")),
-    efficacy_label = factor(paste0(round(obv_efficacy * 100), "%"), levels = paste0(c(50, 60, 70, 80, 90), "%"))
+    coverage_label = factor(paste0(round(obv_coverage * 100), "%"),
+                            levels = paste0(c(10, 30, 50, 70, 90), "%")),
+    efficacy_label = factor(paste0(round(obv_efficacy * 100), "%"),
+                            levels = paste0(c(50, 60, 70, 80, 90), "%"))
   )
 
-make_heatmap <- function(sc, metric, fill_label, subtitle = NULL) {
-  df        <- filter(heatmap_df, scenario == sc)
-  sc_color  <- SCENARIO_COLORS[[sc]]
+save_figure_data(heatmap_df, "figure_4_heatmap_df.csv")
 
+make_heatmap <- function(sc, metric, fill_label, subtitle = NULL) {
+  df       <- filter(heatmap_df, scenario == sc)
+  sc_color <- SCENARIO_COLORS[[sc]]
   ggplot(df, aes(x = coverage_label, y = efficacy_label, fill = .data[[metric]])) +
     geom_tile(color = "white", linewidth = 0.5) +
-    geom_text(
-      aes(label = sprintf("%.0f%%", .data[[metric]])),
-      size = 4, fontface = "bold", color = "grey20"
-    ) +
-    scale_fill_gradient(
-      low      = "white",
-      high     = sc_color,
-      name     = fill_label,
-      limits   = c(0, 100),
-      labels   = function(x) paste0(x, "%"),
-      na.value = "grey90"
-    ) +
+    geom_text(aes(label = sprintf("%.0f%%", .data[[metric]])),
+              size = 4, fontface = "bold", color = "grey20") +
+    scale_fill_gradient(low = "white", high = sc_color, name = fill_label,
+                        limits = c(0, 100), labels = function(x) paste0(x, "%"),
+                        na.value = "grey90") +
     labs(x = "OBV coverage", y = "OBV efficacy", subtitle = subtitle) +
     theme_fig(base_size = 13) +
     theme(legend.position = "none", panel.grid = element_blank(),
           axis.line = element_blank())
 }
 
-# Combine panels ----
 make_header <- function(label) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
@@ -131,14 +70,13 @@ fig4b <- make_heatmap("DRC",        "median_deaths_averted",    "Deaths averted"
 fig4c <- make_heatmap("WestAfrica", "median_days_lost_averted", "Days lost averted", subtitle = "% HCW days lost averted")
 fig4d <- make_heatmap("DRC",        "median_days_lost_averted", "Days lost averted", subtitle = "% HCW days lost averted")
 
-fig4_all <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
-               ((fig4a + fig4b + fig4c + fig4d) + plot_layout(nrow = 2, axis_titles = "collect"))) +
+fig4_all <- (
+  (make_header("West Africa archetype") | make_header("DRC archetype")) /
+    ((fig4a + fig4b + fig4c + fig4d) + plot_layout(nrow = 2, axis_titles = "collect"))
+) +
   plot_layout(guides = "collect", heights = c(0.1, 1)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
-ggsave(
-  file.path(OUT_DIR, "figure_4.png"),
-  fig4_all, width = 10, height = 6.5, dpi = 400, units = "in"
-)
-
+ggsave(file.path(OUT_DIR, "figure_4.png"),
+       fig4_all, width = 10, height = 6.5, dpi = 400, units = "in")
 message("Figure 4 saved")
