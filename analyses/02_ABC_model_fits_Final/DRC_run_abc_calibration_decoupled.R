@@ -318,7 +318,6 @@ if (all(c("ppe_efficacy", "hcw_risk_scalar") %in% PARAM_NAMES)) {
 # -----------------------------------------------------------------------------
 # 9. PROGRESS / RECONSTRUCTION FROM DISK
 # -----------------------------------------------------------------------------
-ABC_OUTPUT_DIR <- "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_Final/abc_outputs/ Middle_DRC_ConflictSmoothed_PlusPlus_20260607_215621_Decoupled_check_NP5_NS4_NBREPS_30_NBSIMUL_590"
 abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target,
              param_names = PARAM_NAMES, stat_names = prep$summary_stats)
 print(abc_compare_steps(ABC_OUTPUT_DIR, param_names = PARAM_NAMES, stat_names = prep$summary_stats))
