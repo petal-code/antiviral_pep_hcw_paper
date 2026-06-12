@@ -162,3 +162,44 @@ for (v in list(
 }
 
 message("Figure 1 variants saved")
+
+############### aggregating number for the paper
+ts <- read.csv(here("output_figgen", "figure_1_weekly_ts.csv"))
+ts %>%
+  filter(metric == "hcw_deaths") %>%
+  group_by(scenario, arm) %>%
+  filter(week == max(week)) %>%
+  select(scenario, arm, q50, q025, q975) %>%
+  pivot_wider(names_from = arm, values_from = c(q50, q025, q975)) %>%
+  mutate(
+    averted_median = q50_baseline - q50_obv,
+    pct_median     = 100 * averted_median / q50_baseline
+  ) %>%
+  select(scenario,
+         baseline_median = q50_baseline, baseline_lo = q025_baseline, baseline_hi = q975_baseline,
+         obv_median = q50_obv, obv_lo = q025_obv, obv_hi = q975_obv,
+         averted_median, pct_median) %>%
+  mutate(across(where(is.numeric), ~round(., 1))) %>%
+  as.data.frame() %>%
+  print()
+
+particle_df <- read.csv(here("output_figgen", "figure_1_particle_cum_hcw_deaths.csv"))
+
+particle_df %>%
+  pivot_wider(names_from = arm, values_from = cum_hcw_deaths) %>%
+  mutate(
+    averted = baseline - obv,
+    pct_averted = 100 * averted / baseline
+  ) %>%
+  group_by(scenario) %>%
+  summarise(
+    averted_median = median(averted),
+    averted_lo     = quantile(averted, 0.025),
+    averted_hi     = quantile(averted, 0.975),
+    pct_median     = median(pct_averted),
+    pct_lo         = quantile(pct_averted, 0.025),
+    pct_hi         = quantile(pct_averted, 0.975)
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 1))) %>%
+  as.data.frame() %>%
+  print()
