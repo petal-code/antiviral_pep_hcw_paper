@@ -436,3 +436,55 @@ print(ggplot(band, aes(week, med)) +
         labs(x = "Time since outbreak start (days)", y = "Count per week",
              title = sprintf("Posterior median + 95%% CrI: %s", SCENARIO_ID)) +
         theme_bw())
+
+# -----------------------------------------------------------------------------
+# 12. OUTBREAK DURATION FROM SIMULATED TRAJECTORIES
+# -----------------------------------------------------------------------------
+# Per-trajectory outbreak duration, recomputed from the SAME posterior-draw
+# trajectories as section 11 (`traj_runs`) -- no new model runs. Measured from
+# DEATH dates (the scale this scheme's timing summary is defined on; swap
+# r$death_days -> r$case_days for a case-based span). Two complementary measures:
+#   * d_p05_p95 : day span between the 5th and 95th percentile of death dates --
+#                 the tail-robust timing summary this scheme fits. Directly
+#                 comparable to the observed target (~378 d; Kivu 4 Oct 2018 -
+#                 17 Oct 2019). Recompute the observed value via observed_d_p05_p95().
+#   * dur_full  : first-death to last-death span -- the classic, tail-sensitive
+#                 "duration", reported for context (no single observed target).
+# Trajectories with no deaths give NA; a single death gives a span of 0.
+dur_post <- do.call(rbind, lapply(traj_runs, function(r) {
+  d <- r$death_days[is.finite(r$death_days)]
+  if (length(d) == 0L) {
+    return(data.frame(n_deaths = 0L, dur_full = NA_real_, d_p05_p95 = NA_real_))
+  }
+  qs <- quantile(d, c(0.05, 0.95), names = FALSE)
+  data.frame(n_deaths  = length(d),
+             dur_full  = max(d) - min(d),
+             d_p05_p95 = qs[2] - qs[1])
+}))
+
+obs_dur <- c(
+  dur_full  = NA_real_,    # no single observed "duration" target in this scheme
+  d_p05_p95 = if ("d_p05_p95" %in% names(observed_summaries)) {
+    observed_summaries[["d_p05_p95"]]
+  } else 378    # placeholder: Kivu 4 Oct 2018 - 17 Oct 2019
+)
+
+cat("\nOutbreak duration posterior predictive (median / 95% CrI, days):\n")
+for (s in c("dur_full", "d_p05_p95")) {
+  qs <- quantile(dur_post[[s]], c(0.025, 0.5, 0.975), na.rm = TRUE)
+  obs_txt <- if (is.finite(obs_dur[s])) sprintf("   (observed %.1f)", obs_dur[s]) else ""
+  cat(sprintf("  %-11s %.1f / [%.1f, %.1f]%s\n",
+              paste0(s, ":"), qs[2], qs[1], qs[3], obs_txt))
+}
+
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+for (s in c("dur_full", "d_p05_p95")) {
+  x  <- dur_post[[s]][is.finite(dur_post[[s]])]
+  qs <- quantile(x, probs = c(0.025, 0.5, 0.975))
+  hist(x, breaks = 12, main = paste0("Trajectory ", s), xlab = paste0(s, " (days)"),
+       col = adjustcolor("steelblue", 0.6), border = "white")
+  abline(v = qs, col = "darkblue", lty = c(2, 1, 2), lwd = c(1, 2, 1))
+  if (is.finite(obs_dur[s])) abline(v = obs_dur[s], col = "red", lwd = 2.5)
+}
+par(mfrow = c(1, 1))
+
