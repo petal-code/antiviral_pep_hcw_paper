@@ -84,8 +84,7 @@ FIXED_PARAMS <- list(
 # ---- WHICH SUMMARIES TO FIT -------------------------------------------------
 # Any subset of DECOUPLED_AVAILABLE_SUMMARIES; comment a line out of BOTH this
 # vector and OBSERVED_NAMED to drop a summary from the fit.
-SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height")
-                   # "d_p05_p95", "log_peak_height")
+SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height", "d_p05_p95")
 
 # Observed targets, ON THE FITTED SCALE (log the counts), keyed BY NAME.
 #   raw WA targets: n_deaths = 11325, n_hcw_deaths = 513, peak_height = 599.
@@ -95,7 +94,7 @@ OBSERVED_NAMED <- c(
   log_n_hcw_deaths = log(513),
   hcw_fraction     = 513 / 11325,   # = 0.0453
   d_p05_p95        = 274, # linear interpolation from ## info from here: https://en.wikipedia.org/wiki/West_African_Ebola_virus_epidemic_timeline_of_reported_cases_and_deaths 
-                          # gives the period 23rd July 2014 - 23 April April 2015
+                          # gives the period 23rd July 2014 - 23 April 2015
   log_peak_height  = log(599) ## info from here: https://en.wikipedia.org/wiki/West_African_Ebola_virus_epidemic_timeline_of_reported_cases_and_deaths 
 )
 
