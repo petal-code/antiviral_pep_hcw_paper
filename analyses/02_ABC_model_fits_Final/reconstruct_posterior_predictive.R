@@ -40,19 +40,19 @@ SCENARIOS <- list(
 # >>> COUNTRY COLOURS <<< no per-country palette exists in the repo (it colours by
 # arm: Okabe-Ito #D55E00 / #0072B2). Defaulting to that pair, one per country --
 # SET THESE to whatever you've used for DRC / West Africa elsewhere.
-COUNTRY_COLS <- c(WestAfrica = "#D55E00", DRC = "#0072B2")
+COUNTRY_COLS <- c(WestAfrica = "#d95f02", DRC = "#1b9e77")
 NAME_FULL    <- c(WestAfrica = "West Africa", DRC = "DRC")
 
 # Summaries to drop so the histograms form a clean 2x2 (hcw_fraction is the
 # redundant one -- "deliberately redundant with the two count logs"). Set to
 # character(0) to show all 5 (the grid then becomes 3x2).
-DROP_STATS <- "hcw_fraction"
+# DROP_STATS <- "hcw_fraction"\
 
-PRETTY <- c(log_n_deaths     = "log(deaths)",
+PRETTY <- c(log_n_deaths     = "log(Total Deaths)",
             log_n_hcw_deaths = "log(HCW deaths)",
             hcw_fraction     = "HCW fraction",
             d_p05_p95        = "death-date 5-95% span (days)",
-            log_peak_height  = "log(peak height)")
+            log_peak_height  = "log(Peak Height)")
 pretty_of <- function(s) ifelse(s %in% names(PRETTY), PRETTY[s], s)
 
 N_POST     <- 10000L     # posterior-predictive resample size
@@ -87,8 +87,7 @@ gg_fit_ratio <- function(fit, stats, col) {
   ggplot(rdf, aes(med, stat)) +
     geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
     geom_pointrange(aes(xmin = lo, xmax = hi), colour = col, linewidth = 0.9, size = 0.5) +
-    labs(x = "Simulated / Observed", y = NULL,
-         caption = "ratio on the fitted scale (log for counts)") +
+    labs(x = "Simulated / Observed", y = NULL) +
     theme_bw(base_size = 10) +
     theme(plot.caption = element_text(size = 7, colour = "grey40"))
 }
@@ -116,10 +115,9 @@ gg_pp_hist <- function(fit, stats, fill_col, ncol = 2L) {
     geom_vline(data = odf, aes(xintercept = value), colour = "black", linewidth = 1) +
     scale_linetype_manual(values = c(med = "solid", ci = "dashed"), guide = "none") +
     facet_wrap(~ stat, scales = "free", ncol = ncol) +
-    labs(x = NULL, y = "Draws",
-         subtitle = "black = observed; grey = posterior median (solid) / 95% (dashed)") +
+    labs(x = "Parameter Value", y = "Frequency") +
     theme_bw(base_size = 10) +
-    theme(strip.text = element_text(face = "bold"),
+    theme(strip.text = element_text(),
           plot.subtitle = element_text(size = 7, colour = "grey30"))
 }
 
@@ -131,10 +129,10 @@ country_figure <- function(name, fit) {
     gg_fit_ratio(fit, stats, col),
     gg_pp_hist(fit, stats, col, ncol = 2L),
     labels = c("A", "B"), rel_widths = c(0.8, 1.2), nrow = 1)
-  title <- cowplot::ggdraw() +
-    cowplot::draw_label(sprintf("%s -- posterior-predictive checks", NAME_FULL[[name]] %||% name),
-                        fontface = "bold", x = 0.01, hjust = 0, size = 13)
-  cowplot::plot_grid(title, body, ncol = 1, rel_heights = c(0.08, 1))
+  title <- cowplot::ggdraw() # +
+    # cowplot::draw_label(sprintf("%s -- posterior-predictive checks", NAME_FULL[[name]] %||% name),
+    #                     fontface = "bold", x = 0.01, hjust = 0, size = 13)
+  cowplot::plot_grid(title, body, ncol = 1, rel_heights = c(0.08, 1), align = "h", axis = "b")
 }
 
 # =============================================================================
@@ -146,8 +144,8 @@ for (name in names(SCENARIOS)) {
   figs[[name]] <- country_figure(name, fit)
   print(figs[[name]])
   if (SAVE_PLOTS) {
-    f <- file.path(OUT_DIR, sprintf("posterior_predictive_%s.png", name))
-    ggsave(f, figs[[name]], width = 11, height = 5, dpi = 200)
+    f <- file.path(OUT_DIR, sprintf("posterior_predictive_%s.pdf", name))
+    ggsave(f, figs[[name]], width = 10, height = 5.5)
     message("  wrote ", f)
   }
 }
