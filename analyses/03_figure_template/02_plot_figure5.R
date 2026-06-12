@@ -130,3 +130,70 @@ save_fig <- function(filename_base, plot, width, height) {
 
 save_fig("figure_5", fig5_all, 12, 5)
 message("Figure 5 saved")
+
+# =============================================================================
+# Split versions: panel a and panel b saved as separate figures
+# =============================================================================
+fig5_panel_a <- panel_a +
+  plot_annotation(tag_levels = list(c("a ")))
+save_fig("figure_5_panel-a_dose-efficiency-boxplot", fig5_panel_a, 5, 5)
+
+fig5_panel_b <- panel_b +
+  plot_annotation(tag_levels = list(c("b ")))
+save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", fig5_panel_b, 7, 5)
+
+message("Figure 5 split panels saved")
+# =============================================================================
+# Panel a, alternative split: Policy A boxplots in one panel,
+# Policy B boxplots in another panel (separate y-scales)
+# =============================================================================
+panel_a_A <- panel_a_df %>%
+  filter(policy == "A") %>%
+  ggplot(aes(x = scenario_label, y = value, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, color = "black",
+               linewidth = 0.25, position = position_dodge(0.75)) +
+  scale_fill_manual(
+    values = sc_fills,
+    breaks = c(paste(SCENARIO_LABELS["WestAfrica"], "A", sep = "."),
+               paste(SCENARIO_LABELS["DRC"],        "A", sep = ".")),
+    guide = "none"
+  ) +
+  scale_y_continuous(limits = c(0, 225), breaks = seq(0, 225, by = 25),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_discrete(labels = c("West Africa (Worst)"    = "West Africa\narchetype",
+                              "DRC (Middle, PlusPlus)" = "DRC\narchetype")) +
+  labs(x = NULL, y = sprintf("Doses per death averted\n(1 course = %d doses)",
+                             DOSES_PER_COURSE),
+       title = "Policy A") +
+  theme_fig() +
+  theme(legend.position = "none",
+        plot.title = element_text(size = 11, hjust = 0.5))
+
+panel_a_B <- panel_a_df %>%
+  filter(policy == "B") %>%
+  ggplot(aes(x = scenario_label, y = value, fill = group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, color = "black",
+               linewidth = 0.25, position = position_dodge(0.75)) +
+  scale_fill_manual(
+    values = sc_fills,
+    breaks = c(paste(SCENARIO_LABELS["WestAfrica"], "B", sep = "."),
+               paste(SCENARIO_LABELS["DRC"],        "B", sep = ".")),
+    guide = "none"
+  ) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 5),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_discrete(labels = c("West Africa (Worst)"    = "West Africa\narchetype",
+                              "DRC (Middle, PlusPlus)" = "DRC\narchetype")) +
+  labs(x = NULL, y = sprintf("Doses per death averted\n(1 course = %d doses)",
+                             DOSES_PER_COURSE),
+       title = "Policy B") +
+  theme_fig() +
+  theme(legend.position = "none",
+        plot.title = element_text(size = 11, hjust = 0.5))
+
+fig5_panel_a_AB <- (panel_a_A | panel_a_B) +
+  plot_annotation(tag_levels = list(c("a ", "b ")))
+
+save_fig("figure_5_panel-a_dose-efficiency-boxplot_A-vs-B", fig5_panel_a_AB, 8, 5)
+
+message("Figure 5 panel a A-vs-B split saved")

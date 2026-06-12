@@ -1,16 +1,16 @@
 # =============================================================================
 # 01_analysis_figure3.R
 #
-# Runs OBV simulations exclusively for ramp coverage combinations.
+# Runs OBV simulations exclusively for new coverage scenario combinations.
 # Each arm is saved to a separate subdirectory under outputs/simulation/.
 #
 # Arms (10 total):
-#   ramp_high_obv50 ~ ramp_high_obv90  (5) : ramp-high coverage, 50-90%   -- Figure 3
-#   ramp_low_obv50  ~ ramp_low_obv90   (5) : ramp-low coverage, 50-90%    -- Figure 3
+#   ramp_high_obv50 ~ ramp_high_obv90  (5) : scenario2 coverage, 50-90%   -- Figure 3
+#   ramp_low_obv50  ~ ramp_low_obv90   (5) : scenario3 coverage, 50-90%   -- Figure 3
 #
-# Coverage splines (consistent with helper COVERAGE_SPECS):
-#   ramp_high : clamped cubic spline (0wk,0.20)->(26wk,0.50)->(52wk,0.80)
-#   ramp_low  : clamped cubic spline (0wk,0.00)->(26wk,0.25)->(52wk,0.50)
+# Coverage curves (consistent with helper COVERAGE_SPECS):
+#   ramp_high (scenario2) : clamped cubic spline (0,0.0)->(90,0.40)->(180,0.80), flat 0.80 after day180
+#   ramp_low  (scenario3) : clamped cubic spline (0,0.0)->(75,0.0)->(365,0.50)
 #
 # Each RDS file contains the full fiber output (out$tdf + out$prevented_completed
 # + out$sim_info). "Without OBV" is reconstructed post-hoc by combining
@@ -38,7 +38,7 @@ sys.source(here("functions", "abc_calibration_functions_decoupled.R"), envir = e
 # =============================================================================
 N_WORKERS    <- 50L
 N_PARTICLES  <- 200
-N_REPS       <- 10
+N_REPS       <- 1
 SEEDING_CASES <- 25L
 RESAMPLE_SEED <- 42L
 SEED_BASE     <- 20260701L
@@ -99,22 +99,32 @@ make_clamped_spline_fn <- function(t_knots, y_knots,
 }
 
 # Coverage curve functions (days as input)
-COVERAGE_FNS <- list(
-  ramp_high = make_clamped_spline_fn(
-    t_knots = c(0, 26 * 7, 52 * 7),
-    y_knots = c(0.20, 0.50, 0.80)
-  ),
-  ramp_low  = make_clamped_spline_fn(
-    t_knots = c(0, 26 * 7, 52 * 7),
-    y_knots = c(0.00, 0.25, 0.50)
+# ramp_high : clamped spline 0 -> 0.40 -> 0.80 over days 0-180, then flat at 0.80 (scenario2)
+fn_ramp_high <- local({
+  spline_part <- make_clamped_spline_fn(
+    t_knots = c(0, 90, 180), y_knots = c(0.0, 0.40, 0.80),
+    deriv_start = 0, deriv_end = 0
   )
+  function(t) ifelse(t <= 180, spline_part(t), 0.80)
+})
+
+# ramp_low : flat 0% until day 75, then clamped spline ramp to 0.50 by day 365 (scenario3)
+fn_ramp_low <- make_clamped_spline_fn(
+  t_knots = c(0, 75, 365),
+  y_knots = c(0.0, 0.0, 0.50),
+  deriv_start = 0, deriv_end = 0
+)
+
+COVERAGE_FNS <- list(
+  ramp_high = fn_ramp_high,
+  ramp_low  = fn_ramp_low
 )
 
 # =============================================================================
 # Arm definitions
 #
-# ramp_high_obv50~obv90       (5 arms) : ramp-high coverage, 50-90%      -- Figure 3
-# ramp_low_obv50~obv90        (5 arms) : ramp-low coverage, 50-90%       -- Figure 3
+# ramp_high_obv50~obv90       (5 arms) : scenario2 coverage, 50-90%      -- Figure 3
+# ramp_low_obv50~obv90        (5 arms) : scenario3 coverage, 50-90%       -- Figure 3
 # =============================================================================
 RAMP_EFFICACIES  <- c(0.50, 0.60, 0.70, 0.80, 0.90)
 
@@ -250,7 +260,7 @@ future_lapply(jobs, function(job) {
         efficacy <- arm$efficacy
         arm_name <- arm$arm_name
         
-        # Resolve coverage function (Only Ramp Coverage in this script)
+        # Resolve coverage function for this arm
         cov_fn <- COVERAGE_FNS[[arm$coverage]]
         
         for (r in seq_len(N_REPS)) {
