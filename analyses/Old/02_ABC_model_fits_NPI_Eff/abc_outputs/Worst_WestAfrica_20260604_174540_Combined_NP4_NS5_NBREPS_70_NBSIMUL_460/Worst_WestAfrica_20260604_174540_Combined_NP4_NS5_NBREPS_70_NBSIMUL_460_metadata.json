@@ -1,0 +1,78 @@
+{
+  "npi_spec": {
+    "ppe_efficacy": {
+      "min": 0.3,
+      "max": 0.9
+    },
+    "etu_efficacy": {
+      "min": 0.6,
+      "max": 0.95
+    }
+  },
+  "scenario_id": "Worst_WestAfrica",
+  "param_names": ["R0", "prop_funeral", "npi_scaler", "hcw_risk_scalar"],
+  "priors": [
+    ["unif", "1.15", "1.65"],
+    ["unif", "0.1", "0.4"],
+    ["unif", "-1", "1"],
+    ["unif", "1", "1.8"]
+  ],
+  "observed_summaries": [11325, 513, 365, 164, 599],
+  "fixed_efficacies": {
+    "general_hospital_quarantine_efficacy": 0.3,
+    "safe_funeral_efficacy": 0.8
+  },
+  "created_at": "2026-06-05 15:46:44 -0700",
+  "approach": "combined",
+  "result_filename": "Worst_WestAfrica_20260604_174540_Combined_NP4_NS5_NBREPS_70_NBSIMUL_460.rds",
+  "fit_params": ["R0", "prop_funeral", "npi_scaler", "hcw_risk_scalar"],
+  "fixed_values": {
+    "R0": 1.4,
+    "prop_funeral": 0.35,
+    "npi_scaler": 0,
+    "hcw_risk_scalar": 1
+  },
+  "hcw_base_prob": 0.25,
+  "summary_stats": ["n_deaths", "n_hcw_deaths", "duration", "time_to_peak", "peak_height"],
+  "peak_settings": {
+    "bin_width": 7,
+    "time_origin": "first_death"
+  },
+  "abc_settings": {
+    "method": "Delmoral",
+    "nb_simul": 460,
+    "alpha": 0.5,
+    "tolerance_target": 0.5,
+    "M": 1,
+    "use_seed": true,
+    "verbose": true
+  },
+  "abc_config": {
+    "takeoff_death_threshold": 100,
+    "n_reps": 70,
+    "seeding_cases": 25,
+    "setup_R0_n": 100000,
+    "setup_R0_seed": 42,
+    "npi_spec": {
+      "ppe_efficacy": {
+        "min": 0.3,
+        "max": 0.9
+      },
+      "etu_efficacy": {
+        "min": 0.6,
+        "max": 0.95
+      }
+    },
+    "hcw_base_prob": 0.25,
+    "fit_params": ["R0", "prop_funeral", "npi_scaler", "hcw_risk_scalar"],
+    "fixed_values": {
+      "R0": 1.4,
+      "prop_funeral": 0.35,
+      "npi_scaler": 0,
+      "hcw_risk_scalar": 1
+    },
+    "summary_stats": ["n_deaths", "n_hcw_deaths", "duration", "time_to_peak", "peak_height"],
+    "peak_bin_width": 7,
+    "peak_time_origin": "first_death"
+  }
+}
