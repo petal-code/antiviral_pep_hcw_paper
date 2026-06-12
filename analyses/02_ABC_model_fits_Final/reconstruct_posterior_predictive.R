@@ -149,3 +149,32 @@ for (name in names(SCENARIOS)) {
     message("  wrote ", f)
   }
 }
+
+# one country's A|B row (fit-ratio | 2x2 histograms); labels passed in so the two
+# rows can be A,B (top) and C,D (bottom). No title -> each row keeps fixed dims.
+country_row <- function(name, fit, labels) {
+  drop  <- if (exists("DROP_STATS")) DROP_STATS else character(0)  # robust if commented out
+  stats <- setdiff(names(fit$observed), drop)
+  col   <- COUNTRY_COLS[[name]] %||% "#666666"
+  cowplot::plot_grid(
+    gg_fit_ratio(fit, stats, col),
+    gg_pp_hist(fit, stats, col, ncol = 2L),
+    labels = labels, rel_widths = c(0.8, 1.2), nrow = 1)
+}
+
+# =============================================================================
+# DRIVER -- one combined figure: West Africa (A,B) on top, DRC (C,D) on bottom
+# =============================================================================
+fits <- lapply(SCENARIOS, load_fit)
+
+combined <- cowplot::plot_grid(
+  country_row("WestAfrica", fits$WestAfrica, c("A", "B")),   # top row
+  country_row("DRC",        fits$DRC,        c("C", "D")),   # bottom row
+  ncol = 1, rel_heights = c(1, 1))
+
+print(combined)
+
+if (SAVE_PLOTS) {
+  ggsave(file.path(OUT_DIR, "posterior_predictive_WA_DRC.pdf"),
+         combined, width = 10.3, height = 8)   # width = your single fig; height x2
+}
