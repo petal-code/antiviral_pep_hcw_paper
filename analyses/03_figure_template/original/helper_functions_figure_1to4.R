@@ -41,8 +41,22 @@ OBV_EFFICACY_VALUES <- c(obv_10 = 0.10, obv_20 = 0.20, obv_30 = 0.30,
                          obv_70 = 0.70, obv_80 = 0.80, obv_90 = 0.90)
 
 COVERAGE_LEVELS <- c("full", "ramp_high", "ramp_low")
+# COVERAGE_LABELS <- c("Full (100%)", "Ramp high (20%->80%)", "Ramp low (0%->50%)")
 COVERAGE_LABELS <- c("Full (100%)", "Ramp high (0%->80%)", "Ramp low (0%->50%)")
 COVERAGE_COLORS <- c(full = "#1a9641", ramp_high = "#fdae61", ramp_low = "#d7191c")
+
+COVERAGE_SPECS <- list(
+  full = list(fn = function(t) rep(1.0, length(t))),
+  ramp_high = list(fn = local({
+    spline_part <- .make_clamped_spline(
+      t_knots = c(0, 90, 180), y_knots = c(0.0, 0.40, 0.80)
+    )
+    function(t) ifelse(t <= 180, spline_part(t), 0.80)
+  })),
+  ramp_low = list(fn = .make_clamped_spline(
+    t_knots = c(0, 75, 365), y_knots = c(0.0, 0.0, 0.50)
+  ))
+)
 
 # Coverage curves
 .make_clamped_spline <- function(t_knots, y_knots,
@@ -85,6 +99,17 @@ COVERAGE_COLORS <- c(full = "#1a9641", ramp_high = "#fdae61", ramp_low = "#d7191
     }, numeric(1))
   }
 }
+
+# old version
+# COVERAGE_SPECS <- list(
+#   full = list(fn = function(t) rep(1.0, length(t))),
+#   ramp_high = list(fn = .make_clamped_spline(
+#     t_knots = c(0, 26 * 7, 52 * 7), y_knots = c(0.20, 0.50, 0.80)
+#   )),
+#   ramp_low = list(fn = .make_clamped_spline(
+#     t_knots = c(0, 26 * 7, 52 * 7), y_knots = c(0.00, 0.25, 0.50)
+#   ))
+# )
 
 COVERAGE_SPECS <- list(
   full = list(fn = function(t) rep(1.0, length(t))),

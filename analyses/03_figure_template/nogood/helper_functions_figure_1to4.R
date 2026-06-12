@@ -86,17 +86,6 @@ COVERAGE_COLORS <- c(full = "#1a9641", ramp_high = "#fdae61", ramp_low = "#d7191
   }
 }
 
-# old version
-# COVERAGE_SPECS <- list(
-#   full = list(fn = function(t) rep(1.0, length(t))),
-#   ramp_high = list(fn = .make_clamped_spline(
-#     t_knots = c(0, 26 * 7, 52 * 7), y_knots = c(0.20, 0.50, 0.80)
-#   )),
-#   ramp_low = list(fn = .make_clamped_spline(
-#     t_knots = c(0, 26 * 7, 52 * 7), y_knots = c(0.00, 0.25, 0.50)
-#   ))
-# )
-
 COVERAGE_SPECS <- list(
   full = list(fn = function(t) rep(1.0, length(t))),
   ramp_high = list(fn = local({
@@ -174,7 +163,7 @@ theme_fig <- function(base_size = 10) {
 }
 
 # =============================================================================
-# extract_weekly_ts  (Figure 1)
+# extract_weekly_ts  (Figure 1, also used for Figure 3 averted-burden panels)
 # =============================================================================
 extract_weekly_ts <- function(arm_dir,
                               bin_width = 7,
@@ -193,7 +182,7 @@ extract_weekly_ts <- function(arm_dir,
   on.exit(plan(sequential), add = TRUE)
   
   results <- future_lapply(seq_along(files), function(i) {
-    if (i %% 100 == 0)
+    if (i %% 10 == 0)
       message(sprintf("  Processing file %d / %d...", i, length(files)))
     
     f <- files[[i]]
@@ -212,6 +201,21 @@ extract_weekly_ts <- function(arm_dir,
     .bin <- function(times) {
       t_clip <- times[!is.na(times) & times >= 0 & times <= max(breaks)]
       hist(t_clip, breaks = breaks, plot = FALSE)$counts
+    }
+    
+    # Like .bin, but sums `weights` into the bin corresponding to each time,
+    # rather than counting occurrences.
+    .bin_weighted <- function(times, weights) {
+      keep    <- !is.na(times) & times >= 0 & times <= max(breaks)
+      t_clip  <- times[keep]
+      w_clip  <- weights[keep]
+      bin_idx <- findInterval(t_clip, breaks, rightmost.closed = TRUE)
+      out <- numeric(length(mids))
+      for (j in seq_along(t_clip)) {
+        if (bin_idx[j] >= 1 && bin_idx[j] <= length(mids))
+          out[bin_idx[j]] <- out[bin_idx[j]] + w_clip[j]
+      }
+      out
     }
     
     .extract <- function(cases, arm_label) {
@@ -242,22 +246,48 @@ extract_weekly_ts <- function(arm_dir,
       cases_base <- tdf
     }
     
-    # Averted HCW deaths: incidence of HCW deaths among prevented_completed cases,
-    # binned by time_outcome_absolute. Run-level, so always >= 0.
+    base_rows <- rbind(.extract(cases_base, "baseline"), .extract(tdf, "obv"))
+    
+    # Averted HCW deaths / days lost: incidence among prevented_completed HCW.
+    # - deaths: binned by time_outcome_absolute
+    # - days lost: each prevented HCW contributes
+    #   (duration - time_symptom_onset_absolute), binned at their symptom
+    #   onset week (per compute_hcw_days_lost convention: symptom onset -> end)
+    # Run-level, so always >= 0.
+    duration <- max(tdf$time_outcome_absolute, na.rm = TRUE)
+    # if (!is.null(prevented) && nrow(prevented) > 0) {
+    #   is_hcw_prev <- !is.na(prevented$class) & prevented$class == "HCW"
+    #   prev_hcw    <- prevented[is_hcw_prev, ]
+    # } else {
+    #   prev_hcw <- prevented[FALSE, ]
+    # }
     if (!is.null(prevented) && nrow(prevented) > 0) {
       is_hcw_prev <- !is.na(prevented$class) & prevented$class == "HCW"
       prev_hcw    <- prevented[is_hcw_prev, ]
-      averted_vals <- .bin(prev_hcw$time_outcome_absolute)
     } else {
-      averted_vals <- rep(0, length(mids))
+      prev_hcw <- tdf[FALSE, ]
     }
-    averted_df <- data.frame(
-      scenario = sc, particle_id = pid, rep = rep,
-      arm = "averted", week = mids, metric = "averted_hcw_deaths_incidence",
-      value = averted_vals, stringsAsFactors = FALSE
+    
+    if (nrow(prev_hcw) > 0) {
+      averted_deaths_vals <- .bin(prev_hcw$time_outcome_absolute)
+      days_lost_per_hcw   <- pmax(duration - prev_hcw$time_symptom_onset_absolute, 0)
+      averted_days_vals   <- .bin_weighted(prev_hcw$time_symptom_onset_absolute,
+                                           days_lost_per_hcw)
+    } else {
+      averted_deaths_vals <- rep(0, length(mids))
+      averted_days_vals   <- rep(0, length(mids))
+    }
+    
+    averted_rows <- rbind(
+      data.frame(scenario = sc, particle_id = pid, rep = rep,
+                 arm = "averted", week = mids, metric = "averted_hcw_deaths_incidence",
+                 value = averted_deaths_vals, stringsAsFactors = FALSE),
+      data.frame(scenario = sc, particle_id = pid, rep = rep,
+                 arm = "averted", week = mids, metric = "averted_hcw_days_lost_incidence",
+                 value = averted_days_vals, stringsAsFactors = FALSE)
     )
     
-    rbind(.extract(cases_base, "baseline"), .extract(tdf, "obv"), averted_df)
+    rbind(base_rows, averted_rows)
   }, future.packages = c("here"), future.seed = TRUE)
   
   do.call(rbind, results)
@@ -267,16 +297,23 @@ extract_weekly_ts <- function(arm_dir,
 # summarise_cumulative_ts
 #
 # Given a long-format weekly ts data.frame (one row per particle x rep x week,
-# grouped also by coverage_name), computes the cumulative sum of `value` over
-# week within each particle x rep, then summarises across particle x rep
-# with quantiles.
+# with optional grouping columns such as coverage_name / eff_name), computes
+# the cumulative sum of `value` over week within each particle x rep (within
+# any extra grouping columns), then summarises across particle x rep with
+# quantiles.
+#
+# extra_group_cols: character vector of additional column names to group by
+# (e.g. c("coverage_name", "eff_name")). Pass character(0) if none.
 # =============================================================================
-summarise_cumulative_ts <- function(df) {
+summarise_cumulative_ts <- function(df, extra_group_cols = character(0)) {
+  cum_groups  <- c("scenario", extra_group_cols, "particle_id", "rep")
+  summ_groups <- c("scenario", extra_group_cols, "week")
+  
   df %>%
-    arrange(scenario, coverage_name, particle_id, rep, week) %>%
-    group_by(scenario, coverage_name, particle_id, rep) %>%
+    arrange(across(all_of(c(cum_groups, "week")))) %>%
+    group_by(across(all_of(cum_groups))) %>%
     mutate(cum_value = cumsum(value)) %>%
-    group_by(scenario, coverage_name, week) %>%
+    group_by(across(all_of(summ_groups))) %>%
     summarise(
       q025 = quantile(cum_value, 0.025),
       q25  = quantile(cum_value, 0.25),
@@ -308,7 +345,7 @@ extract_run_summary <- function(arm_dir,
   on.exit(plan(sequential), add = TRUE)
   
   results <- future_lapply(seq_along(files), function(i) {
-    if (i %% 100 == 0)
+    if (i %% 10 == 0)
       message(sprintf("  Processing file %d / %d...", i, length(files)))
     
     f <- files[[i]]
@@ -413,7 +450,7 @@ extract_dose_summary <- function(arm_dir,
   on.exit(plan(sequential), add = TRUE)
   
   results <- future_lapply(seq_along(files), function(i) {
-    if (i %% 100 == 0)
+    if (i %% 10 == 0)
       message(sprintf("  Processing file %d / %d...", i, length(files)))
     
     f <- files[[i]]

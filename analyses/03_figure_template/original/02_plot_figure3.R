@@ -2,7 +2,6 @@
 # 02_plot_figure3.R
 # Coverage scenario comparison
 # Reads pre-computed CSV from output_figgen/figure_3_run_summary.csv
-# and output_figgen/figure_3_weekly_hcw_deaths_80.csv
 # Run 02_extract_figure3.R first.
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
@@ -86,8 +85,6 @@ save_fig <- function(filename_base, plot, width, height) {
          plot, width = width, height = height, units = "in")
 }
 
-x_max_weeks <- function(sc) SCENARIO_X_MAX_DAYS[sc] / 7
-
 h1 <- make_col_header("Constant, Full Coverage")
 h2 <- make_col_header("Ramp Up to High Coverage")
 h3 <- make_col_header("Ramp Up to Medium Coverage")
@@ -126,76 +123,3 @@ figure_3_days_lost <- (
 save_fig("figure_3_days-averted", figure_3_days_lost, 10, 6.5)
 
 message("Figure 3 variants saved")
-
-# =============================================================================
-# Weekly HCW deaths incidence overlay (80% efficacy):
-# baseline (no antiviral) + full / ramp_high / ramp_low, per scenario
-# =============================================================================
-weekly_80 <- read.csv(here("output_figgen", "figure_3_weekly_hcw_deaths_80.csv"),
-                      stringsAsFactors = FALSE)
-
-LINE_LEVELS <- c("baseline", "full", "ramp_high", "ramp_low")
-LINE_LABELS <- c("No antiviral", "Full (100%)", "Ramp high (0%->80%)", "Ramp low (0%->50%)")
-LINE_COLORS <- c(baseline = "grey40", full = "#1a9641",
-                 ramp_high = "#fdae61", ramp_low = "#d7191c")
-
-make_weekly_deaths_panel <- function(sc) {
-  x_max <- x_max_weeks(sc)
-  df <- weekly_80 %>%
-    filter(scenario == sc, week <= x_max) %>%
-    mutate(line_group = factor(line_group, levels = LINE_LEVELS))
-  
-  ggplot(df, aes(x = week, y = q50, color = line_group, fill = line_group)) +
-    # geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.15, color = NA) +
-    geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.15, color = NA) +
-    geom_line(linewidth = 1) +
-    scale_color_manual(values = LINE_COLORS,
-                       breaks = LINE_LEVELS, labels = LINE_LABELS, name = NULL) +
-    scale_fill_manual(values = LINE_COLORS,
-                      breaks = LINE_LEVELS, labels = LINE_LABELS, name = NULL) +
-    scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 13)) +
-    labs(x = "Weeks since outbreak start", y = "Incident HCW deaths") +
-    theme_fig()
-}
-
-p_weekly_d <- make_weekly_deaths_panel("WestAfrica")
-p_weekly_e <- make_weekly_deaths_panel("DRC")
-
-fig3_weekly_deaths <- (p_weekly_d | p_weekly_e) +
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = list(c("d ", "e "))) &
-  theme(legend.position = "bottom")
-
-save_fig("figure_3_weekly-hcw-deaths-80pct", fig3_weekly_deaths, 10, 4)
-
-message("Figure 3 weekly HCW deaths overlay (80% efficacy) saved")
-
-
-
-# =============================================================================
-# Combined figure: a-c coverage curves, d-e weekly HCW deaths overlay (80%),
-# f-h deaths averted boxplots
-# =============================================================================
-p_f_full      <- make_box_plot(COVERAGE_LEVELS[1], "pct_hcw_deaths_averted", "HCW deaths averted")
-p_f_ramp_high <- make_box_plot(COVERAGE_LEVELS[2], "pct_hcw_deaths_averted", "HCW deaths averted")
-p_f_ramp_low  <- make_box_plot(COVERAGE_LEVELS[3], "pct_hcw_deaths_averted", "HCW deaths averted")
-
-figure_3_combined <- (
-  (h1 | h2 | h3) /
-    ((p_a | p_b | p_c) + plot_layout(axis_titles = "collect")) /
-    ((p_weekly_d | p_weekly_e) + plot_layout(axis_titles = "collect", widths = c(1, 1))) /
-    ((p_f_full | p_f_ramp_high | p_f_ramp_low) + plot_layout(axis_titles = "collect"))
-) +
-  plot_layout(guides = "collect", heights = c(0.2, 1, 1, 1.5)) +
-  plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f ", "g ", "h "))) &
-  theme(legend.position = "bottom")
-
-save_fig("figure_3_combined", figure_3_combined, 10, 9)
-
-
-message("Figure 3 combined (a-h) saved")
-
-
-
-
-
