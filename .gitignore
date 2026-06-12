@@ -18,3 +18,4 @@ renv/staging/
 
 # Uncomment if outputs are large/regenerable and you don't want them tracked:
 # outputs/
+data-processed/**/*.rds
