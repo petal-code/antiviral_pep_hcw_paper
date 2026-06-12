@@ -52,7 +52,7 @@ make_bar_plot <- function(summ_df, sc, y_label) {
     scale_fill_manual(values = obv_colors, guide = "none") +
     scale_y_continuous(expand = expansion(mult = c(0, 0)), limits = c(0, 100),
                        labels = function(x) paste0(x, "%")) +
-    labs(x = "OBV efficacy", y = y_label) +
+    labs(x = "Antiviral efficacy", y = y_label) +
     theme_fig()
 }
 
@@ -60,6 +60,13 @@ make_header <- function(label) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
     theme_void()
+}
+
+save_fig <- function(filename_base, plot, width, height) {
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
+         plot, width = width, height = height, dpi = 400, units = "in")
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
+         plot, width = width, height = height, units = "in")
 }
 
 fig2a <- make_bar_plot(make_summ(pdf, "pct_hcw_deaths_averted", "WestAfrica"), "WestAfrica", "HCW deaths averted")
@@ -75,6 +82,5 @@ fig2_all <- (
   plot_layout(heights = c(0.08, 1, 1)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
-ggsave(file.path(OUT_DIR, "figure_2.png"), fig2_all,
-       width = 10, height = 6.5, dpi = 400, units = "in")
+save_fig("figure_2", fig2_all, 10, 6.5)
 message("Figure 2 saved")
