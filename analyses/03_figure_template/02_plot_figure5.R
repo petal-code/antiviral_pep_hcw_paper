@@ -134,13 +134,19 @@ message("Figure 5 saved")
 # =============================================================================
 # Split versions: panel a and panel b saved as separate figures
 # =============================================================================
-fig5_panel_a <- panel_a +
-  plot_annotation(tag_levels = list(c("a ")))
-save_fig("figure_5_panel-a_dose-efficiency-boxplot", fig5_panel_a, 5, 5)
+# fig5_panel_a <- panel_a +
+#   plot_annotation(tag_levels = list(c("a ")))
+# save_fig("figure_5_panel-a_dose-efficiency-boxplot", fig5_panel_a, 5, 5)
+# 
+# fig5_panel_b <- panel_b +
+#   plot_annotation(tag_levels = list(c("b ")))
+# save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", fig5_panel_b, 7, 5)
 
-fig5_panel_b <- panel_b +
-  plot_annotation(tag_levels = list(c("b ")))
-save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", fig5_panel_b, 7, 5)
+# fig5_panel_a <- panel_a
+save_fig("figure_5_panel-a_dose-efficiency-boxplot", panel_a, 5, 5)
+
+# fig5_panel_b <- panel_b
+save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", panel_b, 7, 5)
 
 message("Figure 5 split panels saved")
 # =============================================================================
@@ -197,3 +203,4 @@ fig5_panel_a_AB <- (panel_a_A | panel_a_B) +
 save_fig("figure_5_panel-a_dose-efficiency-boxplot_A-vs-B", fig5_panel_a_AB, 8, 5)
 
 message("Figure 5 panel a A-vs-B split saved")
+

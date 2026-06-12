@@ -38,7 +38,7 @@ sys.source(here("functions", "abc_calibration_functions_decoupled.R"), envir = e
 # =============================================================================
 N_WORKERS    <- 50L
 N_PARTICLES  <- 200
-N_REPS       <- 1
+N_REPS       <- 10
 SEEDING_CASES <- 25L
 RESAMPLE_SEED <- 42L
 SEED_BASE     <- 20260701L
