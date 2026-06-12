@@ -33,4 +33,20 @@ ts_quantiles <- raw_ts %>%
   mutate(week = week / 7)
 
 save_figure_data(ts_quantiles, "figure_1_weekly_ts.csv")
+
+# Particle-level final cumulative HCW deaths (baseline vs obv), for computing
+# averted (baseline - obv) and % reduction with proper CIs at the particle level.
+particle_cum_hcw_deaths <- raw_ts %>%
+  filter(metric == "hcw_deaths") %>%
+  group_by(scenario, arm, particle_id, week) %>%
+  summarise(value = mean(value), .groups = "drop") %>%
+  arrange(scenario, arm, particle_id, week) %>%
+  group_by(scenario, arm, particle_id) %>%
+  mutate(value = cumsum(value)) %>%
+  filter(week == max(week)) %>%
+  ungroup() %>%
+  select(scenario, arm, particle_id, cum_hcw_deaths = value)
+
+save_figure_data(particle_cum_hcw_deaths, "figure_1_particle_cum_hcw_deaths.csv")
+
 message("Figure 1 data extraction complete.")
