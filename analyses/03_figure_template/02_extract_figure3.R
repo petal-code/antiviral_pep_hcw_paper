@@ -13,7 +13,7 @@ run_df <- do.call(rbind, lapply(COVERAGE_LEVELS, function(cov) {
   do.call(rbind, lapply(FIG3_EFFICACY_LEVELS, function(eff_name) {
     arm_dir   <- sprintf("%s_obv%02d", cov, round(OBV_EFFICACY_VALUES[[eff_name]] * 100))
     arm_label <- sprintf("%s__%s", cov, eff_name)
-    extract_run_summary(arm_dir, arm_label = arm_label, n_workers = 10L, obv_return = TRUE)
+    extract_run_summary(arm_dir, arm_label = arm_label, n_workers = 10L, obv_return = FALSE)
   }))
 }))
 
