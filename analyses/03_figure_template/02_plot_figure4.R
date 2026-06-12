@@ -48,7 +48,7 @@ make_heatmap <- function(sc, metric, fill_label, subtitle = NULL) {
   sc_color <- SCENARIO_COLORS[[sc]]
   ggplot(df, aes(x = coverage_label, y = efficacy_label, fill = .data[[metric]])) +
     geom_tile(color = "white", linewidth = 0.5) +
-    geom_text(aes(label = sprintf("%.0f%%", .data[[metric]])),
+    geom_text(aes(label = sprintf("%.1f%%", .data[[metric]])),
               size = 4, fontface = "bold", color = "grey20") +
     scale_fill_gradient(low = "white", high = sc_color, name = fill_label,
                         limits = c(0, 100), labels = function(x) paste0(x, "%"),
@@ -85,4 +85,63 @@ save_fig <- function(filename_base, plot, width, height) {
 }
 
 save_fig("figure_4", fig4_all, 10, 6.5)
+
+# Deaths-only variant
+fig4_deaths <- (
+  (make_header("West Africa archetype") | make_header("DRC archetype")) /
+    ((fig4a | fig4b) + plot_layout(axis_titles = "collect"))
+) +
+  plot_layout(heights = c(0.1, 1)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "b ")))
+save_fig("figure_4_deaths-averted", fig4_deaths, 10, 4)
+
+# Days-lost-only variant
+fig4_days <- (
+  (make_header("West Africa archetype") | make_header("DRC archetype")) /
+    ((fig4c | fig4d) + plot_layout(axis_titles = "collect"))
+) +
+  plot_layout(heights = c(0.1, 1)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "b ")))
+save_fig("figure_4_days-averted", fig4_days, 10, 4)
+
 message("Figure 4 saved")
+
+
+############### aggregating number for the paper
+run_df4 <- read.csv(here("output_figgen", "figure_4_run_summary.csv"))
+
+particle_df4 <- run_df4 %>%
+  group_by(scenario, particle_id, arm, obv_efficacy, obv_coverage) %>%
+  summarise(
+    prevented_hcw      = sum(prevented_hcw),
+    counterfactual_hcw = sum(counterfactual_hcw),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pct_hcw_deaths_averted = ifelse(
+      counterfactual_hcw > 0, 100 * prevented_hcw / counterfactual_hcw, NA_real_)
+  )
+
+particle_df4 %>%
+  filter(obv_efficacy == 0.8, obv_coverage %in% c(0.1, 0.9)) %>%
+  group_by(scenario, obv_coverage) %>%
+  summarise(
+    median_pct = median(pct_hcw_deaths_averted, na.rm = TRUE),
+    lo_pct     = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
+    hi_pct     = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 1))) %>%
+  as.data.frame() %>% print()
+
+particle_df4 %>%
+  filter(obv_coverage == 0.9, obv_efficacy %in% c(0.5, 0.9)) %>%
+  group_by(scenario, obv_efficacy) %>%
+  summarise(
+    median_pct = median(pct_hcw_deaths_averted, na.rm = TRUE),
+    lo_pct     = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
+    hi_pct     = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 1))) %>%
+  as.data.frame() %>% print()
