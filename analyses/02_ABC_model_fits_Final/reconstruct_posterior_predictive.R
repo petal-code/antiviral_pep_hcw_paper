@@ -37,11 +37,11 @@ SCENARIOS <- list(
 )
 
 # ---- knobs ------------------------------------------------------------------
-# >>> COUNTRY COLOURS <<< no per-country palette exists in the repo (it colours by
-# arm: Okabe-Ito #D55E00 / #0072B2). Defaulting to that pair, one per country --
-# SET THESE to whatever you've used for DRC / West Africa elsewhere.
-COUNTRY_COLS <- c(WestAfrica = "#D55E00", DRC = "#0072B2")
-NAME_FULL    <- c(WestAfrica = "West Africa", DRC = "DRC")
+# Country labels + colours (supplied; Dark2 orange / teal).
+SCENARIO_LABELS <- c(WestAfrica = "West Africa (Worst)",
+                     DRC        = "DRC (Middle, PlusPlus)")
+SCENARIO_COLORS <- c(WestAfrica = "#d95f02",
+                     DRC        = "#1b9e77")
 
 # Summaries to drop so the histograms form a clean 2x2 (hcw_fraction is the
 # redundant one -- "deliberately redundant with the two count logs"). Set to
@@ -126,13 +126,13 @@ gg_pp_hist <- function(fit, stats, fill_col, ncol = 2L) {
 # build the combined A | B figure for one country
 country_figure <- function(name, fit) {
   stats <- setdiff(names(fit$observed), DROP_STATS)   # 4 -> clean 2x2
-  col   <- COUNTRY_COLS[[name]] %||% "#0072B2"
+  col   <- SCENARIO_COLORS[[name]] %||% "#666666"
   body  <- cowplot::plot_grid(
     gg_fit_ratio(fit, stats, col),
     gg_pp_hist(fit, stats, col, ncol = 2L),
     labels = c("A", "B"), rel_widths = c(0.8, 1.2), nrow = 1)
   title <- cowplot::ggdraw() +
-    cowplot::draw_label(sprintf("%s -- posterior-predictive checks", NAME_FULL[[name]] %||% name),
+    cowplot::draw_label(sprintf("%s -- posterior-predictive checks", SCENARIO_LABELS[[name]] %||% name),
                         fontface = "bold", x = 0.01, hjust = 0, size = 13)
   cowplot::plot_grid(title, body, ncol = 1, rel_heights = c(0.08, 1))
 }
