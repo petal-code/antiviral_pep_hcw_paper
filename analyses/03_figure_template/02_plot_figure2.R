@@ -84,3 +84,26 @@ fig2_all <- (
 
 save_fig("figure_2", fig2_all, 10, 6.5)
 message("Figure 2 saved")
+
+############### aggregating number for the paper
+pdf2 <- read.csv(here("output_figgen", "figure_2_particle_df.csv"))
+
+pdf2 %>%
+  filter(arm %in% c("obv_50", "obv_80", "obv_90")) %>%
+  group_by(scenario, arm) %>%
+  summarise(
+    median_pct = median(pct_hcw_deaths_averted, na.rm = TRUE),
+    lo_pct     = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
+    hi_pct     = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 1))) %>%
+  as.data.frame() %>%
+  print()
+
+
+
+
+
+
+
