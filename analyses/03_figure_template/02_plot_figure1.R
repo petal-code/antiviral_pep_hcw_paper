@@ -61,7 +61,7 @@ make_hcw_death_bar <- function(sc, show_errorbars = TRUE) {
   arms       <- c("baseline", "obv")
   sc_color   <- unname(SCENARIO_COLORS[sc])
   bar_colors <- setNames(c("grey50", sc_color), arms)
-  bar_labels <- c(baseline = "Without OBV", obv = "With OBV (80% efficacy, 100% coverage)")
+  bar_labels <- c(baseline = "Without antiviral", obv = "With antiviral (80% efficacy, 100% coverage)")
   x_max      <- x_max_weeks(sc)
   df <- bind_rows(
     get_ts(sc, "hcw_deaths_incidence", "baseline"),
@@ -85,7 +85,7 @@ make_ts <- function(sc) {
   sc_color     <- unname(SCENARIO_COLORS[sc])
   ts_colors    <- setNames(c("grey50", sc_color), arms)
   ts_linetypes <- c(baseline = "solid", obv = "dashed")
-  ts_labels    <- c(baseline = "Without OBV", obv = "With OBV (80% efficacy, 100% coverage)")
+  ts_labels    <- c(baseline = "Without antiviral", obv = "With antiviral (80% efficacy, 100% coverage)")
   x_max        <- x_max_weeks(sc)
   df <- bind_rows(
     get_ts(sc, "hcw_deaths", "baseline"),
@@ -109,38 +109,42 @@ make_header <- function(label) {
     theme_void()
 }
 
+# Save both PNG and PDF
+save_fig <- function(filename_base, plot, width, height) {
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
+         plot, width = width, height = height, dpi = 400, units = "in")
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
+         plot, width = width, height = height, units = "in")
+}
+
 # Save figures ----
 fig1_v2 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_death_bar("WestAfrica") | make_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
   plot_layout(heights = c(0.2, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
-ggsave(file.path(OUT_DIR, "figure_1_all-deaths-baseline-only.png"),
-       fig1_v2, width = 10, height = 6.5, dpi = 400, units = "in")
+save_fig("figure_1_all-deaths-baseline-only", fig1_v2, 10, 6.5)
 
 fig1_v1 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_infection_bar("WestAfrica") | make_infection_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
   plot_layout(heights = c(0.2, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
-ggsave(file.path(OUT_DIR, "figure_1_all-infections-baseline-only.png"),
-       fig1_v1, width = 10, height = 6.5, dpi = 400, units = "in")
+save_fig("figure_1_all-infections-baseline-only", fig1_v1, 10, 6.5)
 
 fig1_v3 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_hcw_death_bar_baseline("WestAfrica") | make_hcw_death_bar_baseline("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
   plot_layout(heights = c(0.2, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
-ggsave(file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-only.png"),
-       fig1_v3, width = 10, height = 6.5, dpi = 400, units = "in")
+save_fig("figure_1_HCW-deaths-baseline-only", fig1_v3, 10, 6.5)
 
 fig1_v4 <- ((make_header("West Africa archetype") | make_header("DRC archetype")) /
               ((make_hcw_death_bar("WestAfrica") | make_hcw_death_bar("DRC")) + plot_layout(axis_titles = "collect")) /
               ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
   plot_layout(heights = c(0.2, 1, 2)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "c ", "b ", "d ")))
-ggsave(file.path(OUT_DIR, "figure_1_HCW-deaths-baseline-obv.png"),
-       fig1_v4, width = 10, height = 6.5, dpi = 400, units = "in")
+save_fig("figure_1_HCW-deaths-baseline-obv", fig1_v4, 10, 6.5)
 
 # No-errorbar variants
 for (v in list(
@@ -154,8 +158,7 @@ for (v in list(
             top /
             ((make_ts("WestAfrica") | make_ts("DRC")) + plot_layout(axis_titles = "collect"))) +
     plot_layout(heights = c(0.2, 1, 2))
-  ggsave(file.path(OUT_DIR, sprintf("figure_1_%s_no-errorbars.png", v$tag)),
-         fig, width = 10, height = 6.5, dpi = 400, units = "in")
+  save_fig(sprintf("figure_1_%s_no-errorbars", v$tag), fig, 10, 6.5)
 }
 
 message("Figure 1 variants saved")
