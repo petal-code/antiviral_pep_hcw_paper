@@ -41,22 +41,8 @@ OBV_EFFICACY_VALUES <- c(obv_10 = 0.10, obv_20 = 0.20, obv_30 = 0.30,
                          obv_70 = 0.70, obv_80 = 0.80, obv_90 = 0.90)
 
 COVERAGE_LEVELS <- c("full", "ramp_high", "ramp_low")
-# COVERAGE_LABELS <- c("Full (100%)", "Ramp high (20%->80%)", "Ramp low (0%->50%)")
 COVERAGE_LABELS <- c("Full (100%)", "Ramp high (0%->80%)", "Ramp low (0%->50%)")
 COVERAGE_COLORS <- c(full = "#1a9641", ramp_high = "#fdae61", ramp_low = "#d7191c")
-
-COVERAGE_SPECS <- list(
-  full = list(fn = function(t) rep(1.0, length(t))),
-  ramp_high = list(fn = local({
-    spline_part <- .make_clamped_spline(
-      t_knots = c(0, 90, 180), y_knots = c(0.0, 0.40, 0.80)
-    )
-    function(t) ifelse(t <= 180, spline_part(t), 0.80)
-  })),
-  ramp_low = list(fn = .make_clamped_spline(
-    t_knots = c(0, 75, 365), y_knots = c(0.0, 0.0, 0.50)
-  ))
-)
 
 # Coverage curves
 .make_clamped_spline <- function(t_knots, y_knots,
@@ -207,7 +193,7 @@ extract_weekly_ts <- function(arm_dir,
   on.exit(plan(sequential), add = TRUE)
   
   results <- future_lapply(seq_along(files), function(i) {
-    if (i %% 10 == 0)
+    if (i %% 100 == 0)
       message(sprintf("  Processing file %d / %d...", i, length(files)))
     
     f <- files[[i]]
@@ -256,10 +242,49 @@ extract_weekly_ts <- function(arm_dir,
       cases_base <- tdf
     }
     
-    rbind(.extract(cases_base, "baseline"), .extract(tdf, "obv"))
+    # Averted HCW deaths: incidence of HCW deaths among prevented_completed cases,
+    # binned by time_outcome_absolute. Run-level, so always >= 0.
+    if (!is.null(prevented) && nrow(prevented) > 0) {
+      is_hcw_prev <- !is.na(prevented$class) & prevented$class == "HCW"
+      prev_hcw    <- prevented[is_hcw_prev, ]
+      averted_vals <- .bin(prev_hcw$time_outcome_absolute)
+    } else {
+      averted_vals <- rep(0, length(mids))
+    }
+    averted_df <- data.frame(
+      scenario = sc, particle_id = pid, rep = rep,
+      arm = "averted", week = mids, metric = "averted_hcw_deaths_incidence",
+      value = averted_vals, stringsAsFactors = FALSE
+    )
+    
+    rbind(.extract(cases_base, "baseline"), .extract(tdf, "obv"), averted_df)
   }, future.packages = c("here"), future.seed = TRUE)
   
   do.call(rbind, results)
+}
+
+# =============================================================================
+# summarise_cumulative_ts
+#
+# Given a long-format weekly ts data.frame (one row per particle x rep x week,
+# grouped also by coverage_name), computes the cumulative sum of `value` over
+# week within each particle x rep, then summarises across particle x rep
+# with quantiles.
+# =============================================================================
+summarise_cumulative_ts <- function(df) {
+  df %>%
+    arrange(scenario, coverage_name, particle_id, rep, week) %>%
+    group_by(scenario, coverage_name, particle_id, rep) %>%
+    mutate(cum_value = cumsum(value)) %>%
+    group_by(scenario, coverage_name, week) %>%
+    summarise(
+      q025 = quantile(cum_value, 0.025),
+      q25  = quantile(cum_value, 0.25),
+      q50  = quantile(cum_value, 0.50),
+      q75  = quantile(cum_value, 0.75),
+      q975 = quantile(cum_value, 0.975),
+      .groups = "drop"
+    )
 }
 
 # =============================================================================
@@ -283,7 +308,7 @@ extract_run_summary <- function(arm_dir,
   on.exit(plan(sequential), add = TRUE)
   
   results <- future_lapply(seq_along(files), function(i) {
-    if (i %% 10 == 0)
+    if (i %% 100 == 0)
       message(sprintf("  Processing file %d / %d...", i, length(files)))
     
     f <- files[[i]]
@@ -388,7 +413,7 @@ extract_dose_summary <- function(arm_dir,
   on.exit(plan(sequential), add = TRUE)
   
   results <- future_lapply(seq_along(files), function(i) {
-    if (i %% 10 == 0)
+    if (i %% 100 == 0)
       message(sprintf("  Processing file %d / %d...", i, length(files)))
     
     f <- files[[i]]
