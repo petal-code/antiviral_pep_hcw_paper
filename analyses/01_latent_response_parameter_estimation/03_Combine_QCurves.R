@@ -311,7 +311,7 @@ fit_vs_data_panel <- function(curve_df, anchor_df, col, extra_points = NULL) {
     geom_line(colour = col, linewidth = 0.9)
   if (!is.null(extra_points)) {
     p <- p + geom_point(data = extra_points, aes(relative_day, value_used),
-                        inherit.aes = FALSE, colour = "grey55", size = 1, alpha = 0.7)
+                        inherit.aes = FALSE, colour = "black", size = 1, alpha = 0.7)
   }
   p +
     geom_point(data = anchor_df, aes(relative_day, value_used),
@@ -326,5 +326,7 @@ p_wa  <- fit_vs_data_panel(wa_curve_df,  wa_anchor_df,  col = wa_col)
 p_drc <- fit_vs_data_panel(drc_curve_df, drc_anchor_df, col = drc_col, extra_points = drc_sdb_df)
 
 # (A) West Africa and (B) DRC conflict, side by side.   display only; not saved
-print((p_wa | p_drc) +
-        plot_annotation(tag_levels = "A", tag_prefix = "(", tag_suffix = ")"))
+a <- print((p_wa | p_drc) +
+        plot_annotation(tag_levels = "A"))
+ggsave(filename = "figures/figure_S1_QCurves.pdf",
+       plot = a, width = 11.6, height = 5.87)
