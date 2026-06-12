@@ -1,20 +1,16 @@
 # reconstruct_posterior_predictive.R
 # =============================================================================
-# Read the two FINAL decoupled ABC-SMC fits, reconstruct posterior trajectories,
-# and draw posterior-predictive checks (summary-stat histograms + fit-ratio), a
-# la sections 9-11 of the *_run_abc_calibration_decoupled.R scripts -- but driven
-# straight off the saved .RDS (each file IS the `result`, with $param/$stats/
-# $weights and a self-describing $run_metadata).
+# Read the two FINAL decoupled ABC-SMC fits and draw, FOR EACH COUNTRY, ONE figure
+# combining (A) the simulated/observed fit-ratio plot on the left and (B) the 2x2
+# of posterior-predictive summary-stat histograms on the right. DRC and West
+# Africa are drawn as SEPARATE figures, each in its country colour.
 #
-#   STAGE A (always; needs only base R): posterior-predictive summary statistics
-#     - per-stat histograms with the 2.5/50/97.5% posterior-predictive lines and
-#       the observed target overlaid;
-#     - a single-panel "simulated / observed" fit-ratio plot.
-#   STAGE B (DO_TRAJECTORIES; needs the `fiber` package + the functions/): re-
-#     simulate N_TRAJ posterior draws and draw spaghetti + median/95% CrI bands.
+# Driven straight off the saved .RDS (each file IS the `result`, with $param/
+# $stats/$weights and a self-describing $run_metadata, from which the observed
+# targets + stat names are read -- nothing hardcoded per scenario).
 #
-# Observed targets + stat names are pulled from each file's $run_metadata, so the
-# only per-scenario inputs are the .RDS, the scenario CSV, and check_final_size.
+# The plotting functions RETURN ggplot objects; the driver arranges them with
+# cowplot::plot_grid (labels A / B).
 # =============================================================================
 
 suppressPackageStartupMessages({ library(here); library(ggplot2) })
@@ -41,24 +37,31 @@ SCENARIOS <- list(
 )
 
 # ---- knobs ------------------------------------------------------------------
-DO_TRAJECTORIES <- TRUE       # STAGE B: re-simulate (needs `fiber`); the slow part
-SAVE_PDF        <- FALSE      # FALSE = plot to the active device; TRUE = one PDF per scenario
-N_POST          <- 10000L     # posterior-predictive resample size (summary stats)
-N_TRAJ          <- 200L       # trajectories re-simulated per scenario (lower = faster)
-BIN_WIDTH       <- 7L         # weekly bins (matches PEAK_BIN_WIDTH in the fits)
-SEEDING_CASES   <- 25L        # matches SEEDING_CASES in the fits (not stored in metadata)
-SETUP_R0_N      <- 100000L    # R0-invariant calibration draws (matches the fits)
-SETUP_R0_SEED   <- 42L
-PP_SEED         <- 1L
-TRAJ_SEED       <- 100L
-TRAJ_WORKERS    <- max(1L, min(parallel::detectCores() - 1L, 8L))
+# >>> COUNTRY COLOURS <<< no per-country palette exists in the repo (it colours by
+# arm: Okabe-Ito #D55E00 / #0072B2). Defaulting to that pair, one per country --
+# SET THESE to whatever you've used for DRC / West Africa elsewhere.
+COUNTRY_COLS <- c(WestAfrica = "#D55E00", DRC = "#0072B2")
+NAME_FULL    <- c(WestAfrica = "West Africa", DRC = "DRC")
 
-FUNCTIONS_DIR <- here("functions")
-OUT_DIR       <- here("outputs", "02_ABC_model_fits_Final")
+# Summaries to drop so the histograms form a clean 2x2 (hcw_fraction is the
+# redundant one -- "deliberately redundant with the two count logs"). Set to
+# character(0) to show all 5 (the grid then becomes 3x2).
+DROP_STATS <- "hcw_fraction"
+
+PRETTY <- c(log_n_deaths     = "log(deaths)",
+            log_n_hcw_deaths = "log(HCW deaths)",
+            hcw_fraction     = "HCW fraction",
+            d_p05_p95        = "death-date 5-95% span (days)",
+            log_peak_height  = "log(peak height)")
+pretty_of <- function(s) ifelse(s %in% names(PRETTY), PRETTY[s], s)
+
+N_POST     <- 10000L     # posterior-predictive resample size
+PP_SEED    <- 1L
+SAVE_PLOTS <- FALSE      # TRUE = also write one PNG per country to OUT_DIR
+OUT_DIR    <- here("outputs", "02_ABC_model_fits_Final")
 
 # =============================================================================
-# STAGE A -- posterior predictive on the fitted summary statistics
-# =============================================================================
+# Load + posterior-predictive resample (one fit) -----------------------------
 load_fit <- function(sc) {
   stopifnot(file.exists(sc$rds))
   res <- readRDS(sc$rds)
@@ -66,152 +69,85 @@ load_fit <- function(sc) {
   stat_names <- md$summary_stats %||% colnames(res$stats)
   observed   <- md$observed_summaries
   if (is.null(stat_names) || is.null(observed))
-    stop("No summary_stats/observed_summaries in $run_metadata for ", sc$id,
-         " -- supply them in SCENARIOS to proceed.")
+    stop("No summary_stats/observed_summaries in $run_metadata for ", sc$id, ".")
   stats <- as.data.frame(res$stats); colnames(stats) <- stat_names
   set.seed(PP_SEED)
-  idx  <- sample(seq_len(nrow(stats)), size = N_POST, replace = TRUE, prob = res$weights)
+  idx <- sample(seq_len(nrow(stats)), size = N_POST, replace = TRUE, prob = res$weights)
   list(res = res, md = md, stat_names = stat_names, observed = observed,
        post = stats[idx, , drop = FALSE])
 }
 
-# per-stat histograms: PP distribution + 2.5/50/97.5% lines (blue) + observed (red)
-plot_pp_hist <- function(name, fit) {
-  obs <- fit$observed; ns <- length(obs)
-  op <- par(mfrow = c(ceiling(ns / 2), 2), mar = c(4, 4, 3, 1)); on.exit(par(op))
-  for (s in names(obs)) {
-    x <- fit$post[[s]]
-    hist(x, breaks = 12, main = paste0(name, "  |  PP: ", s), xlab = s,
-         col = adjustcolor("steelblue", 0.6), border = "white")
-    abline(v = quantile(x, c(0.025, 0.5, 0.975)), col = "darkblue",
-           lty = c(2, 1, 2), lwd = c(1, 2, 1))
-    abline(v = obs[s], col = "red", lwd = 2.5)
-  }
-}
-
-# single panel: simulated / observed for every fitted summary (fitted scale, so
-# for the log_* summaries this is a ratio of logs -- ~1 when well fit).
-plot_fit_ratio <- function(name, fit) {
-  obs <- fit$observed; ns <- length(obs)
-  qs <- sapply(names(obs), function(s) quantile(fit$post[[s]] / obs[s], c(0.025, 0.5, 0.975)))
-  op <- par(mfrow = c(1, 1), mar = c(8, 4, 3, 1)); on.exit(par(op))
-  plot(NA, xlim = c(0.5, ns + 0.5), ylim = c(min(0, qs), max(1.5, qs) * 1.02),
-       xaxt = "n", xlab = "", ylab = "Simulated / Observed",
-       main = paste0(name, ": posterior-predictive fit ratio"))
-  axis(1, at = seq_len(ns), labels = names(obs), las = 2, cex.axis = 0.8)
-  abline(h = 1, lty = 2, col = "red")
-  for (i in seq_len(ns)) {
-    segments(i, qs[1, i], i, qs[3, i], lwd = 2, col = "darkblue")
-    points(i, qs[2, i], pch = 16, cex = 1.5, col = "darkblue")
-  }
-}
-
-# =============================================================================
-# STAGE B -- reconstruct posterior trajectories by re-simulating the model
-# =============================================================================
-reconstruct_trajectories <- function(sc, fit) {
-  suppressPackageStartupMessages({
-    library(fiber); library(future); library(future.apply)
-  })
-  source(file.path(FUNCTIONS_DIR, "setup_model_parameters.R"))
-  source(file.path(FUNCTIONS_DIR, "abc_calibration_functions_common.R"))
-  source(file.path(FUNCTIONS_DIR, "abc_calibration_functions_decoupled.R"))
-  source(file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R"))
-  source(file.path(FUNCTIONS_DIR, "simulation_helpers.R"))   # bin_counts()
-
-  res <- fit$res; md <- fit$md
-  fit_params   <- md$fit_params %||% sc$param_names
-  fixed_values <- md$fixed_values
-  ghqe <- md$fixed_efficacies$general_hospital_quarantine_efficacy
-  sfe  <- md$fixed_efficacies$safe_funeral_efficacy
-  hcw_base_prob <- md$hcw_base_prob %||% 0.25
-
-  # rebuild the scenario args exactly as the calibration script's section 4
-  scenario_matrix <- read_scenario_matrix(sc$scenario_csv)
-  mp <- make_model_parameters(scenario_id = sc$id, scenario_matrix = scenario_matrix,
-                              overrides = list(check_final_size = sc$check_final_size))
-  R0_invariants <- compute_R0_invariants(args = mp$args, n = SETUP_R0_N, seed = SETUP_R0_SEED)
-
-  posterior <- as.data.frame(res$param); colnames(posterior) <- fit_params
-  set.seed(TRAJ_SEED)
-  traj_idx <- sample(seq_len(nrow(posterior)), size = N_TRAJ, replace = TRUE, prob = res$weights)
-
-  plan(multisession, workers = TRAJ_WORKERS); on.exit(plan(sequential), add = TRUE)
-  traj_runs <- future_lapply(seq_along(traj_idx), function(k) {
-    i    <- traj_idx[k]
-    full <- assemble_decoupled_theta(as.numeric(posterior[i, fit_params]), fit_params, fixed_values)
-    a <- build_abc_model_args_decoupled(
-      R0 = full$R0, prop_funeral = full$prop_funeral, etu_efficacy = full$etu_efficacy,
-      ppe_efficacy = full$ppe_efficacy, hcw_risk_scalar = full$hcw_risk_scalar,
-      base = mp$base_args, tv = mp$tv_args, invariants = R0_invariants,
-      general_hospital_quarantine_efficacy = ghqe, safe_funeral_efficacy = sfe,
-      hcw_base_prob = hcw_base_prob, seeding_cases = SEEDING_CASES)
-    a$seed <- TRAJ_SEED + k
-    tdf  <- do.call(branching_process_main, a)$tdf
-    tdf  <- tdf[!is.na(tdf$time_infection_absolute), , drop = FALSE]
-    died <- !is.na(tdf$outcome) & tdf$outcome
-    list(case_days  = as.integer(floor(tdf$time_infection_absolute)),
-         death_days = as.integer(floor(tdf$time_outcome_absolute[died])))
-  }, future.packages = "fiber", future.seed = TRUE)
-
-  max_day <- max(unlist(lapply(traj_runs, function(r) c(r$case_days, r$death_days))), 0)
-  n_bins  <- max(1L, ceiling((max_day + 1L) / BIN_WIDTH))
-  week    <- ((seq_len(n_bins) - 1L) + 0.5) * BIN_WIDTH
-  do.call(rbind, lapply(seq_along(traj_runs), function(k) {
-    r <- traj_runs[[k]]
-    rbind(data.frame(scenario = sc$id, draw = k, week = week, metric = "Cases",
-                     incidence = bin_counts(r$case_days,  BIN_WIDTH, n_bins)),
-          data.frame(scenario = sc$id, draw = k, week = week, metric = "Deaths",
-                     incidence = bin_counts(r$death_days, BIN_WIDTH, n_bins)))
+# (A) simulated / observed fit-ratio -- horizontal pointrange, one row per stat.
+gg_fit_ratio <- function(fit, stats, col) {
+  rdf <- do.call(rbind, lapply(stats, function(s) {
+    q <- quantile(fit$post[[s]] / fit$observed[[s]], c(0.025, 0.5, 0.975), names = FALSE)
+    data.frame(stat = pretty_of(s), lo = q[1], med = q[2], hi = q[3])
   }))
+  rdf$stat <- factor(rdf$stat, levels = rev(pretty_of(stats)))   # first stat on top
+  ggplot(rdf, aes(med, stat)) +
+    geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
+    geom_pointrange(aes(xmin = lo, xmax = hi), colour = col, linewidth = 0.9, size = 0.5) +
+    labs(x = "Simulated / Observed", y = NULL,
+         caption = "ratio on the fitted scale (log for counts)") +
+    theme_bw(base_size = 10) +
+    theme(plot.caption = element_text(size = 7, colour = "grey40"))
 }
 
-plot_trajectories <- function(name, traj_long) {
-  print(ggplot(traj_long, aes(week, incidence, group = draw)) +
-          geom_line(alpha = 0.15, colour = "steelblue", linewidth = 0.3) +
-          facet_wrap(~ metric, scales = "free_y") +
-          labs(x = "Time since outbreak start (days)", y = "Count per week",
-               title = sprintf("Posterior trajectories: %s", name)) + theme_bw())
-  band <- do.call(rbind, lapply(split(traj_long, list(traj_long$metric, traj_long$week), drop = TRUE),
-    function(d) data.frame(metric = d$metric[1], week = d$week[1],
-                           lo  = quantile(d$incidence, 0.025, names = FALSE),
-                           med = quantile(d$incidence, 0.500, names = FALSE),
-                           hi  = quantile(d$incidence, 0.975, names = FALSE))))
-  print(ggplot(band, aes(week, med)) +
-          geom_ribbon(aes(ymin = lo, ymax = hi), fill = "steelblue", alpha = 0.3) +
-          geom_line(colour = "steelblue", linewidth = 0.8) +
-          facet_wrap(~ metric, scales = "free_y") +
-          labs(x = "Time since outbreak start (days)", y = "Count per week",
-               title = sprintf("Posterior median + 95%% CrI: %s", name)) + theme_bw())
+# (B) posterior-predictive histograms, faceted 2x2; bars in the country colour,
+# observed target (black) and posterior median/95% (grey solid/dashed) overlaid.
+gg_pp_hist <- function(fit, stats, fill_col, ncol = 2L) {
+  post <- fit$post[stats]
+  long <- utils::stack(post)                       # -> values, ind
+  names(long) <- c("value", "stat")
+  long$stat <- factor(pretty_of(as.character(long$stat)), levels = pretty_of(stats))
+
+  qdf <- do.call(rbind, lapply(stats, function(s) {
+    q <- quantile(post[[s]], c(0.025, 0.5, 0.975), names = FALSE)
+    data.frame(stat = pretty_of(s), value = q, kind = c("ci", "med", "ci"))
+  }))
+  qdf$stat <- factor(qdf$stat, levels = pretty_of(stats))
+  odf <- data.frame(stat = factor(pretty_of(stats), levels = pretty_of(stats)),
+                    value = as.numeric(fit$observed[stats]))
+
+  ggplot(long, aes(value)) +
+    geom_histogram(bins = 12, fill = fill_col, colour = "white", alpha = 0.85) +
+    geom_vline(data = qdf, aes(xintercept = value, linetype = kind),
+               colour = "grey25", linewidth = 0.5) +
+    geom_vline(data = odf, aes(xintercept = value), colour = "black", linewidth = 1) +
+    scale_linetype_manual(values = c(med = "solid", ci = "dashed"), guide = "none") +
+    facet_wrap(~ stat, scales = "free", ncol = ncol) +
+    labs(x = NULL, y = "Draws",
+         subtitle = "black = observed; grey = posterior median (solid) / 95% (dashed)") +
+    theme_bw(base_size = 10) +
+    theme(strip.text = element_text(face = "bold"),
+          plot.subtitle = element_text(size = 7, colour = "grey30"))
+}
+
+# build the combined A | B figure for one country
+country_figure <- function(name, fit) {
+  stats <- setdiff(names(fit$observed), DROP_STATS)   # 4 -> clean 2x2
+  col   <- COUNTRY_COLS[[name]] %||% "#0072B2"
+  body  <- cowplot::plot_grid(
+    gg_fit_ratio(fit, stats, col),
+    gg_pp_hist(fit, stats, col, ncol = 2L),
+    labels = c("A", "B"), rel_widths = c(0.8, 1.2), nrow = 1)
+  title <- cowplot::ggdraw() +
+    cowplot::draw_label(sprintf("%s -- posterior-predictive checks", NAME_FULL[[name]] %||% name),
+                        fontface = "bold", x = 0.01, hjust = 0, size = 13)
+  cowplot::plot_grid(title, body, ncol = 1, rel_heights = c(0.08, 1))
 }
 
 # =============================================================================
-# DRIVER -- loop the scenarios
-# =============================================================================
+# DRIVER -- one SEPARATE figure per country (returned in `figs`) --------------
+figs <- list()
 for (name in names(SCENARIOS)) {
-  sc  <- SCENARIOS[[name]]
-  message("\n==== ", name, "  (", sc$id, ") ====")
-  fit <- load_fit(sc)
-
-  cat(sprintf("  particles: %d   summaries: %s\n",
-              nrow(fit$post), paste(fit$stat_names, collapse = ", ")))
-
-  traj_long <- if (DO_TRAJECTORIES) {
-    message("  re-simulating ", N_TRAJ, " posterior trajectories ...")
-    reconstruct_trajectories(sc, fit)
-  } else NULL
-
-  draw_all <- function() {
-    plot_pp_hist(name, fit)
-    plot_fit_ratio(name, fit)
-    if (!is.null(traj_long)) plot_trajectories(name, traj_long)
-  }
-
-  if (SAVE_PDF) {
-    pdf_path <- file.path(OUT_DIR, sprintf("posterior_predictive_%s.pdf", name))
-    pdf(pdf_path, width = 9, height = 7); draw_all(); dev.off()
-    message("  wrote ", pdf_path)
-  } else {
-    draw_all()
+  message("==== ", name, " ====")
+  fit  <- load_fit(SCENARIOS[[name]])
+  figs[[name]] <- country_figure(name, fit)
+  print(figs[[name]])
+  if (SAVE_PLOTS) {
+    f <- file.path(OUT_DIR, sprintf("posterior_predictive_%s.png", name))
+    ggsave(f, figs[[name]], width = 11, height = 5, dpi = 200)
+    message("  wrote ", f)
   }
 }
