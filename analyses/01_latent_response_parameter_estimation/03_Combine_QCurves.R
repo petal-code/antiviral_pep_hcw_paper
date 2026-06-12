@@ -250,3 +250,83 @@ p_grid +
       quantity != "prob_hosp" ~ scale_y_continuous(limits = c(0, 1))
     )
   )
+
+# ----------------------------------------------------------------------------
+# Fitted curves vs data: West Africa (A) and DRC conflict (B)   (display only)
+# ----------------------------------------------------------------------------
+# Side-by-side fit-vs-data check for the two headline scenarios, restricted to
+# five parameters. Each region is its own 2-column x 3-row panel of the fitted
+# curve (posterior mean + 90% interval) drawn in the archetype colour, with the
+# data the model saw overlaid in black: literature anchors throughout, plus the
+# DRC SDB community proxy points (grey) behind the community unsafe-funeral panel.
+# This mirrors the per-scenario figures in 01/02, placed together as (A) West
+# Africa and (B) DRC conflict. Text is kept to the axes only. Display only; not saved.
+library(patchwork)
+
+# The five parameters to show, in the requested panel order. The fit objects and
+# anchors use the INTERNAL names; the published-output columns are noted alongside
+# (p_hosp = prob_hosp, p_ETU = prop_etu, latent_IPC = ipc_helper, ...).
+plot_params  <- c("p_hosp", "delay_hosp", "p_unsafe_funeral_comm", "p_ETU", "latent_IPC")
+panel_levels <- unname(PANEL_LOOKUP[plot_params])
+
+# Archetype line/ribbon colours, matching SCENARIO_COLORS in the main-text figure
+# helper (analyses/03_figure_template/helper_functions_figure_1to4.R).
+wa_col  <- "#d95f02"   # West Africa (orange)
+drc_col <- "#1b9e77"   # DRC (green)
+
+# The fit objects store only the fitted curves, not the data they were fit to, so
+# re-read the prepped inputs purely for the observed points.
+wa_prep  <- readRDS(file.path(DIR_PROCESSED, "WestAfrica_QCurve/WestAfrica_QCurve_PreppedData.rds"))
+drc_prep <- readRDS(file.path(DIR_PROCESSED, "DRC_QCurve/DRC_QCurve_PreppedData.rds"))
+
+# Restrict a per-parameter table to the five plotted parameters and turn
+# `parameter` into an ordered panel factor (so facets read in the requested order).
+to_panels <- function(df) {
+  df %>%
+    filter(parameter %in% plot_params) %>%
+    mutate(panel = factor(PANEL_LOOKUP[parameter], levels = panel_levels))
+}
+
+# West Africa: scenario-1 fit (with tweaks) + literature anchors.
+wa_curve_df  <- to_panels(wa_fit$curve_summ)
+wa_anchor_df <- to_panels(wa_prep$anchors)
+
+# DRC conflict: fit + anchors, plus the SDB community proxy behind the community
+# unsafe-funeral panel. That panel's mean was deterministically overridden in 02,
+# so its q5/q95 are stale -> collapse the ribbon there to the mean (as 02 does).
+drc_curve_df <- to_panels(drc_conflict_fit$curve_summ) %>%
+  mutate(q5  = if_else(parameter == "p_unsafe_funeral_comm", mean, q5),
+         q95 = if_else(parameter == "p_unsafe_funeral_comm", mean, q95))
+drc_anchor_df <- to_panels(drc_prep$anchors)
+drc_sdb_df <- drc_prep$conflict_qseries %>%
+  filter(n_eligible_sum > 0) %>%
+  transmute(relative_day, value_used = unsafe_funeral_comm_proxy,
+            panel = factor(PANEL_LOOKUP[["p_unsafe_funeral_comm"]], levels = panel_levels))
+
+# One region's 2x3 fit-vs-data panel; curve in the archetype colour `col`, data in
+# black; no title/subtitle (axes text only).
+fit_vs_data_panel <- function(curve_df, anchor_df, col, extra_points = NULL) {
+  p <- ggplot(curve_df, aes(relative_day, mean)) +
+    geom_ribbon(aes(ymin = q5, ymax = q95), fill = col, alpha = 0.20) +
+    geom_line(colour = col, linewidth = 0.9)
+  if (!is.null(extra_points)) {
+    p <- p + geom_point(data = extra_points, aes(relative_day, value_used),
+                        inherit.aes = FALSE, colour = "black", size = 1, alpha = 0.7)
+  }
+  p +
+    geom_point(data = anchor_df, aes(relative_day, value_used),
+               inherit.aes = FALSE, colour = "black", size = 2) +
+    facet_wrap(~ panel, scales = "free_y", ncol = 2) +
+    labs(x = "Relative outbreak day", y = NULL) +
+    theme_bw(base_size = 9) +
+    theme(strip.text = element_text(size = 7))
+}
+
+p_wa  <- fit_vs_data_panel(wa_curve_df,  wa_anchor_df,  col = wa_col)
+p_drc <- fit_vs_data_panel(drc_curve_df, drc_anchor_df, col = drc_col, extra_points = drc_sdb_df)
+
+# (A) West Africa and (B) DRC conflict, side by side.   display only; not saved
+a <- print((p_wa | p_drc) +
+        plot_annotation(tag_levels = "A"))
+ggsave(filename = "figures/figure_S1_QCurves.pdf",
+       plot = a, width = 11.6, height = 5.87)
