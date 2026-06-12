@@ -66,11 +66,11 @@ panel_a <- ggplot(panel_a_df, aes(x = scenario_label, y = value, fill = group)) 
     name = NULL
   ) +
   scale_y_continuous(
-    limits = c(0, 350),                    
-    breaks = seq(0, 350, by = 25),         
-    expand = expansion(mult = c(0, 0.05))  
+    limits = c(0, 350),
+    breaks = seq(0, 350, by = 25),
+    expand = expansion(mult = c(0, 0.05))
   ) +
-  coord_cartesian(ylim = c(0, 225))+
+  coord_cartesian(ylim = c(0, 225)) +
   scale_x_discrete(labels = c("West Africa (Worst)"    = "West Africa\narchetype",
                               "DRC (Middle, PlusPlus)" = "DRC\narchetype")) +
   labs(x = NULL, y = sprintf("Doses per death averted\n(1 course = %d doses)",
@@ -108,7 +108,7 @@ panel_b <- ggplot() +
   scale_fill_manual( values = setNames(SCENARIO_COLORS, SCENARIO_LABELS), name = NULL) +
   scale_x_continuous(breaks = seq(20, 80, by = 10),
                      labels = function(x) paste0(x, "%"),
-                     name   = "OBV efficacy (Policy B)") +
+                     name   = "Antiviral efficacy (Policy B)") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.05)),
                      name   = sprintf("Doses per death averted\n(1 course = %d doses)",
                                       DOSES_PER_COURSE)) +
@@ -121,6 +121,12 @@ fig5_all <- (panel_a | panel_b) +
   plot_layout(widths = c(2, 3)) +
   plot_annotation(tag_levels = list(c("a ", "b ")))
 
-ggsave(file.path(OUT_DIR, "figure_5.png"),
-       fig5_all, width = 12, height = 5, dpi = 400, units = "in")
+save_fig <- function(filename_base, plot, width, height) {
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
+         plot, width = width, height = height, dpi = 400, units = "in")
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
+         plot, width = width, height = height, units = "in")
+}
+
+save_fig("figure_5", fig5_all, 12, 5)
 message("Figure 5 saved")

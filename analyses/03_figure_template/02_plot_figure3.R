@@ -39,7 +39,7 @@ make_coverage_plot <- function(cs) {
     geom_line(color = COVERAGE_COLORS[cs], linewidth = 1.2) +
     scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     scale_x_continuous(breaks = seq(0, x_max / 7, by = 13)) +
-    labs(x = "Weeks since outbreak start", y = "OBV coverage") +
+    labs(x = "Weeks since outbreak start", y = "Antiviral coverage") +
     theme_fig()
 }
 
@@ -68,7 +68,7 @@ make_box_plot <- function(cs, metric, y_label) {
     scale_fill_manual(values = fill_vals, breaks = rev(legend_breaks),
                       labels = c("DRC archetype", "West Africa archetype"), name = NULL) +
     scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
-    labs(x = "OBV efficacy", y = y_label) +
+    labs(x = "Antiviral efficacy", y = y_label) +
     theme_fig()
 }
 
@@ -76,6 +76,13 @@ make_col_header <- function(label) {
   ggplot() +
     annotate("text", x = 0.5, y = 0.5, label = label, fontface = "bold", size = 4.5) +
     theme_void()
+}
+
+save_fig <- function(filename_base, plot, width, height) {
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
+         plot, width = width, height = height, dpi = 400, units = "in")
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
+         plot, width = width, height = height, units = "in")
 }
 
 h1 <- make_col_header("Constant, Full Coverage")
@@ -102,8 +109,7 @@ figure_3_deaths <- (
   plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
   theme(legend.position = "bottom")
 
-ggsave(file.path(OUT_DIR, "figure_3_deaths-averted.png"),
-       figure_3_deaths, width = 10, height = 6.5, dpi = 400)
+save_fig("figure_3_deaths-averted", figure_3_deaths, 10, 6.5)
 
 figure_3_days_lost <- (
   (h1 | h2 | h3) /
@@ -114,7 +120,6 @@ figure_3_days_lost <- (
   plot_annotation(tag_levels = list(c("", "", "", "a ", "b ", "c ", "d ", "e ", "f "))) &
   theme(legend.position = "bottom")
 
-ggsave(file.path(OUT_DIR, "figure_3_days-averted.png"),
-       figure_3_days_lost, width = 10, height = 6.5, dpi = 400)
+save_fig("figure_3_days-averted", figure_3_days_lost, 10, 6.5)
 
 message("Figure 3 variants saved")

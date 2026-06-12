@@ -53,7 +53,7 @@ make_heatmap <- function(sc, metric, fill_label, subtitle = NULL) {
     scale_fill_gradient(low = "white", high = sc_color, name = fill_label,
                         limits = c(0, 100), labels = function(x) paste0(x, "%"),
                         na.value = "grey90") +
-    labs(x = "OBV coverage", y = "OBV efficacy", subtitle = subtitle) +
+    labs(x = "Antiviral coverage", y = "Antiviral efficacy", subtitle = subtitle) +
     theme_fig(base_size = 13) +
     theme(legend.position = "none", panel.grid = element_blank(),
           axis.line = element_blank())
@@ -77,6 +77,12 @@ fig4_all <- (
   plot_layout(guides = "collect", heights = c(0.1, 1)) +
   plot_annotation(tag_levels = list(c("", "", "a ", "b ", "c ", "d ")))
 
-ggsave(file.path(OUT_DIR, "figure_4.png"),
-       fig4_all, width = 10, height = 6.5, dpi = 400, units = "in")
+save_fig <- function(filename_base, plot, width, height) {
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
+         plot, width = width, height = height, dpi = 400, units = "in")
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
+         plot, width = width, height = height, units = "in")
+}
+
+save_fig("figure_4", fig4_all, 10, 6.5)
 message("Figure 4 saved")
