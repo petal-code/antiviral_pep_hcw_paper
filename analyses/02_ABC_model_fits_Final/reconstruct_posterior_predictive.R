@@ -124,7 +124,7 @@ gg_pp_hist <- function(fit, stats, fill_col, ncol = 2L) {
 # build the combined A | B figure for one country
 country_figure <- function(name, fit) {
   stats <- setdiff(names(fit$observed), DROP_STATS)   # 4 -> clean 2x2
-  col   <- COUNTRY_COLS[[name]] %||% "#0072B2"
+  col   <- SCENARIO_COLORS[[name]] %||% "#666666"
   body  <- cowplot::plot_grid(
     gg_fit_ratio(fit, stats, col),
     gg_pp_hist(fit, stats, col, ncol = 2L),
