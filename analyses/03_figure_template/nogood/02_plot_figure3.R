@@ -142,6 +142,7 @@ save_fig("figure_3_days-averted", figure_3_days_lost, 10, 6.5)
 message("Figure 3 variants saved")
 
 # =============================================================================
+<<<<<<< HEAD
 # Cumulative averted burden panels (2 scenarios x 3 coverage levels),
 # with efficacy 50-90% as colored lines within each panel
 # =============================================================================
@@ -261,3 +262,36 @@ save_fig("figure_3_weekly-hcw-deaths-80pct", fig3_weekly_deaths, 10, 4)
 message("Figure 3 weekly HCW deaths overlay (80% efficacy) saved")
 
 message("Figure 3 cumulative averted-burden panels saved")
+=======
+# Cumulative averted HCW deaths (full / ramp_high / ramp_low overlay, 80% efficacy)
+# =============================================================================
+averted_ts  <- read.csv(here("output_figgen", "figure_3_averted_weekly_ts.csv"),
+                        stringsAsFactors = FALSE)
+averted_cum <- summarise_cumulative_ts(averted_ts)
+
+make_averted_ts <- function(sc) {
+  x_max <- x_max_weeks(sc)
+  df <- averted_cum %>%
+    filter(scenario == sc, week <= x_max) %>%
+    mutate(coverage_label = factor(COVERAGE_LABELS[match(coverage_name, COVERAGE_LEVELS)],
+                                   levels = COVERAGE_LABELS))
+  ggplot(df, aes(x = week, color = coverage_label, fill = coverage_label)) +
+    geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.15, color = NA) +
+    geom_line(aes(y = q50), linewidth = 1) +
+    scale_color_manual(values = setNames(COVERAGE_COLORS, COVERAGE_LABELS), name = NULL) +
+    scale_fill_manual(values = setNames(COVERAGE_COLORS, COVERAGE_LABELS), name = NULL) +
+    scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 5)) +
+    labs(x = "Weeks since outbreak start", y = "Cumulative HCW deaths averted (80% efficacy)") +
+    theme_fig()
+}
+
+fig3_averted <- ((make_col_header("West Africa archetype") | make_col_header("DRC archetype")) /
+                   ((make_averted_ts("WestAfrica") | make_averted_ts("DRC")) +
+                      plot_layout(axis_titles = "collect", guides = "collect"))) +
+  plot_layout(heights = c(0.2, 2)) +
+  plot_annotation(tag_levels = list(c("", "", "a ", "b "))) &
+  theme(legend.position = "bottom")
+save_fig("figure_3_cumulative-averted-hcw-deaths", fig3_averted, 10, 4)
+
+message("Figure 3 cumulative averted-deaths panel saved")
+>>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c

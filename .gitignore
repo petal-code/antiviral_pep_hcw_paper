@@ -21,4 +21,7 @@ renv/staging/
 data-processed/**/*.rds
 outputs/
 .positai
+<<<<<<< HEAD
 output_figgen/figure_3_averted_weekly_ts.csv
+=======
+>>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c

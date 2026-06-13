@@ -143,10 +143,17 @@ message("Figure 5 saved")
 # save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", fig5_panel_b, 7, 5)
 
 # fig5_panel_a <- panel_a
+<<<<<<< HEAD
 save_fig("figure_5_panel-a_dose-efficiency-boxplot", panel_a, 4, 4)
 
 # fig5_panel_b <- panel_b
 save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", panel_b, 6, 4)
+=======
+save_fig("figure_5_panel-a_dose-efficiency-boxplot", panel_a, 5, 5)
+
+# fig5_panel_b <- panel_b
+save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", panel_b, 7, 5)
+>>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
 
 message("Figure 5 split panels saved")
 # =============================================================================

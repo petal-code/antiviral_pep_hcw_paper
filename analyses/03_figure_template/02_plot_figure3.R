@@ -2,7 +2,10 @@
 # 02_plot_figure3.R
 # Coverage scenario comparison
 # Reads pre-computed CSV from output_figgen/figure_3_run_summary.csv
+<<<<<<< HEAD
 # and output_figgen/figure_3_weekly_hcw_deaths_80.csv
+=======
+>>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
 # Run 02_extract_figure3.R first.
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
@@ -86,8 +89,11 @@ save_fig <- function(filename_base, plot, width, height) {
          plot, width = width, height = height, units = "in")
 }
 
+<<<<<<< HEAD
 x_max_weeks <- function(sc) SCENARIO_X_MAX_DAYS[sc] / 7
 
+=======
+>>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
 h1 <- make_col_header("Constant, Full Coverage")
 h2 <- make_col_header("Ramp Up to High Coverage")
 h3 <- make_col_header("Ramp Up to Medium Coverage")
@@ -125,6 +131,7 @@ figure_3_days_lost <- (
 
 save_fig("figure_3_days-averted", figure_3_days_lost, 10, 6.5)
 
+<<<<<<< HEAD
 message("Figure 3 variants saved")
 
 # =============================================================================
@@ -199,3 +206,6 @@ message("Figure 3 combined (a-h) saved")
 
 
 
+=======
+message("Figure 3 variants saved")
+>>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
