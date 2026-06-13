@@ -134,8 +134,9 @@ weekly_80 <- read.csv(here("output_figgen", "figure_3_weekly_hcw_deaths_80.csv")
 LINE_LEVELS <- c("baseline", "full", "ramp_high", "ramp_low")
 LINE_LABELS <- c("No antiviral", "Scenario 1", "Scenario 2", "Scenario 3")
 # LINE_LABELS <- c("No antiviral", "Full (100%)", "Ramp high (0%->80%)", "Ramp low (0%->50%)")
-LINE_COLORS <- c(baseline = "grey40", full = "#1a9641",
-                 ramp_high = "#fdae61", ramp_low = "#d7191c")
+# LINE_COLORS <- c(baseline = "grey40", full = "#1a9641",
+#                  ramp_high = "#fdae61", ramp_low = "#d7191c")
+LINE_COLORS <- c(baseline = "grey40", full = "#5C995C", ramp_high = "#BCA05C", ramp_low = "#B3614C")  # sage / ochre / terracotta
 
 make_weekly_deaths_panel <- function(sc) {
   x_max <- x_max_weeks(sc)
@@ -247,7 +248,7 @@ make_coverage_plot <- function(cs, title) {
 
 # ---- D,E: weekly incident HCW deaths overlay (80% efficacy); country title ---
 LINE_LEVELS <- c("baseline", "full", "ramp_high", "ramp_low")
-LINE_LABELS <- c("No antiviral", "Full (100%)", "Ramp high (0%->80%)", "Ramp low (0%->50%)")
+LINE_LABELS <- c("No antiviral", "Scenario 1", "Scenario 2", "Scenario 3")
 make_weekly_deaths_panel <- function(sc, panel_title) {
   xm <- x_max_weeks(sc)
   df <- weekly_80 %>% filter(scenario == sc, week <= xm) %>%
