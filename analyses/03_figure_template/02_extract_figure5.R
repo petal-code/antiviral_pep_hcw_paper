@@ -8,7 +8,7 @@ source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to
 source(here("functions", "abc_posterior.R"))
 
 FIG5_EFFICACY_LEVELS <- c("obv_20", "obv_30", "obv_40",
-                          "obv_50", "obv_60", "obv_70", "obv_80")
+                          "obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
 
 # Load PPE efficacy per particle from posterior RDS
 SCENARIOS_RDS <- list(

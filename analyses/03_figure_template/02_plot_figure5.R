@@ -194,80 +194,162 @@ save_fig("figure_5_panel-a_dose-efficiency-boxplot_A-vs-B", fig5_panel_a_AB, 8, 
 
 message("Figure 5 panel a A-vs-B split saved")
 
+title_map <- c(WestAfrica = "West Africa Archetype", DRC = "DRC Archetype")
 # =============================================================================
-# Efficacy sweep version: Policy A and Policy B both as lines vs efficacy,
-# for WestAfrica and DRC. De-emphasises the (very narrow) uncertainty bands
-# relative to the boxplot version above.
+# Efficacy sweep version: Policy A vs Policy B, split into separate panels
+# for WestAfrica and DRC, y-axis starting at 0. Linetype legend distinguishes
+# Policy A (dashed) vs Policy B (solid).
 # =============================================================================
-sweep_df_AB <- particle_df %>%
+make_sweep_panel <- function(df, sc) {
+  df_sc <- df %>% filter(scenario == sc)
+  
+  base_col  <- unname(SCENARIO_COLORS[sc])
+  light_col <- if (sc == "WestAfrica") "#fdd8a0" else "#a8ddb5"
+  policy_colors    <- setNames(c(light_col, base_col), c("A", "B"))
+  policy_linetypes <- setNames(c("dashed", "solid"), c("A", "B"))
+  policy_labels    <- c(A = "Policy A", B = "Policy B")
+  
+  ggplot(df_sc, aes(x = efficacy * 100, color = policy, fill = policy,
+                    linetype = policy, group = policy)) +
+    geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.15, color = NA) +
+    geom_line(aes(y = med), linewidth = 1.0) +
+    scale_color_manual(values = policy_colors, guide = "none") +
+    scale_fill_manual(values = policy_colors, guide = "none") +
+    scale_linetype_manual(values = policy_linetypes, labels = policy_labels, name = NULL) +
+    scale_x_continuous(breaks = seq(50, 90, by = 10),
+                       labels = function(x) paste0(x, "%"),
+                       name   = "Antiviral efficacy") +
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05)),
+                       name   = sprintf("Doses per death averted\n(1 course = %d doses)",
+                                        DOSES_PER_COURSE)) +
+    labs(title = title_map[sc]) +
+    guides(linetype = guide_legend(override.aes = list(color = "black", fill = NA))) +
+    theme_fig() +
+    theme(legend.position = "bottom",
+          plot.title = element_text(size = 11, hjust = 0.5))
+}
+
+panel_c_wa  <- make_sweep_panel(sweep_df_AB, "WestAfrica")
+panel_c_drc <- make_sweep_panel(sweep_df_AB, "DRC")
+
+fig5_panel_c_split <- (panel_c_wa | panel_c_drc) +
+  plot_annotation(tag_levels = list(c("a ", "b ")))
+
+save_fig("figure_5_panel-c_efficacy-sweep-split", fig5_panel_c_split, 10, 4.5)
+
+title_map <- c(WestAfrica = "West Africa Archetype", DRC = "DRC Archetype")
+
+# =============================================================================
+# Efficacy sweep version: Policy A vs Policy B, split into separate panels
+# for WestAfrica and DRC, y-axis starting at 0. Legend placed inside the
+# plot area, using the same scenario colors as the lines.
+# =============================================================================
+make_sweep_panel <- function(df, sc) {
+  df_sc <- df %>% filter(scenario == sc)
+  
+  base_col  <- unname(SCENARIO_COLORS[sc])
+  light_col <- if (sc == "WestAfrica") "#fdd8a0" else "#a8ddb5"
+  policy_colors    <- setNames(c(light_col, base_col), c("A", "B"))
+  policy_linetypes <- setNames(c("dashed", "solid"), c("A", "B"))
+  policy_labels    <- c(A = "Policy A", B = "Policy B")
+  
+  ggplot(df_sc, aes(x = efficacy * 100, color = policy, fill = policy,
+                    linetype = policy, group = policy)) +
+    geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.15, color = NA) +
+    geom_line(aes(y = med), linewidth = 1.0) +
+    scale_color_manual(values = policy_colors, labels = policy_labels, name = NULL) +
+    scale_fill_manual(values = policy_colors, guide = "none") +
+    scale_linetype_manual(values = policy_linetypes, labels = policy_labels, name = NULL) +
+    scale_x_continuous(breaks = seq(50, 90, by = 10),
+                       labels = function(x) paste0(x, "%"),
+                       name   = "Antiviral efficacy") +
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05)),
+                       name   = sprintf("Doses per death averted\n(1 course = %d doses)",
+                                        DOSES_PER_COURSE)) +
+    labs(title = title_map[sc]) +
+    guides(color = guide_legend(override.aes = list(linewidth = 0.8)),
+           linetype = guide_legend(override.aes = list(linewidth = 0.8))) +
+    theme_fig() +
+    theme(legend.position = c(0.78, 0.85),
+          legend.background = element_rect(fill = "white", colour = "white"),
+          legend.key = element_rect(fill = "white", colour = "white"),
+          legend.key.width = unit(1.5, "cm"),
+          legend.title = element_blank(),
+          plot.title = element_text(size = 11, hjust = 0.5))
+}
+
+panel_c_wa  <- make_sweep_panel(sweep_df_AB, "WestAfrica")
+panel_c_drc <- make_sweep_panel(sweep_df_AB, "DRC")
+
+fig5_panel_c_split <- (panel_c_wa | panel_c_drc) +
+  plot_annotation(tag_levels = list(c("a ", "b ")))
+
+save_fig("figure_5_panel-c_efficacy-sweep-split", fig5_panel_c_split, 10, 4)
+
+message("Figure 5 efficacy sweep split (WestAfrica / DRC) saved")
+
+# =============================================================================
+# Efficacy sweep version, 95% CI: Policy A vs Policy B, split into separate
+# panels for WestAfrica and DRC, y-axis starting at 0
+# =============================================================================
+sweep_df_AB_95 <- particle_df %>%
+  filter(efficacy >= 0.5) %>%
   group_by(scenario, scenario_label, efficacy) %>%
-  summarise(med_dda_A = median(dda_A, na.rm = TRUE),
-            q25_dda_A = quantile(dda_A, 0.25, na.rm = TRUE),
-            q75_dda_A = quantile(dda_A, 0.75, na.rm = TRUE),
-            med_dda_B = median(dda_B, na.rm = TRUE),
-            q25_dda_B = quantile(dda_B, 0.25, na.rm = TRUE),
-            q75_dda_B = quantile(dda_B, 0.75, na.rm = TRUE),
+  summarise(med_dda_A  = median(dda_A, na.rm = TRUE),
+            q025_dda_A = quantile(dda_A, 0.025, na.rm = TRUE),
+            q975_dda_A = quantile(dda_A, 0.975, na.rm = TRUE),
+            med_dda_B  = median(dda_B, na.rm = TRUE),
+            q025_dda_B = quantile(dda_B, 0.025, na.rm = TRUE),
+            q975_dda_B = quantile(dda_B, 0.975, na.rm = TRUE),
             .groups = "drop") %>%
   tidyr::pivot_longer(
-    cols = c(med_dda_A, q25_dda_A, q75_dda_A, med_dda_B, q25_dda_B, q75_dda_B),
-    names_to = c("stat", "policy"), names_pattern = "(med|q25|q75)_dda_(A|B)",
+    cols = c(med_dda_A, q025_dda_A, q975_dda_A, med_dda_B, q025_dda_B, q975_dda_B),
+    names_to = c("stat", "policy"), names_pattern = "(med|q025|q975)_dda_(A|B)",
     values_to = "value"
   ) %>%
   tidyr::pivot_wider(names_from = stat, values_from = value) %>%
   mutate(group = paste(as.character(scenario_label), policy, sep = "."))
 
-sweep_colors <- c(
-  setNames(c("#fdae61", SCENARIO_COLORS["WestAfrica"]),
-           paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = ".")),
-  setNames(c("#66c2a5", SCENARIO_COLORS["DRC"]),
-           paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = "."))
-)
-sweep_linetypes <- c(
-  setNames(c("dashed", "solid"), paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = ".")),
-  setNames(c("dashed", "solid"), paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = "."))
-)
+make_sweep_panel_95 <- function(df, sc) {
+  df_sc <- df %>% filter(scenario == sc)
+  
+  base_col  <- unname(SCENARIO_COLORS[sc])
+  light_col <- if (sc == "WestAfrica") "#fdd8a0" else "#a8ddb5"
+  policy_colors    <- setNames(c(light_col, base_col), c("A", "B"))
+  policy_linetypes <- setNames(c("dashed", "solid"), c("A", "B"))
+  policy_labels    <- c(A = "Policy A", B = "Policy B")
+  
+  ggplot(df_sc, aes(x = efficacy * 100, color = policy, fill = policy,
+                    linetype = policy, group = policy)) +
+    geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.15, color = NA) +
+    geom_line(aes(y = med), linewidth = 1.0) +
+    scale_color_manual(values = policy_colors, labels = policy_labels, name = NULL) +
+    scale_fill_manual(values = policy_colors, guide = "none") +
+    scale_linetype_manual(values = policy_linetypes, labels = policy_labels, name = NULL) +
+    scale_x_continuous(breaks = seq(50, 90, by = 10),
+                       labels = function(x) paste0(x, "%"),
+                       name   = "Antiviral efficacy") +
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05)),
+                       name   = sprintf("Doses per death averted\n(1 course = %d doses)",
+                                        DOSES_PER_COURSE)) +
+    labs(title = title_map[sc]) +
+    guides(color = guide_legend(override.aes = list(linewidth = 0.8)),
+           linetype = guide_legend(override.aes = list(linewidth = 0.8))) +
+    theme_fig() +
+    theme(legend.position = c(0.78, 0.85),
+          legend.background = element_blank(),
+          legend.key = element_blank(),
+          legend.key.width = unit(1.5, "cm"),
+          legend.title = element_blank(),
+          plot.title = element_text(size = 11, hjust = 0.5))
+}
 
-panel_c <- ggplot(sweep_df_AB, aes(x = efficacy * 100, color = group, fill = group,
-                                   linetype = group, group = group)) +
-  geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.15, color = NA) +
-  geom_line(aes(y = med), linewidth = 1.0) +
-  scale_color_manual(
-    values = sweep_colors,
-    breaks = c(paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = "."),
-               paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = ".")),
-    labels = c("West Africa — Policy A", "West Africa — Policy B",
-               "DRC — Policy A",         "DRC — Policy B"),
-    name = NULL
-  ) +
-  scale_fill_manual(
-    values = sweep_colors,
-    breaks = c(paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = "."),
-               paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = ".")),
-    labels = c("West Africa — Policy A", "West Africa — Policy B",
-               "DRC — Policy A",         "DRC — Policy B"),
-    name = NULL
-  ) +
-  scale_linetype_manual(
-    values = sweep_linetypes,
-    breaks = c(paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = "."),
-               paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = ".")),
-    labels = c("West Africa — Policy A", "West Africa — Policy B",
-               "DRC — Policy A",         "DRC — Policy B"),
-    name = NULL
-  ) +
-  scale_x_continuous(breaks = seq(20, 80, by = 10),
-                     labels = function(x) paste0(x, "%"),
-                     name   = "Antiviral efficacy") +
-  scale_y_continuous(limits = c(0, 225), expand = expansion(mult = c(0, 0.05)),
-                     name   = sprintf("Doses per death averted\n(1 course = %d doses)",
-                                      DOSES_PER_COURSE)) +
-  theme_fig() +
-  theme(legend.position = "bottom", legend.key.size = unit(0.4, "cm"),
-        legend.text = element_text(size = 8)) +
-  guides(color = guide_legend(nrow = 2, byrow = TRUE),
-         fill = guide_legend(nrow = 2, byrow = TRUE),
-         linetype = guide_legend(nrow = 2, byrow = TRUE))
+panel_c_wa_95  <- make_sweep_panel_95(sweep_df_AB_95, "WestAfrica")
+panel_c_drc_95 <- make_sweep_panel_95(sweep_df_AB_95, "DRC")
 
-save_fig("figure_5_panel-c_efficacy-sweep-policyA-vs-policyB", panel_c, 7, 5)
+fig5_panel_c_split_95 <- (panel_c_wa_95 | panel_c_drc_95) +
+  plot_annotation(tag_levels = list(c("a ", "b ")))
 
-message("Figure 5 efficacy sweep (Policy A vs B) saved")
+save_fig("figure_5_panel-c_efficacy-sweep-split_95CI", fig5_panel_c_split_95, 10, 4)
+
+message("Figure 5 efficacy sweep split 95% CI (WestAfrica / DRC) saved")

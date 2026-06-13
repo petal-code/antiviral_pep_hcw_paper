@@ -175,3 +175,30 @@ ggsave(plot = fig_v3,
        filename = file.path(OUT_DIR, "figure_3_redesign_bars.pdf"),
        width = 8.25, height = 6.5)
 
+# =============================================================================
+# Numbers for the Figure 3 text (80% efficacy, by coverage scenario)
+# =============================================================================
+fig3_text_numbers <- pdf %>%
+  filter(eff_name == "obv_80") %>%
+  group_by(scenario, coverage_name) %>%
+  summarise(
+    lo  = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
+    med = quantile(pct_hcw_deaths_averted, 0.5,   na.rm = TRUE),
+    hi  = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(c(lo, med, hi), ~round(.x, 1)))
+
+print(fig3_text_numbers)
+
+# Percent of Scenario 1 (full) benefit preserved under Scenario 2 / 3,
+# based on median pct_hcw_deaths_averted
+fig3_pct_preserved <- fig3_text_numbers %>%
+  select(scenario, coverage_name, med) %>%
+  tidyr::pivot_wider(names_from = coverage_name, values_from = med) %>%
+  mutate(
+    pct_preserved_ramp_high = round(100 * ramp_high / full, 1),
+    pct_preserved_ramp_low  = round(100 * ramp_low  / full, 1)
+  )
+
+print(fig3_pct_preserved)

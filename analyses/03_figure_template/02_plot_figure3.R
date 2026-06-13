@@ -85,9 +85,9 @@ save_fig <- function(filename_base, plot, width, height) {
 }
 
 x_max_weeks <- function(sc) SCENARIO_X_MAX_DAYS[sc] / 7
-h1 <- make_col_header("Constant, Full Coverage")
-h2 <- make_col_header("Ramp Up to High Coverage")
-h3 <- make_col_header("Ramp Up to Medium Coverage")
+h1 <- make_col_header("Scenario 1: Outbreak-ready /\npre-positioned PEP")
+h2 <- make_col_header("Scenario 2: Deployment-ready /\nsupply-constrained PEP")
+h3 <- make_col_header("Scenario 3: Evaluation-dependent /\nlimited-access PEP")
 
 p_a <- make_coverage_plot(COVERAGE_LEVELS[1])
 p_b <- make_coverage_plot(COVERAGE_LEVELS[2])

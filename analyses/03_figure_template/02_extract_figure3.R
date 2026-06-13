@@ -2,11 +2,10 @@
 # 02_extract_figure3.R
 # Extract and save run summaries for Figure 3.
 # Output: output_figgen/figure_3_run_summary.csv
-<<<<<<< HEAD
 #
 # Also extracts weekly incident HCW deaths at 80% antiviral efficacy, for
 # baseline (no antiviral) and each coverage scenario (full/ramp_high/ramp_low),
-# pre-aggregated to quantiles across particle x rep (same convention as
+# pre-aggregated to mean and 95% CI across particle x rep (same convention as
 # figure 1's weekly ts CSV).
 # Output: output_figgen/figure_3_weekly_hcw_deaths_80.csv
 # =============================================================================
@@ -17,15 +16,6 @@ FIG3_EFFICACY_LEVELS <- c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
 # Run summary (deaths averted / days lost averted boxplots)
 # -----------------------------------------------------------------------
 message("Extracting run summaries for figure 3...")
-=======
-# =============================================================================
-source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
-
-FIG3_EFFICACY_LEVELS <- c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
-
-message("Extracting run summaries for figure 3...")
-
->>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
 run_df <- do.call(rbind, lapply(COVERAGE_LEVELS, function(cov) {
   do.call(rbind, lapply(FIG3_EFFICACY_LEVELS, function(eff_name) {
     arm_dir   <- sprintf("%s_obv%02d", cov, round(OBV_EFFICACY_VALUES[[eff_name]] * 100))
@@ -33,7 +23,6 @@ run_df <- do.call(rbind, lapply(COVERAGE_LEVELS, function(cov) {
     extract_run_summary(arm_dir, arm_label = arm_label, n_workers = 14L, obv_return = FALSE)
   }))
 }))
-<<<<<<< HEAD
 save_figure_data(run_df, "figure_3_run_summary.csv")
 
 # -----------------------------------------------------------------------
@@ -61,18 +50,7 @@ weekly_80_clean <- weekly_80_raw %>%
   ) %>%
   mutate(line_group = ifelse(arm == "baseline", "baseline", coverage_name))
 
-# Aggregate to quantiles across particle x rep
-# weekly_80_q <- weekly_80_clean %>%
-#   mutate(week = week / 7) %>%
-#   group_by(scenario, line_group, week) %>%
-#   summarise(
-#     q025 = quantile(value, 0.025),
-#     q25  = quantile(value, 0.25),
-#     q50  = quantile(value, 0.50),
-#     q75  = quantile(value, 0.75),
-#     q975 = quantile(value, 0.975),
-#     .groups = "drop"
-#   )
+# Aggregate to mean and 95% CI across particle x rep
 weekly_80_q <- weekly_80_clean %>%
   mutate(week = week / 7) %>%
   group_by(scenario, line_group, week) %>%
@@ -93,8 +71,4 @@ weekly_80_q <- weekly_80_clean %>%
 
 save_figure_data(weekly_80_q, "figure_3_weekly_hcw_deaths_80.csv")
 
-=======
-
-save_figure_data(run_df, "figure_3_run_summary.csv")
->>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
 message("Figure 3 data extraction complete.")
