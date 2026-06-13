@@ -1,0 +1,32 @@
+# Auto-generated NPI-efficacy ABC run metadata.
+# source() this file to load the list `npi_run_metadata`.
+# npi_spec maps npi_scaler in [-1, 1] -> efficacy:
+#   efficacy = midpoint + npi_scaler * (max - min) / 2  (per fitted efficacy).
+# Required by any downstream analysis that reconstructs efficacies from the fit.
+
+npi_run_metadata <- list(npi_spec = list(ppe_efficacy = list(min = 0.3, max = 0.9), 
+    etu_efficacy = list(min = 0.6, max = 0.95)), scenario_id = "Worst_WestAfrica", 
+    param_names = c("R0", "prop_funeral", "npi_scaler", "hcw_risk_scalar"
+    ), priors = list(c("unif", "1.15", "1.65"), c("unif", "0.1", 
+    "0.4"), c("unif", "-1", "1"), c("unif", "1", "1.8")), observed_summaries = c(n_deaths = 11325, 
+    n_hcw_deaths = 513, duration = 365, time_to_peak = 164, peak_height = 599
+    ), fixed_efficacies = list(general_hospital_quarantine_efficacy = 0.3, 
+        safe_funeral_efficacy = 0.8), created_at = "2026-06-05 15:46:44 -0700", 
+    approach = "combined", result_filename = "Worst_WestAfrica_20260604_174540_Combined_NP4_NS5_NBREPS_70_NBSIMUL_460.rds", 
+    fit_params = c("R0", "prop_funeral", "npi_scaler", "hcw_risk_scalar"
+    ), fixed_values = list(R0 = 1.4, prop_funeral = 0.35, npi_scaler = 0, 
+        hcw_risk_scalar = 1), hcw_base_prob = 0.25, summary_stats = c("n_deaths", 
+    "n_hcw_deaths", "duration", "time_to_peak", "peak_height"
+    ), peak_settings = list(bin_width = 7L, time_origin = "first_death"), 
+    abc_settings = list(method = "Delmoral", nb_simul = 460, 
+        alpha = 0.5, tolerance_target = 0.5, M = 1, use_seed = TRUE, 
+        verbose = TRUE), abc_config = list(takeoff_death_threshold = 100L, 
+        n_reps = 70L, seeding_cases = 25L, setup_R0_n = 100000L, 
+        setup_R0_seed = 42L, npi_spec = list(ppe_efficacy = list(
+            min = 0.3, max = 0.9), etu_efficacy = list(min = 0.6, 
+            max = 0.95)), hcw_base_prob = 0.25, fit_params = c("R0", 
+        "prop_funeral", "npi_scaler", "hcw_risk_scalar"), fixed_values = list(
+            R0 = 1.4, prop_funeral = 0.35, npi_scaler = 0, hcw_risk_scalar = 1), 
+        summary_stats = c("n_deaths", "n_hcw_deaths", "duration", 
+        "time_to_peak", "peak_height"), peak_bin_width = 7L, 
+        peak_time_origin = "first_death"))
