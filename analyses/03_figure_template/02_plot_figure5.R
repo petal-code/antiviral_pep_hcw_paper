@@ -310,22 +310,61 @@ sweep_df_AB_95 <- particle_df %>%
   tidyr::pivot_wider(names_from = stat, values_from = value) %>%
   mutate(group = paste(as.character(scenario_label), policy, sep = "."))
 
+# make_sweep_panel_95 <- function(df, sc) {
+#   df_sc <- df %>% filter(scenario == sc)
+#   
+#   base_col  <- unname(SCENARIO_COLORS[sc])
+#   light_col <- if (sc == "WestAfrica") "#fdd8a0" else "#a8ddb5"
+#   policy_colors    <- setNames(c(light_col, base_col), c("A", "B"))
+#   policy_linetypes <- setNames(c("dashed", "solid"), c("A", "B"))
+#   policy_labels    <- c(A = "Policy A", B = "Policy B")
+#   
+#   ggplot(df_sc, aes(x = efficacy * 100, color = policy, fill = policy,
+#                     linetype = policy, group = policy)) +
+#     geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.15, color = NA) +
+#     geom_line(aes(y = med), linewidth = 1.0) +
+#     scale_color_manual(values = policy_colors, labels = policy_labels, name = NULL) +
+#     scale_fill_manual(values = policy_colors, guide = "none") +
+#     scale_linetype_manual(values = policy_linetypes, labels = policy_labels, name = NULL) +
+#     scale_x_continuous(breaks = seq(50, 90, by = 10),
+#                        labels = function(x) paste0(x, "%"),
+#                        name   = "Antiviral efficacy") +
+#     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05)),
+#                        name   = sprintf("Doses per death averted\n(1 course = %d doses)",
+#                                         DOSES_PER_COURSE)) +
+#     labs(title = title_map[sc]) +
+#     guides(color = guide_legend(override.aes = list(linewidth = 0.8)),
+#            linetype = guide_legend(override.aes = list(linewidth = 0.8))) +
+#     theme_fig() +
+#     theme(legend.position = c(0.78, 0.85),
+#           legend.background = element_blank(),
+#           legend.key = element_blank(),
+#           legend.key.width = unit(1.5, "cm"),
+#           legend.title = element_blank(),
+#           plot.title = element_text(size = 11, hjust = 0.5))
+# }
+
 make_sweep_panel_95 <- function(df, sc) {
   df_sc <- df %>% filter(scenario == sc)
   
   base_col  <- unname(SCENARIO_COLORS[sc])
   light_col <- if (sc == "WestAfrica") "#fdd8a0" else "#a8ddb5"
-  policy_colors    <- setNames(c(light_col, base_col), c("A", "B"))
+  
+  policy_colors    <- setNames(c(base_col, base_col), c("A", "B"))
   policy_linetypes <- setNames(c("dashed", "solid"), c("A", "B"))
   policy_labels    <- c(A = "Policy A", B = "Policy B")
   
+  ribbon_colors    <- setNames(c(light_col, base_col), c("A", "B"))
+  
   ggplot(df_sc, aes(x = efficacy * 100, color = policy, fill = policy,
                     linetype = policy, group = policy)) +
-    geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.15, color = NA) +
+    geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.15, color = NA, show.legend = FALSE) +
     geom_line(aes(y = med), linewidth = 1.0) +
+    
     scale_color_manual(values = policy_colors, labels = policy_labels, name = NULL) +
-    scale_fill_manual(values = policy_colors, guide = "none") +
+    scale_fill_manual(values = ribbon_colors, guide = "none") + 
     scale_linetype_manual(values = policy_linetypes, labels = policy_labels, name = NULL) +
+    
     scale_x_continuous(breaks = seq(50, 90, by = 10),
                        labels = function(x) paste0(x, "%"),
                        name   = "Antiviral efficacy") +
@@ -338,7 +377,7 @@ make_sweep_panel_95 <- function(df, sc) {
     theme_fig() +
     theme(legend.position = c(0.78, 0.85),
           legend.background = element_blank(),
-          legend.key = element_blank(),
+          legend.key = element_blank(), 
           legend.key.width = unit(1.5, "cm"),
           legend.title = element_blank(),
           plot.title = element_text(size = 11, hjust = 0.5))
@@ -353,3 +392,4 @@ fig5_panel_c_split_95 <- (panel_c_wa_95 | panel_c_drc_95) +
 save_fig("figure_5_panel-c_efficacy-sweep-split_95CI", fig5_panel_c_split_95, 10, 4)
 
 message("Figure 5 efficacy sweep split 95% CI (WestAfrica / DRC) saved")
+
