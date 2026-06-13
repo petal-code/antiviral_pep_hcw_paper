@@ -51,8 +51,9 @@ sys.source(here("functions", "abc_calibration_functions_decoupled.R"), envir = e
 REP_BATCH <- 1L  # <--- CHANGE THIS: 1 for reps 1-5, 2 for reps 6-10
 
 REP_RANGES <- list(
-  `1` = 1:5,
-  `2` = 6:10
+  `1` = 1:3,
+  `2` = 4:6,
+  `3` = 7:10
 )
 REPS_TO_RUN <- REP_RANGES[[as.character(REP_BATCH)]]
 stopifnot(!is.null(REPS_TO_RUN))
