@@ -2,10 +2,7 @@
 # 02_plot_figure3.R
 # Coverage scenario comparison
 # Reads pre-computed CSV from output_figgen/figure_3_run_summary.csv
-<<<<<<< HEAD
 # and output_figgen/figure_3_weekly_hcw_deaths_80.csv
-=======
->>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
 # Run 02_extract_figure3.R first.
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
@@ -83,17 +80,11 @@ make_col_header <- function(label) {
 }
 
 save_fig <- function(filename_base, plot, width, height) {
-  ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
-         plot, width = width, height = height, dpi = 400, units = "in")
   ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
          plot, width = width, height = height, units = "in")
 }
 
-<<<<<<< HEAD
 x_max_weeks <- function(sc) SCENARIO_X_MAX_DAYS[sc] / 7
-
-=======
->>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
 h1 <- make_col_header("Constant, Full Coverage")
 h2 <- make_col_header("Ramp Up to High Coverage")
 h3 <- make_col_header("Ramp Up to Medium Coverage")
@@ -131,7 +122,6 @@ figure_3_days_lost <- (
 
 save_fig("figure_3_days-averted", figure_3_days_lost, 10, 6.5)
 
-<<<<<<< HEAD
 message("Figure 3 variants saved")
 
 # =============================================================================
@@ -202,10 +192,114 @@ save_fig("figure_3_combined", figure_3_combined, 10, 9)
 
 message("Figure 3 combined (a-h) saved")
 
+# =============================================================================
+# Figure 3 (redesign): coverage curves (A,B,C) on top; per-country weekly HCW-
+# death incidence (D=DRC, E=West Africa) stacked on the LEFT; % HCW deaths averted
+# vs efficacy with 95% CrI (F=DRC, G=West Africa) stacked on the RIGHT.
+#   AABBCC
+#   DDDFFF
+#   EEEGGG
+# Prereqs: 02_extract_figure3.R has produced the two CSVs below.
+# =============================================================================
+source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
+library(dplyr); library(ggplot2); library(patchwork)
+OUT_DIR <- here::here("figures"); dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
+FIG3_EFFICACY_LEVELS <- c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
 
+# ---- data -------------------------------------------------------------------
+run_df <- read.csv(here::here("output_figgen", "figure_3_run_summary.csv"),
+                   stringsAsFactors = FALSE)
+pdf <- make_particle_df(run_df) %>%
+  filter(arm != "baseline") %>%
+  mutate(coverage_name  = sub("__.*", "", arm),
+         eff_name       = sub(".*__", "", arm),
+         efficacy_pct   = as.numeric(sub("obv_", "", eff_name)),
+         coverage_label = factor(COVERAGE_LABELS[match(coverage_name, COVERAGE_LEVELS)],
+                                 levels = COVERAGE_LABELS))
 
+weekly_80   <- read.csv(here::here("output_figgen", "figure_3_weekly_hcw_deaths_80.csv"),
+                        stringsAsFactors = FALSE)
+x_max_weeks <- function(sc) SCENARIO_X_MAX_DAYS[sc] / 7
+.title_thm  <- theme(plot.title = element_text(face = "bold", size = 10, hjust = 0.5))
 
-=======
-message("Figure 3 variants saved")
->>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
+# ---- A,B,C: coverage curves (header as the panel title) ---------------------
+make_coverage_plot <- function(cs, title) {
+  x_max <- max(SCENARIO_X_MAX_DAYS); t_days <- seq(0, x_max, by = 1)
+  ggplot(data.frame(week = t_days / 7, coverage = coverage_at_time(t_days, COVERAGE_SPECS[[cs]]) * 100),
+         aes(week, coverage)) +
+    geom_line(color = COVERAGE_COLORS[cs], linewidth = 1.2) +
+    scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
+    scale_x_continuous(breaks = seq(0, x_max / 7, by = 13)) +
+    labs(x = "Weeks since outbreak start", y = "Antiviral coverage", title = title) +
+    theme_fig() + .title_thm
+}
+
+# ---- D,E: weekly incident HCW deaths overlay (80% efficacy) -----------------
+LINE_LEVELS <- c("baseline", "full", "ramp_high", "ramp_low")
+LINE_LABELS <- c("No antiviral", "Full (100%)", "Ramp high (0%->80%)", "Ramp low (0%->50%)")
+LINE_COLORS <- c(baseline = "grey40", full = "#1a9641", ramp_high = "#fdae61", ramp_low = "#d7191c")
+make_weekly_deaths_panel <- function(sc) {
+  xm <- x_max_weeks(sc)
+  df <- weekly_80 %>% filter(scenario == sc, week <= xm) %>%
+    mutate(line_group = factor(line_group, levels = LINE_LEVELS))
+  ggplot(df, aes(week, q50, color = line_group, fill = line_group)) +
+    geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.15, color = NA) +
+    geom_line(linewidth = 1) +
+    scale_color_manual(values = LINE_COLORS, breaks = LINE_LEVELS, labels = LINE_LABELS, name = NULL) +
+    scale_fill_manual(values = LINE_COLORS, breaks = LINE_LEVELS, labels = LINE_LABELS, name = NULL) +
+    scale_x_continuous(limits = c(0, xm), breaks = seq(0, xm, 13)) +
+    labs(x = "Weeks since outbreak start", y = "Incident HCW deaths",
+         title = unname(SCENARIO_LABELS[sc])) +
+    theme_fig() + .title_thm
+}
+
+# ---- F,G: % HCW deaths averted vs efficacy (median + 95% CrI), per coverage --
+make_averted_line_panel <- function(sc, metric = "pct_hcw_deaths_averted",
+                                    y_label = "HCW deaths averted") {
+  df <- pdf %>%
+    filter(scenario == sc, eff_name %in% FIG3_EFFICACY_LEVELS, !is.na(.data[[metric]])) %>%
+    group_by(coverage_name, coverage_label, efficacy_pct) %>%
+    summarise(lo  = quantile(.data[[metric]], 0.025, names = FALSE),
+              med = quantile(.data[[metric]], 0.5,   names = FALSE),
+              hi  = quantile(.data[[metric]], 0.975, names = FALSE), .groups = "drop")
+  ggplot(df, aes(efficacy_pct, med, color = coverage_label, fill = coverage_label)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.15, color = NA) +
+    geom_line(linewidth = 1) + geom_point(size = 1.6) +
+    scale_color_manual(values = setNames(COVERAGE_COLORS[COVERAGE_LEVELS], COVERAGE_LABELS), name = NULL) +
+    scale_fill_manual(values  = setNames(COVERAGE_COLORS[COVERAGE_LEVELS], COVERAGE_LABELS), name = NULL) +
+    scale_x_continuous(breaks = c(50, 60, 70, 80, 90), labels = function(x) paste0(x, "%")) +
+    scale_y_continuous(labels = function(x) paste0(x, "%")) +
+    labs(x = "Antiviral efficacy", y = y_label, title = unname(SCENARIO_LABELS[sc])) +
+    lims(y = c(0, NA)) +
+    theme_fig() + .title_thm
+}
+
+# ---- panels (order added == area letters A..G) ------------------------------
+p_a <- make_coverage_plot("full",      "Constant, Full Coverage")
+p_b <- make_coverage_plot("ramp_high", "Ramp Up to High Coverage")
+p_c <- make_coverage_plot("ramp_low",  "Ramp Up to Medium Coverage")
+p_d <- make_weekly_deaths_panel("DRC")           # D: DRC incidence      (top-left)
+p_e <- make_weekly_deaths_panel("WestAfrica")    # E: West Africa incid.  (bottom-left)
+p_f <- make_averted_line_panel("DRC")            # F: DRC % averted       (top-right)
+p_g <- make_averted_line_panel("WestAfrica")     # G: West Africa % avert (bottom-right)
+
+design <- "
+AAABBBCCC
+AAABBBCCC
+DDDDDDFFF
+DDDDDDFFF
+DDDDDDFFF
+EEEEEEGGG
+EEEEEEGGG
+EEEEEEGGG
+"
+figure_3_redesign <-
+  p_a + p_b + p_c + p_d + p_e + p_f + p_g +
+  plot_layout(design = design, guides = "collect", heights = c(1, 1.3, 1.3)) +
+  plot_annotation(tag_levels = "A") &
+  theme(legend.position = "bottom")
+
+print(figure_3_redesign)
+ggsave(file.path(OUT_DIR, "figure_3_redesign.pdf"), figure_3_redesign, width = 11, height = 9)
+
