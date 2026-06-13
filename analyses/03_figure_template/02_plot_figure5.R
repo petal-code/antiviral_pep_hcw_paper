@@ -36,6 +36,13 @@ particle_df <- dose_df %>%
 
 save_figure_data(particle_df, "figure_5_particle_df.csv")
 
+save_fig <- function(filename_base, plot, width, height) {
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
+         plot, width = width, height = height, dpi = 400, units = "in")
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
+         plot, width = width, height = height, units = "in")
+}
+
 # Color scheme
 sc_fills <- c(
   setNames(c("#fdd0a2", unname(SCENARIO_COLORS["WestAfrica"])),
@@ -80,7 +87,7 @@ panel_a <- ggplot(panel_a_df, aes(x = scenario_label, y = value, fill = group)) 
         legend.text = element_text(size = 8)) +
   guides(fill = guide_legend(nrow = 2, byrow = TRUE))
 
-# Panel b: DDA vs OBV efficacy (20-80%)
+# Panel b: DDA vs OBV efficacy (20-80%), Policy B only (original version)
 sweep_df <- particle_df %>%
   group_by(scenario, scenario_label, efficacy) %>%
   summarise(med_dda_A = median(dda_A, na.rm = TRUE),
@@ -121,41 +128,17 @@ fig5_all <- (panel_a | panel_b) +
   plot_layout(widths = c(2, 3)) +
   plot_annotation(tag_levels = list(c("a ", "b ")))
 
-save_fig <- function(filename_base, plot, width, height) {
-  ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
-         plot, width = width, height = height, dpi = 400, units = "in")
-  ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
-         plot, width = width, height = height, units = "in")
-}
-
 save_fig("figure_5", fig5_all, 12, 5)
 message("Figure 5 saved")
 
 # =============================================================================
 # Split versions: panel a and panel b saved as separate figures
 # =============================================================================
-# fig5_panel_a <- panel_a +
-#   plot_annotation(tag_levels = list(c("a ")))
-# save_fig("figure_5_panel-a_dose-efficiency-boxplot", fig5_panel_a, 5, 5)
-# 
-# fig5_panel_b <- panel_b +
-#   plot_annotation(tag_levels = list(c("b ")))
-# save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", fig5_panel_b, 7, 5)
-
-# fig5_panel_a <- panel_a
-<<<<<<< HEAD
-save_fig("figure_5_panel-a_dose-efficiency-boxplot", panel_a, 4, 4)
-
-# fig5_panel_b <- panel_b
-save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", panel_b, 6, 4)
-=======
 save_fig("figure_5_panel-a_dose-efficiency-boxplot", panel_a, 5, 5)
-
-# fig5_panel_b <- panel_b
 save_fig("figure_5_panel-b_dose-efficiency-vs-efficacy", panel_b, 7, 5)
->>>>>>> 873ecc12b709e76c5085cd6ebf2f57c289f1da8c
 
 message("Figure 5 split panels saved")
+
 # =============================================================================
 # Panel a, alternative split: Policy A boxplots in one panel,
 # Policy B boxplots in another panel (separate y-scales)
@@ -211,3 +194,80 @@ save_fig("figure_5_panel-a_dose-efficiency-boxplot_A-vs-B", fig5_panel_a_AB, 8, 
 
 message("Figure 5 panel a A-vs-B split saved")
 
+# =============================================================================
+# Efficacy sweep version: Policy A and Policy B both as lines vs efficacy,
+# for WestAfrica and DRC. De-emphasises the (very narrow) uncertainty bands
+# relative to the boxplot version above.
+# =============================================================================
+sweep_df_AB <- particle_df %>%
+  group_by(scenario, scenario_label, efficacy) %>%
+  summarise(med_dda_A = median(dda_A, na.rm = TRUE),
+            q25_dda_A = quantile(dda_A, 0.25, na.rm = TRUE),
+            q75_dda_A = quantile(dda_A, 0.75, na.rm = TRUE),
+            med_dda_B = median(dda_B, na.rm = TRUE),
+            q25_dda_B = quantile(dda_B, 0.25, na.rm = TRUE),
+            q75_dda_B = quantile(dda_B, 0.75, na.rm = TRUE),
+            .groups = "drop") %>%
+  tidyr::pivot_longer(
+    cols = c(med_dda_A, q25_dda_A, q75_dda_A, med_dda_B, q25_dda_B, q75_dda_B),
+    names_to = c("stat", "policy"), names_pattern = "(med|q25|q75)_dda_(A|B)",
+    values_to = "value"
+  ) %>%
+  tidyr::pivot_wider(names_from = stat, values_from = value) %>%
+  mutate(group = paste(as.character(scenario_label), policy, sep = "."))
+
+sweep_colors <- c(
+  setNames(c("#fdae61", SCENARIO_COLORS["WestAfrica"]),
+           paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = ".")),
+  setNames(c("#66c2a5", SCENARIO_COLORS["DRC"]),
+           paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = "."))
+)
+sweep_linetypes <- c(
+  setNames(c("dashed", "solid"), paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = ".")),
+  setNames(c("dashed", "solid"), paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = "."))
+)
+
+panel_c <- ggplot(sweep_df_AB, aes(x = efficacy * 100, color = group, fill = group,
+                                   linetype = group, group = group)) +
+  geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.15, color = NA) +
+  geom_line(aes(y = med), linewidth = 1.0) +
+  scale_color_manual(
+    values = sweep_colors,
+    breaks = c(paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = "."),
+               paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = ".")),
+    labels = c("West Africa — Policy A", "West Africa — Policy B",
+               "DRC — Policy A",         "DRC — Policy B"),
+    name = NULL
+  ) +
+  scale_fill_manual(
+    values = sweep_colors,
+    breaks = c(paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = "."),
+               paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = ".")),
+    labels = c("West Africa — Policy A", "West Africa — Policy B",
+               "DRC — Policy A",         "DRC — Policy B"),
+    name = NULL
+  ) +
+  scale_linetype_manual(
+    values = sweep_linetypes,
+    breaks = c(paste(SCENARIO_LABELS["WestAfrica"], c("A", "B"), sep = "."),
+               paste(SCENARIO_LABELS["DRC"],        c("A", "B"), sep = ".")),
+    labels = c("West Africa — Policy A", "West Africa — Policy B",
+               "DRC — Policy A",         "DRC — Policy B"),
+    name = NULL
+  ) +
+  scale_x_continuous(breaks = seq(20, 80, by = 10),
+                     labels = function(x) paste0(x, "%"),
+                     name   = "Antiviral efficacy") +
+  scale_y_continuous(limits = c(0, 225), expand = expansion(mult = c(0, 0.05)),
+                     name   = sprintf("Doses per death averted\n(1 course = %d doses)",
+                                      DOSES_PER_COURSE)) +
+  theme_fig() +
+  theme(legend.position = "bottom", legend.key.size = unit(0.4, "cm"),
+        legend.text = element_text(size = 8)) +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE),
+         fill = guide_legend(nrow = 2, byrow = TRUE),
+         linetype = guide_legend(nrow = 2, byrow = TRUE))
+
+save_fig("figure_5_panel-c_efficacy-sweep-policyA-vs-policyB", panel_c, 7, 5)
+
+message("Figure 5 efficacy sweep (Policy A vs B) saved")
