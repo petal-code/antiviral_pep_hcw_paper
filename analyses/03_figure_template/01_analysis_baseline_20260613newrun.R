@@ -187,7 +187,7 @@ SCENARIOS <- list(
   WestAfrica = list(
     id           = "Worst_WestAfrica",
     rds          = here("outputs", "02_ABC_model_fits_Final",
-                        "fiber_ABC_SMC_Worst_WestAfrica_Decoupled_20260608_162044_check_NP5_NS4_NBREPS_30_NBSIMUL_472.RDS"),
+                        "fiber_ABC_SMC_Worst_WestAfrica_Decoupled_20260611_210549_check_NP5_NS6_NBREPS_30_NBSIMUL_472.RDS"),
     scenario_csv = here("data-processed", "final_six_scenario_values_original_approach.csv"),
     param_names  = c("R0", "prop_funeral", "etu_efficacy", "ppe_efficacy", "hcw_risk_scalar"),
     check_final_size = 40000
@@ -195,7 +195,7 @@ SCENARIOS <- list(
   DRC = list(
     id           = "Middle_DRC_ConflictSmoothed_PlusPlus",
     rds          = here("outputs", "02_ABC_model_fits_Final",
-                        "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260607_215621_check_NP5_NS4_NBREPS_30_NBSIMUL_590.RDS"),
+                        "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260611_211042_check_NP5_NS6_NBREPS_30_NBSIMUL_590.RDS"),
     scenario_csv = here("data-processed", "final_six_scenario_values_original_approach.csv"),
     param_names  = c("R0", "prop_funeral", "etu_efficacy", "ppe_efficacy", "hcw_risk_scalar"),
     check_final_size = 10000
