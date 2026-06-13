@@ -81,8 +81,7 @@ FIXED_PARAMS <- list(
 # ---- WHICH SUMMARIES TO FIT -------------------------------------------------
 # Any subset of DECOUPLED_AVAILABLE_SUMMARIES; comment a line out of BOTH this
 # vector and OBSERVED_NAMED to drop a summary from the fit.
-SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height")
-                  #  "d_p05_p95", )
+SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height", "d_p05_p95")
 
 # Observed targets, ON THE FITTED SCALE (log the counts), keyed BY NAME.
 #   raw DRC targets: n_deaths = 2299, n_hcw_deaths = 79, peak_height = 95.
@@ -91,7 +90,7 @@ OBSERVED_NAMED <- c(
   log_n_deaths     = log(2299),
   log_n_hcw_deaths = log(79),       # https://afenet-journal.org/10-37432-jieph-d-25-00072/
   hcw_fraction     = 79 / 2299,     # = 0.0344
-  # d_p05_p95        = 378,           # https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic - 4th Oct 2018 - 17 Oct 2019
+  d_p05_p95        = 378,           # https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic - 4th Oct 2018 - 17 Oct 2019
   log_peak_height  = log(95)        # see https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic
 )
 
@@ -318,6 +317,7 @@ if (all(c("ppe_efficacy", "hcw_risk_scalar") %in% PARAM_NAMES)) {
 # -----------------------------------------------------------------------------
 # 9. PROGRESS / RECONSTRUCTION FROM DISK
 # -----------------------------------------------------------------------------
+ABC_OUTPUT_DIR <- "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_Final/abc_outputs/Middle_DRC_ConflictSmoothed_PlusPlus_20260611_211042_Decoupled_check_NP5_NS6_NBREPS_30_NBSIMUL_590"
 abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target,
              param_names = PARAM_NAMES, stat_names = prep$summary_stats)
 print(abc_compare_steps(ABC_OUTPUT_DIR, param_names = PARAM_NAMES, stat_names = prep$summary_stats))
@@ -415,9 +415,10 @@ print(ggplot(traj_long, aes(week, incidence, group = draw)) +
 band <- do.call(rbind, lapply(split(traj_long, list(traj_long$metric, traj_long$week), drop = TRUE),
   function(d) data.frame(metric = d$metric[1], week = d$week[1],
                          lo = quantile(d$incidence, 0.025, names = FALSE),
+                         mean = mean(d$incidence),
                          med = quantile(d$incidence, 0.500, names = FALSE),
                          hi = quantile(d$incidence, 0.975, names = FALSE))))
-print(ggplot(band, aes(week, med)) +
+print(ggplot(band, aes(week, mean)) +
         geom_ribbon(aes(ymin = lo, ymax = hi), fill = "steelblue", alpha = 0.3) +
         geom_line(colour = "steelblue", linewidth = 0.8) +
         facet_wrap(~ metric, scales = "free_y") +
