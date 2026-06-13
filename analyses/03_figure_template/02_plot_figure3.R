@@ -317,5 +317,5 @@ figure_3_redesign <-
 
 print(figure_3_redesign)
 ggsave(file.path(OUT_DIR, "figure_3_redesign.pdf"), 
-       figure_3_redesign, width = 6.5, height = 8)
+       figure_3_redesign, width = 8, height = 6.5)
 # 6.5 * 8
