@@ -45,7 +45,7 @@
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
 # Paths are resolved from the repo root with here::here(), which locates
-# obv_hcw_paper.Rproj — so this runs on any machine, from any working directory
+# antiviral_pep_hcw_paper.Rproj — so this runs on any machine, from any working directory
 # inside the repo, with no per-user paths to maintain. Requires the `here`
 # package: install.packages("here").
 

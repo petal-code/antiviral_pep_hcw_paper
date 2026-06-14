@@ -18,7 +18,7 @@
 # ---------------------------------------------------------------------------
 # 0. Setup: locate the project, load fiber, source the parameter helpers
 # ---------------------------------------------------------------------------
-# here::here() finds the repo root by locating obv_hcw_paper.Rproj, so every
+# here::here() finds the repo root by locating antiviral_pep_hcw_paper.Rproj, so every
 # path below resolves the same regardless of the directory this is launched from.
 library(fiber)                                               # the model engine
 library(ggplot2)

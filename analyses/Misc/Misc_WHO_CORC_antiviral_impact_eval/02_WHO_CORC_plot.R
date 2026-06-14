@@ -22,7 +22,7 @@
 # -----------------------------------------------------------------------------
 # 0. Locate the repo root (works on any machine, from anywhere in the repo)
 # -----------------------------------------------------------------------------
-# here::here() finds the repo root by locating obv_hcw_paper.Rproj, so there are
+# here::here() finds the repo root by locating antiviral_pep_hcw_paper.Rproj, so there are
 # no per-user paths to maintain. Requires the `here` package:
 # install.packages("here").
 REPO_ROOT    <- here::here()

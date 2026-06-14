@@ -1,4 +1,4 @@
-# obv_hcw_paper
+# antiviral_pep_hcw_paper
 
 Code and analysis for [PAPER TITLE].
 
@@ -30,7 +30,7 @@ Code and analysis for [PAPER TITLE].
   figure; the `NN_*` folders are numbered in run order.
 - `outputs/` — curated, manuscript-ready artefacts (figures, tables, the single
   final fit per scenario), **tracked** in git and organised one subfolder per
-  analysis, e.g. `outputs/02_ABC_model_fits_HCWrisk/`.
+  analysis, e.g. `outputs/02_model_calibration_ABC/`.
 - `manuscript/` — paper source.
 
 ## Running the analysis
