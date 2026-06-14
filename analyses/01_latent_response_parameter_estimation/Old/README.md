@@ -23,8 +23,8 @@ The six response parameters (fixed canonical order; see `helpers.R`):
 ## Pipeline (run in order)
 
 All paths are resolved from the repository root with `here::here()` (it locates
-`obv_hcw_paper.Rproj` / `.git`), so the scripts run regardless of the working
-directory. Open `obv_hcw_paper.Rproj` (or set the working directory anywhere in
+`antiviral_pep_hcw_paper.Rproj` / `.git`), so the scripts run regardless of the working
+directory. Open `antiviral_pep_hcw_paper.Rproj` (or set the working directory anywhere in
 the repo) and source in order:
 
 ```r

@@ -270,7 +270,7 @@ plot_params  <- c("p_hosp", "delay_hosp", "p_unsafe_funeral_comm", "p_ETU", "lat
 panel_levels <- unname(PANEL_LOOKUP[plot_params])
 
 # Archetype line/ribbon colours, matching SCENARIO_COLORS in the main-text figure
-# helper (analyses/03_figure_template/helper_functions_figure_1to4.R).
+# helper (analyses/03_paper_figure_analyses/helper_functions_figure_1to4.R).
 wa_col  <- "#d95f02"   # West Africa (orange)
 drc_col <- "#1b9e77"   # DRC (green)
 

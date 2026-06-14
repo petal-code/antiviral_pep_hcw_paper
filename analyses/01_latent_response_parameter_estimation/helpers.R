@@ -13,7 +13,7 @@
 
 # ---- Project paths ---------------------------------------------------------
 # Every script resolves paths from the repository root with here::here(), which
-# locates obv_hcw_paper.Rproj / the .git directory. This means the scripts run
+# locates antiviral_pep_hcw_paper.Rproj / the .git directory. This means the scripts run
 # correctly no matter which working directory they are launched from. Raw inputs
 # and processed outputs live at the TOP LEVEL of the repository (shared across
 # analyses, matching the rest of obv_hcw_paper); the Stan models live in this

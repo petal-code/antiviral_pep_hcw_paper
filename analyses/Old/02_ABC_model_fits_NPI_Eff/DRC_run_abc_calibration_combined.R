@@ -36,7 +36,7 @@
 # -----------------------------------------------------------------------------
 # 1. CONFIGURATION
 # -----------------------------------------------------------------------------
-# Paths resolved from the repo root with here::here() (locates obv_hcw_paper.Rproj),
+# Paths resolved from the repo root with here::here() (locates antiviral_pep_hcw_paper.Rproj),
 # so the script runs the same regardless of working directory / machine.
 ANALYSIS_DIR   <- here::here("analyses", "02_ABC_model_fits_NPI_Eff")
 FUNCTIONS_DIR  <- here::here("functions")
