@@ -78,7 +78,7 @@ source(here("functions", "abc_posterior.R"))
 # =============================================================================
 N_PARTICLES   <- 200L     # posterior particles (resampled); main analysis = 200
 N_REPS        <- 10L      # stochastic replicates per particle/arm; main = 10
-N_WORKERS     <- min(50L, future::availableCores())
+N_WORKERS     <- min(120L, future::availableCores())
 SEEDING_CASES <- 25L
 RESAMPLE_SEED <- 42L      # posterior downsample seed (matches figures)
 SEED_BASE     <- 20260801L
@@ -113,7 +113,7 @@ SENS_SCENARIOS <- list(
        r0_factor = 1.30, hcw_factor = 1.00),
 
   list(key = "hcw_exposure_110",   analysis = "hcw_exposure",     label = "HCW exposure +10%",
-       r0_factor = 1.00, hcw_factor = 1.10),
+       r0_factor = 1.00, hcw_factor = 1.25),
   list(key = "hcw_exposure_125",   analysis = "hcw_exposure",     label = "HCW exposure +25%",
        r0_factor = 1.00, hcw_factor = 1.50),
   list(key = "hcw_exposure_150",   analysis = "hcw_exposure",     label = "HCW exposure +50%",
@@ -129,7 +129,7 @@ SENS_SCENARIOS <- list(
 # matching coverage curves in COVERAGE_FNS (see helper_functions_figure_1to4.R
 # COVERAGE_SPECS for the canonical splines).
 # =============================================================================
-ARM_EFFICACIES <- c(0.50, 0.60, 0.70, 0.80, 0.90)
+ARM_EFFICACIES <- 0.80
 ARMS <- data.frame(
   arm_name = sprintf("full_obv%02d", round(ARM_EFFICACIES * 100)),
   coverage = "full",

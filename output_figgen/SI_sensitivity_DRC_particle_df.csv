@@ -1,0 +1,1401 @@
+"analysis","scenario_key","scenario_label","r0_factor","hcw_factor","arm","efficacy","particle_id","n_reps","baseline_hcw_deaths","pep_hcw_deaths","hcw_deaths_averted","baseline_hcw_days_lost","pep_hcw_days_lost","hcw_days_lost_averted","pct_hcw_deaths_averted","pct_days_lost_averted"
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,1,10,19.5,19.5,0,8946.41358493796,8946.41358493796,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,2,10,4.4,4.4,0,1328.62510295657,1328.62510295657,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,3,10,16,16,0,4704.88331952192,4704.88331952192,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,4,10,19,19,0,8962.9615462582,8962.9615462582,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,5,10,8.2,8.2,0,3676.70153311369,3676.70153311369,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,6,10,18,18,0,7554.18113432274,7554.18113432274,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,7,10,7.2,7.2,0,2212.25109966915,2212.25109966915,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,8,10,6.4,6.4,0,1248.09624756308,1248.09624756308,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,9,10,6.1,6.1,0,2832.07272470791,2832.07272470791,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,10,10,25.4,25.4,0,12655.4649095178,12655.4649095178,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,11,10,13.5,13.5,0,5212.88467058188,5212.88467058188,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,12,10,5,5,0,1793.30412548791,1793.30412548791,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,13,10,12.9,12.9,0,5417.62239838095,5417.62239838095,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,14,10,20.3,20.3,0,11546.3612979366,11546.3612979366,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,15,10,4.7,4.7,0,1255.62464814987,1255.62464814987,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,16,10,16.7,16.7,0,10474.7409354522,10474.7409354522,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,17,10,9.8,9.8,0,4305.34926440291,4305.34926440291,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,18,10,17,17,0,6493.35189579562,6493.35189579562,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,19,10,11.9,11.9,0,5531.04444332565,5531.04444332565,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,20,10,11,11,0,3913.4561926513,3913.4561926513,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,21,10,7.6,7.6,0,4474.83505668223,4474.83505668223,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,22,10,11.1,11.1,0,5592.64347531096,5592.64347531096,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,23,10,21,21,0,11188.748445141,11188.748445141,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,24,10,17.4,17.4,0,10211.9944322294,10211.9944322294,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,25,10,12.7,12.7,0,4727.65682114143,4727.65682114143,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,26,10,8.1,8.1,0,2632.80524181363,2632.80524181363,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,27,10,33.2,33.2,0,12171.5099368909,12171.5099368909,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,28,10,16.1,16.1,0,7947.86385534493,7947.86385534493,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,29,10,21,21,0,8409.31796206254,8409.31796206254,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,30,10,11.2,11.2,0,3245.44986899038,3245.44986899038,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,31,10,18.8,18.8,0,8890.9463850124,8890.9463850124,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,32,10,9.8,9.8,0,4085.57376206852,4085.57376206852,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,33,10,11,11,0,4276.48480861209,4276.48480861209,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,34,10,13.6,13.6,0,6723.14362395888,6723.14362395888,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,35,10,20.4,20.4,0,8644.97885357476,8644.97885357476,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,36,10,4.3,4.3,0,1483.46378820591,1483.46378820591,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,37,10,11.5,11.5,0,2429.56311597024,2429.56311597024,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,38,10,12.5,12.5,0,6859.10361279885,6859.10361279885,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,39,10,6.2,6.2,0,2558.20357633578,2558.20357633578,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,40,10,3.9,3.9,0,1117.64728220958,1117.64728220958,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,41,10,16.2,16.2,0,7623.83479331405,7623.83479331405,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,42,10,11.8,11.8,0,3572.79345693042,3572.79345693042,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,43,10,16,16,0,4670.47791034563,4670.47791034563,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,44,10,21.4,21.4,0,9796.48234552395,9796.48234552395,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,45,10,34.8,34.8,0,14479.4751830546,14479.4751830546,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,46,10,14.9,14.9,0,5744.46096461726,5744.46096461726,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,47,10,26,26,0,10634.7292316885,10634.7292316885,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,48,10,16.9,16.9,0,7498.36189055092,7498.36189055092,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,49,10,5.2,5.2,0,1814.96338465407,1814.96338465407,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,50,10,10.5,10.5,0,4395.07572036581,4395.07572036581,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,51,10,20.6,20.6,0,6831.70618167913,6831.70618167913,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,52,10,16.9,16.9,0,4363.50596121346,4363.50596121346,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,53,10,6.7,6.7,0,2840.16241409312,2840.16241409312,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,54,10,19.7,19.7,0,7439.88528479561,7439.88528479561,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,55,10,17.6,17.6,0,6457.29121874873,6457.29121874873,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,56,10,15.1,15.1,0,9284.69653995588,9284.69653995588,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,57,10,12.9,12.9,0,3955.01604311083,3955.01604311083,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,58,10,18.9,18.9,0,9702.81072897518,9702.81072897518,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,59,10,12.7,12.7,0,4572.97757469993,4572.97757469993,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,60,10,8.1,8.1,0,2371.30376218282,2371.30376218282,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,61,10,10.7,10.7,0,7007.37760570466,7007.37760570466,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,62,10,14.4,14.4,0,4680.54769736924,4680.54769736924,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,63,10,17.3,17.3,0,6275.52711984442,6275.52711984442,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,64,10,21.6,21.6,0,11168.659765845,11168.659765845,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,65,10,10.4,10.4,0,8684.41574310743,8684.41574310743,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,66,10,3.8,3.8,0,1573.34097149714,1573.34097149714,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,67,10,14.2,14.2,0,5184.38824659132,5184.38824659132,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,68,10,15.9,15.9,0,5334.08759651538,5334.08759651538,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,69,10,11.1,11.1,0,5589.7766509137,5589.7766509137,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,70,10,14.7,14.7,0,8240.20032562783,8240.20032562783,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,71,10,8.5,8.5,0,2919.26267639678,2919.26267639678,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,72,10,23.8,23.8,0,11919.4967033086,11919.4967033086,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,73,10,5.5,5.5,0,2451.06865697292,2451.06865697292,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,74,10,20.5,20.5,0,7233.65017714236,7233.65017714236,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,75,10,16.3,16.3,0,9696.11236952403,9696.11236952403,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,76,10,6.6,6.6,0,3475.01153467555,3475.01153467555,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,77,10,6.4,6.4,0,1926.02911007909,1926.02911007909,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,78,10,11.9,11.9,0,5812.75130843915,5812.75130843915,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,79,10,14,14,0,4970.02323170935,4970.02323170935,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,80,10,12.3,12.3,0,4968.89153315578,4968.89153315578,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,81,10,7.9,7.9,0,3089.89928541548,3089.89928541548,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,82,10,3.6,3.6,0,799.161438391948,799.161438391948,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,83,10,15.2,15.2,0,7973.24172680823,7973.24172680823,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,84,10,7.4,7.4,0,2281.30841821929,2281.30841821929,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,85,10,2.9,2.9,0,479.697561044009,479.697561044009,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,86,10,11.4,11.4,0,4424.21035207624,4424.21035207624,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,87,10,14,14,0,6046.29585211672,6046.29585211672,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,88,10,5.3,5.3,0,1552.90123303614,1552.90123303614,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,89,10,12.8,12.8,0,5304.62833142063,5304.62833142063,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,90,10,10.6,10.6,0,4269.64286451885,4269.64286451885,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,91,10,11,11,0,4692.94286120052,4692.94286120052,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,92,10,9.5,9.5,0,6251.12961366366,6251.12961366366,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,93,10,4.9,4.9,0,1942.4561109018,1942.4561109018,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,94,10,10.7,10.7,0,5522.93121283606,5522.93121283606,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,95,10,13.5,13.5,0,3267.32596029074,3267.32596029074,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,96,10,19.5,19.5,0,7198.05239792414,7198.05239792414,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,97,10,10.4,10.4,0,4639.65693987799,4639.65693987799,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,98,10,14,14,0,5467.95835575212,5467.95835575212,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,99,10,14,14,0,5563.31396581743,5563.31396581743,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,100,10,15.8,15.8,0,7859.36911664011,7859.36911664011,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,101,10,15.8,15.8,0,9247.08198398427,9247.08198398427,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,102,10,15.6,15.6,0,5149.46678876206,5149.46678876206,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,103,10,8.9,8.9,0,5452.90268615729,5452.90268615729,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,104,10,11.3,11.3,0,4939.99998112047,4939.99998112047,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,105,10,26.7,26.7,0,14148.3562967181,14148.3562967181,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,106,10,20.8,20.8,0,7101.81746584391,7101.81746584391,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,107,10,8.2,8.2,0,4309.09588725516,4309.09588725516,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,108,10,11.7,11.7,0,6366.29267268014,6366.29267268014,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,109,10,11.4,11.4,0,4398.49613021207,4398.49613021207,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,110,10,11.5,11.5,0,4104.00829865984,4104.00829865984,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,111,10,3.2,3.2,0,628.984160570134,628.984160570134,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,112,10,18.6,18.6,0,7888.70026596662,7888.70026596662,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,113,10,7.1,7.1,0,2359.05150726761,2359.05150726761,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,114,10,14.8,14.8,0,7345.45303689833,7345.45303689833,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,115,10,21.8,21.8,0,11891.27326631,11891.27326631,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,116,10,6.2,6.2,0,2408.35594287015,2408.35594287015,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,117,10,4.2,4.2,0,1187.01329804255,1187.01329804255,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,118,10,15.8,15.8,0,9387.6572912654,9387.6572912654,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,119,10,10,10,0,2600.44565200038,2600.44565200038,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,120,10,16.3,16.3,0,6631.52624302096,6631.52624302096,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,121,10,6.7,6.7,0,3038.05111166533,3038.05111166533,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,122,10,7.7,7.7,0,2991.86436123162,2991.86436123162,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,123,10,6.9,6.9,0,2900.49486499349,2900.49486499349,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,124,10,7.6,7.6,0,3479.17422198102,3479.17422198102,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,125,10,17.8,17.8,0,6433.25446872415,6433.25446872415,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,126,10,11.3,11.3,0,4784.7314715941,4784.7314715941,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,127,10,14.5,14.5,0,7924.94696260446,7924.94696260446,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,128,10,8.4,8.4,0,3582.19503958211,3582.19503958211,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,129,10,14,14,0,5768.43460526687,5768.43460526687,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,130,10,6.5,6.5,0,2401.79914555156,2401.79914555156,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,131,10,5.6,5.6,0,1595.42110824052,1595.42110824052,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,132,10,23.4,23.4,0,9488.97892946651,9488.97892946651,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,133,10,27.6,27.6,0,12105.4871035828,12105.4871035828,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,134,10,14.2,14.2,0,4684.31637633761,4684.31637633761,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,135,10,22.4,22.4,0,9032.72416108131,9032.72416108131,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,136,10,11.6,11.6,0,4688.54864637662,4688.54864637662,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,137,10,16.9,16.9,0,7027.54013164355,7027.54013164355,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,138,10,4.9,4.9,0,1566.32966282997,1566.32966282997,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,139,10,24.9,24.9,0,9286.17190688247,9286.17190688247,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,140,10,22.7,22.7,0,9695.48493755864,9695.48493755864,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,141,10,17.5,17.5,0,8680.7391158917,8680.7391158917,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,142,10,20.2,20.2,0,10364.5972482617,10364.5972482617,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,143,10,4.7,4.7,0,1900.38367609502,1900.38367609502,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,144,10,40.5,40.5,0,20178.9162744049,20178.9162744049,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,145,10,4.6,4.6,0,1686.50780270393,1686.50780270393,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,146,10,23.3,23.3,0,12064.6445595609,12064.6445595609,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,147,10,15.8,15.8,0,8681.82187397941,8681.82187397941,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,148,10,5.9,5.9,0,1561.21010818393,1561.21010818393,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,149,10,5.5,5.5,0,1474.59541392016,1474.59541392016,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,150,10,13.4,13.4,0,8431.99271037559,8431.99271037559,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,151,10,7.5,7.5,0,2789.10107079398,2789.10107079398,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,152,10,23.4,23.4,0,12433.0189586898,12433.0189586898,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,153,10,6,6,0,2075.48432009853,2075.48432009853,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,154,10,5.2,5.2,0,2878.14672414121,2878.14672414121,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,155,10,11.4,11.4,0,4120.83957670579,4120.83957670579,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,156,10,9.8,9.8,0,5053.24347603718,5053.24347603718,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,157,10,7.1,7.1,0,2317.98669370353,2317.98669370353,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,158,10,24.8,24.8,0,11170.3994216197,11170.3994216197,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,159,10,9.6,9.6,0,3567.22146730315,3567.22146730315,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,160,10,12.6,12.6,0,4195.44619693508,4195.44619693508,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,161,10,12.5,12.5,0,5616.23922860751,5616.23922860751,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,162,10,7,7,0,2758.13943760243,2758.13943760243,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,163,10,22.9,22.9,0,9630.93583123983,9630.93583123983,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,164,10,20.3,20.3,0,8881.68468486873,8881.68468486873,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,165,10,6.7,6.7,0,2894.74801564575,2894.74801564575,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,166,10,8.8,8.8,0,4010.60373694406,4010.60373694406,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,167,10,7.1,7.1,0,2571.37628278753,2571.37628278753,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,168,10,17.1,17.1,0,8333.2333539855,8333.2333539855,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,169,10,16.2,16.2,0,7556.11701510773,7556.11701510773,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,170,10,7.6,7.6,0,1712.62461697788,1712.62461697788,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,171,10,13.5,13.5,0,6536.83258010981,6536.83258010981,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,172,10,11.2,11.2,0,5627.84509750987,5627.84509750987,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,173,10,7.4,7.4,0,3142.31861633006,3142.31861633006,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,174,10,13.8,13.8,0,6324.14750844948,6324.14750844948,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,175,10,12.7,12.7,0,7895.56443566774,7895.56443566774,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,176,10,12.7,12.7,0,5707.91526719784,5707.91526719784,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,177,10,10.2,10.2,0,4630.07782729116,4630.07782729116,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,178,10,26.7,26.7,0,9181.93519698366,9181.93519698366,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,179,10,11.1,11.1,0,7660.20408437471,7660.20408437471,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,180,10,11.7,11.7,0,5205.72624761461,5205.72624761461,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,181,10,13.9,13.9,0,4360.66608787911,4360.66608787911,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,182,10,17.7,17.7,0,8686.07864257726,8686.07864257726,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,183,10,7.5,7.5,0,2667.62813247889,2667.62813247889,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,184,10,14.5,14.5,0,5164.10241068274,5164.10241068274,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,185,10,23.3,23.3,0,12669.1712088404,12669.1712088404,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,186,10,7.2,7.2,0,3103.11537115277,3103.11537115277,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,187,10,7,7,0,2492.96273915943,2492.96273915943,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,188,10,16.6,16.6,0,9378.76328929029,9378.76328929029,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,189,10,13.2,13.2,0,4848.13562694206,4848.13562694206,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,190,10,14.1,14.1,0,7719.84710503107,7719.84710503107,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,191,10,11.2,11.2,0,5791.19190506822,5791.19190506822,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,192,10,13.6,13.6,0,6832.26883198585,6832.26883198585,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,193,10,15.2,15.2,0,6465.98583318043,6465.98583318043,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,194,10,9.5,9.5,0,3914.75265352792,3914.75265352792,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,195,10,7.8,7.8,0,3485.33563334876,3485.33563334876,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,196,10,17.9,17.9,0,5556.35418788535,5556.35418788535,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,197,10,13.6,13.6,0,5908.71041174733,5908.71041174733,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,198,10,6,6,0,2260.98997622302,2260.98997622302,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,199,10,7.8,7.8,0,2946.28502389006,2946.28502389006,0,0,0
+"hcw_exposure","hcw_exposure_110","HCW exposure +10%",1,1.25,"full_obv80",0.8,200,10,21.8,21.8,0,9025.17854074672,9025.17854074672,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,1,10,19.2,19.2,0,8399.25571843485,8399.25571843485,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,2,10,11.3,11.3,0,4923.86122584963,4923.86122584963,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,3,10,9.8,9.8,0,3632.56716108113,3632.56716108113,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,4,10,11.1,11.1,0,5209.96699977648,5209.96699977648,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,5,10,13,13,0,5667.24691445973,5667.24691445973,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,6,10,9.6,9.6,0,3376.53956096017,3376.53956096017,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,7,10,4.8,4.8,0,1559.40288453371,1559.40288453371,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,8,10,14.5,14.5,0,5968.66445877978,5968.66445877978,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,9,10,10.7,10.7,0,3864.41180991418,3864.41180991418,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,10,10,19.9,19.9,0,9073.98465932121,9073.98465932121,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,11,10,17.4,17.4,0,9426.23525292126,9426.23525292126,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,12,10,10.5,10.5,0,4440.33795945167,4440.33795945167,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,13,10,3.9,3.9,0,1187.26606265741,1187.26606265741,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,14,10,9.6,9.6,0,5283.67587041308,5283.67587041308,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,15,10,13.6,13.6,0,4562.88891750736,4562.88891750736,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,16,10,6.4,6.4,0,2289.02646210424,2289.02646210424,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,17,10,15.2,15.2,0,6597.24419737236,6597.24419737236,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,18,10,8,8,0,3447.63606382994,3447.63606382994,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,19,10,14.5,14.5,0,7420.23786613422,7420.23786613422,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,20,10,12.7,12.7,0,4907.05079700057,4907.05079700057,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,21,10,15.4,15.4,0,7222.3477522716,7222.3477522716,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,22,10,9.2,9.2,0,3630.51146694852,3630.51146694852,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,23,10,16.6,16.6,0,5889.17936210677,5889.17936210677,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,24,10,9.9,9.9,0,4075.59853405333,4075.59853405333,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,25,10,13.1,13.1,0,4199.50102971697,4199.50102971697,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,26,10,14,14,0,5912.58454142574,5912.58454142574,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,27,10,18,18,0,9001.41463876742,9001.41463876742,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,28,10,10.4,10.4,0,5102.19627342735,5102.19627342735,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,29,10,20.4,20.4,0,11007.0149184352,11007.0149184352,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,30,10,24,24,0,13201.3238090362,13201.3238090362,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,31,10,9.2,9.2,0,4413.40236620086,4413.40236620086,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,32,10,9.3,9.3,0,3629.20407667559,3629.20407667559,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,33,10,16.1,16.1,0,5800.01856696628,5800.01856696628,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,34,10,15.8,15.8,0,7816.10041412465,7816.10041412465,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,35,10,11.9,11.9,0,4557.53670543711,4557.53670543711,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,36,10,9.1,9.1,0,2727.28778542642,2727.28778542642,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,37,10,11.7,11.7,0,5431.96956907936,5431.96956907936,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,38,10,12.6,12.6,0,4863.78522810184,4863.78522810184,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,39,10,9.2,9.2,0,4701.25247795745,4701.25247795745,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,40,10,10.5,10.5,0,4486.25815181079,4486.25815181079,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,41,10,8.7,8.7,0,3166.55419044546,3166.55419044546,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,42,10,22.1,22.1,0,12314.7489873368,12314.7489873368,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,43,10,19.8,19.8,0,7526.6159526447,7526.6159526447,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,44,10,13.6,13.6,0,6097.95778993265,6097.95778993265,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,45,10,9.5,9.5,0,4423.59689774482,4423.59689774482,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,46,10,23.4,23.4,0,9080.74032776839,9080.74032776839,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,47,10,2.1,2.1,0,431.209428543766,431.209428543766,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,48,10,10.6,10.6,0,5085.46178558653,5085.46178558653,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,49,10,7.8,7.8,0,3653.34737396417,3653.34737396417,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,50,10,22.9,22.9,0,10037.3642549593,10037.3642549593,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,51,10,23,23,0,9157.54304900372,9157.54304900372,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,52,10,21.7,21.7,0,13677.8869838771,13677.8869838771,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,53,10,7.4,7.4,0,3543.2344398363,3543.2344398363,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,54,10,9.5,9.5,0,3342.47190663405,3342.47190663405,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,55,10,8.4,8.4,0,3195.89308278419,3195.89308278419,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,56,10,11.3,11.3,0,4878.13775386794,4878.13775386794,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,57,10,14.7,14.7,0,8244.19227672384,8244.19227672384,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,58,10,13.1,13.1,0,4591.44104341864,4591.44104341864,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,59,10,18.6,18.6,0,9198.46651672278,9198.46651672278,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,60,10,7.3,7.3,0,2461.9872771006,2461.9872771006,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,61,10,2.1,2.1,0,1019.54960517405,1019.54960517405,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,62,10,11.4,11.4,0,6268.40834254154,6268.40834254154,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,63,10,7.4,7.4,0,4403.3379747607,4403.3379747607,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,64,10,26.9,26.9,0,9269.32620117136,9269.32620117136,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,65,10,11.7,11.7,0,6694.77805316563,6694.77805316563,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,66,10,12.2,12.2,0,5113.08065116317,5113.08065116317,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,67,10,15.6,15.6,0,6304.93598182681,6304.93598182681,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,68,10,16.4,16.4,0,9322.29545398975,9322.29545398975,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,69,10,3.8,3.8,0,794.762010778942,794.762010778942,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,70,10,19.8,19.8,0,8336.06925681913,8336.06925681913,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,71,10,15.5,15.5,0,8681.29262084179,8681.29262084179,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,72,10,8.8,8.8,0,3400.91065377773,3400.91065377773,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,73,10,1.4,1.4,0,346.819806871383,346.819806871383,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,74,10,16.1,16.1,0,5765.40965687195,5765.40965687195,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,75,10,18.1,18.1,0,11307.3576767477,11307.3576767477,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,76,10,4.1,4.1,0,1151.58267443061,1151.58267443061,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,77,10,6.2,6.2,0,1288.41582164283,1288.41582164283,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,78,10,13.8,13.8,0,6470.9704803688,6470.9704803688,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,79,10,24.6,24.6,0,12974.0913302153,12974.0913302153,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,80,10,16.8,16.8,0,9025.77132601768,9025.77132601768,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,81,10,4.1,4.1,0,1115.65973895031,1115.65973895031,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,82,10,6.6,6.6,0,2995.0356881016,2995.0356881016,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,83,10,11.1,11.1,0,4812.27520553612,4812.27520553612,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,84,10,6.2,6.2,0,1430.3664973495,1430.3664973495,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,85,10,12.4,12.4,0,5059.01165484392,5059.01165484392,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,86,10,12.6,12.6,0,4575.75756221794,4575.75756221794,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,87,10,4.6,4.6,0,1908.76876008614,1908.76876008614,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,88,10,5.6,5.6,0,1866.2505965568,1866.2505965568,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,89,10,7.5,7.5,0,3054.67195342289,3054.67195342289,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,90,10,6.4,6.4,0,2084.54926591765,2084.54926591765,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,91,10,10.2,10.2,0,3439.02999432615,3439.02999432615,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,92,10,15.8,15.8,0,5574.40426085093,5574.40426085093,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,93,10,12.1,12.1,0,5760.24995521242,5760.24995521242,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,94,10,10.9,10.9,0,2839.59661521156,2839.59661521156,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,95,10,9.8,9.8,0,3891.09348308862,3891.09348308862,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,96,10,13.4,13.4,0,7890.01382686915,7890.01382686915,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,97,10,12.4,12.4,0,5395.83990661261,5395.83990661261,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,98,10,20.2,20.2,0,8168.86836565484,8168.86836565484,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,99,10,16,16,0,8168.47475949174,8168.47475949174,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,100,10,13.7,13.7,0,6787.81685770534,6787.81685770534,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,101,10,11.8,11.8,0,5550.58267309042,5550.58267309042,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,102,10,6.8,6.8,0,3152.23389140807,3152.23389140807,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,103,10,13.9,13.9,0,6590.59210993784,6590.59210993784,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,104,10,7.4,7.4,0,2024.8708545005,2024.8708545005,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,105,10,12.3,12.3,0,5379.63441335118,5379.63441335118,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,106,10,9.5,9.5,0,3630.99283833103,3630.99283833103,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,107,10,8.1,8.1,0,3697.87178917409,3697.87178917409,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,108,10,8,8,0,2117.03530781543,2117.03530781543,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,109,10,13.7,13.7,0,5138.790136264,5138.790136264,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,110,10,14.7,14.7,0,6265.30619636107,6265.30619636107,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,111,10,15.6,15.6,0,7867.25825350742,7867.25825350742,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,112,10,12.2,12.2,0,5154.23222481683,5154.23222481683,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,113,10,12.1,12.1,0,7532.13477147492,7532.13477147492,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,114,10,7.5,7.5,0,3748.16690283779,3748.16690283779,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,115,10,14,14,0,7011.53860745267,7011.53860745267,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,116,10,11.4,11.4,0,6196.33466181104,6196.33466181104,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,117,10,14.1,14.1,0,6556.7231512245,6556.7231512245,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,118,10,7.7,7.7,0,2672.40921850496,2672.40921850496,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,119,10,16.4,16.4,0,6716.71079612571,6716.71079612571,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,120,10,25.3,25.3,0,10346.152885054,10346.152885054,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,121,10,9.7,9.7,0,4773.5723491841,4773.5723491841,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,122,10,12.7,12.7,0,6686.34811309625,6686.34811309625,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,123,10,8.6,8.6,0,3797.30722937802,3797.30722937802,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,124,10,16.5,16.5,0,6498.28902325265,6498.28902325265,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,125,10,23.7,23.7,0,9656.69858439275,9656.69858439275,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,126,10,16.1,16.1,0,8607.62180149517,8607.62180149517,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,127,10,20.4,20.4,0,13084.942004643,13084.942004643,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,128,10,3.9,3.9,0,1648.76731004962,1648.76731004962,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,129,10,5,5,0,818.513348853436,818.513348853436,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,130,10,21.1,21.1,0,10778.2993616091,10778.2993616091,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,131,10,8.9,8.9,0,4629.63379710997,4629.63379710997,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,132,10,14.3,14.3,0,4319.29362251881,4319.29362251881,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,133,10,21.4,21.4,0,6842.59665442894,6842.59665442894,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,134,10,12.8,12.8,0,7406.67217183359,7406.67217183359,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,135,10,13.6,13.6,0,5358.88604739685,5358.88604739685,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,136,10,8.8,8.8,0,3555.16040331182,3555.16040331182,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,137,10,18.7,18.7,0,7970.61693442935,7970.61693442935,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,138,10,13.9,13.9,0,6575.9630322514,6575.9630322514,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,139,10,25.5,25.5,0,8761.97340867699,8761.97340867699,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,140,10,8.1,8.1,0,4198.08172079973,4198.08172079973,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,141,10,12.1,12.1,0,6971.24722915899,6971.24722915899,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,142,10,8.7,8.7,0,4278.89278616731,4278.89278616731,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,143,10,14.3,14.3,0,6980.61398987687,6980.61398987687,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,144,10,21.6,21.6,0,11291.2732895685,11291.2732895685,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,145,10,9.6,9.6,0,4809.66322358719,4809.66322358719,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,146,10,12,12,0,2801.08503106595,2801.08503106595,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,147,10,11,11,0,6425.60424908367,6425.60424908367,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,148,10,7.4,7.4,0,2613.75363289798,2613.75363289798,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,149,10,9.8,9.8,0,4792.65446367851,4792.65446367851,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,150,10,11.3,11.3,0,3697.72231456013,3697.72231456013,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,151,10,11.7,11.7,0,4348.08139357838,4348.08139357838,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,152,10,10.9,10.9,0,5131.09504497825,5131.09504497825,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,153,10,12.6,12.6,0,4467.68753040756,4467.68753040756,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,154,10,17.4,17.4,0,7020.32974511746,7020.32974511746,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,155,10,20.7,20.7,0,9438.07405117865,9438.07405117865,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,156,10,3.8,3.8,0,1505.27894172484,1505.27894172484,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,157,10,12.6,12.6,0,5363.19658477703,5363.19658477703,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,158,10,25.1,25.1,0,11471.4798696114,11471.4798696114,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,159,10,9.8,9.8,0,4460.82464664842,4460.82464664842,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,160,10,10.8,10.8,0,2994.82020788105,2994.82020788105,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,161,10,9.3,9.3,0,3826.21278809354,3826.21278809354,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,162,10,5.7,5.7,0,1154.63142225669,1154.63142225669,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,163,10,12.2,12.2,0,8239.40163224291,8239.40163224291,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,164,10,2.9,2.9,0,1002.2367499908,1002.2367499908,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,165,10,12.1,12.1,0,3516.17027747678,3516.17027747678,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,166,10,14.9,14.9,0,5076.9336271442,5076.9336271442,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,167,10,8.5,8.5,0,3407.11001176682,3407.11001176682,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,168,10,7.3,7.3,0,4501.31095873529,4501.31095873529,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,169,10,10.6,10.6,0,2911.89876872023,2911.89876872023,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,170,10,9.7,9.7,0,3657.03046823811,3657.03046823811,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,171,10,19.2,19.2,0,8287.84269196476,8287.84269196476,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,172,10,11.7,11.7,0,3727.02832236685,3727.02832236685,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,173,10,20.1,20.1,0,10006.5375899897,10006.5375899897,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,174,10,10.5,10.5,0,4055.56289221007,4055.56289221007,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,175,10,9.8,9.8,0,4279.5776240646,4279.5776240646,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,176,10,13.6,13.6,0,5841.67186629293,5841.67186629293,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,177,10,14.4,14.4,0,4844.12247458423,4844.12247458423,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,178,10,13.1,13.1,0,5002.07677120897,5002.07677120897,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,179,10,5.9,5.9,0,1215.12520615751,1215.12520615751,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,180,10,8.1,8.1,0,2268.10429572011,2268.10429572011,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,181,10,22.7,22.7,0,7891.20956378163,7891.20956378163,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,182,10,13.9,13.9,0,6945.27842601041,6945.27842601041,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,183,10,10.6,10.6,0,3233.431260434,3233.431260434,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,184,10,20.5,20.5,0,8527.47080347578,8527.47080347578,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,185,10,4.5,4.5,0,1397.70349556724,1397.70349556724,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,186,10,8.8,8.8,0,2293.5760637169,2293.5760637169,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,187,10,15.5,15.5,0,7663.66370161879,7663.66370161879,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,188,10,5.2,5.2,0,1290.20869486155,1290.20869486155,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,189,10,12.6,12.6,0,6008.02847578692,6008.02847578692,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,190,10,23.5,23.5,0,12098.5755533069,12098.5755533069,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,191,10,16.7,16.7,0,7704.02455814694,7704.02455814694,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,192,10,16.3,16.3,0,5149.95097136078,5149.95097136078,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,193,10,13.1,13.1,0,7792.58527388099,7792.58527388099,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,194,10,8.1,8.1,0,2375.17113885554,2375.17113885554,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,195,10,9.8,9.8,0,3822.90954505842,3822.90954505842,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,196,10,14.3,14.3,0,4461.38395319927,4461.38395319927,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,197,10,16.1,16.1,0,6968.6352484598,6968.6352484598,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,198,10,9.4,9.4,0,3616.99074907492,3616.99074907492,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,199,10,12.1,12.1,0,5558.68886361598,5558.68886361598,0,0,0
+"hcw_exposure","hcw_exposure_125","HCW exposure +25%",1,1.5,"full_obv80",0.8,200,10,9.9,9.9,0,4341.1252205644,4341.1252205644,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,1,10,6.9,6.9,0,1896.127023629,1896.127023629,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,2,10,11,11,0,5335.07160138043,5335.07160138043,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,3,10,12.9,12.9,0,4806.5411951748,4806.5411951748,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,4,10,18.9,18.9,0,7342.00959435545,7342.00959435545,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,5,10,12.9,12.9,0,5930.92168061728,5930.92168061728,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,6,10,17,17,0,8186.57357463157,8186.57357463157,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,7,10,13.9,13.9,0,5917.00219711159,5917.00219711159,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,8,10,16.2,16.2,0,8307.8917729661,8307.8917729661,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,9,10,7.3,7.3,0,2555.83503938402,2555.83503938402,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,10,10,24.9,24.9,0,13558.0410347754,13558.0410347754,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,11,10,8.2,8.2,0,2970.45715793969,2970.45715793969,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,12,10,6.8,6.8,0,2852.14855637286,2852.14855637286,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,13,10,4,4,0,902.14519039583,902.14519039583,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,14,10,10,10,0,4341.70979212593,4341.70979212593,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,15,10,8.8,8.8,0,3229.98460085582,3229.98460085582,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,16,10,8.9,8.9,0,2939.54286297482,2939.54286297482,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,17,10,16.3,16.3,0,4828.04593978645,4828.04593978645,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,18,10,9.2,9.2,0,2897.03211123967,2897.03211123967,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,19,10,24.3,24.3,0,9382.21345344018,9382.21345344018,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,20,10,17.7,17.7,0,7097.0446027314,7097.0446027314,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,21,10,4.8,4.8,0,844.070534332992,844.070534332992,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,22,10,15.5,15.5,0,5697.65049509173,5697.65049509173,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,23,10,8.6,8.6,0,2970.76771170476,2970.76771170476,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,24,10,9.4,9.4,0,3731.32415808414,3731.32415808414,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,25,10,13.6,13.6,0,6067.45594655146,6067.45594655146,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,26,10,14.8,14.8,0,7574.27142542154,7574.27142542154,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,27,10,15.8,15.8,0,7624.32588458177,7624.32588458177,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,28,10,8.3,8.3,0,2999.75423169133,2999.75423169133,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,29,10,22,22,0,6275.00528555378,6275.00528555378,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,30,10,20.9,20.9,0,9969.53237250176,9969.53237250176,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,31,10,10.4,10.4,0,3512.69063370669,3512.69063370669,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,32,10,10.4,10.4,0,4398.90373149549,4398.90373149549,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,33,10,8.4,8.4,0,2348.21707555022,2348.21707555022,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,34,10,10.9,10.9,0,3992.15963749139,3992.15963749139,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,35,10,6.5,6.5,0,1556.1930808488,1556.1930808488,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,36,10,16.5,16.5,0,6777.99914829771,6777.99914829771,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,37,10,9.3,9.3,0,1713.54067280992,1713.54067280992,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,38,10,9.8,9.8,0,2616.37565807121,2616.37565807121,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,39,10,9,9,0,3292.07482412242,3292.07482412242,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,40,10,5.3,5.3,0,1816.89786384409,1816.89786384409,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,41,10,6.8,6.8,0,1899.95250763835,1899.95250763835,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,42,10,7.5,7.5,0,3456.23870639135,3456.23870639135,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,43,10,10.7,10.7,0,5109.49566484401,5109.49566484401,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,44,10,22.1,22.1,0,8416.37597504178,8416.37597504178,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,45,10,7.6,7.6,0,2734.9910795065,2734.9910795065,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,46,10,22.6,22.6,0,5459.47874245839,5459.47874245839,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,47,10,15,15,0,3869.33225991091,3869.33225991091,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,48,10,12.3,12.3,0,5473.73827947087,5473.73827947087,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,49,10,11.8,11.8,0,5733.22497660855,5733.22497660855,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,50,10,16,16,0,6947.78905227322,6947.78905227322,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,51,10,10.4,10.4,0,3839.23666858914,3839.23666858914,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,52,10,9,9,0,3355.66623307622,3355.66623307622,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,53,10,15.4,15.4,0,7015.57153022058,7015.57153022058,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,54,10,10.7,10.7,0,5126.82451648806,5126.82451648806,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,55,10,6.6,6.6,0,1398.99305025563,1398.99305025563,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,56,10,5.9,5.9,0,1584.53166700655,1584.53166700655,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,57,10,18.9,18.9,0,7812.43331993299,7812.43331993299,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,58,10,5.6,5.6,0,2384.87411824978,2384.87411824978,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,59,10,8.6,8.6,0,4024.77460713419,4024.77460713419,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,60,10,9.5,9.5,0,3331.18465025507,3331.18465025507,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,61,10,19.7,19.7,0,7578.41331690246,7578.41331690246,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,62,10,17.9,17.9,0,7836.82269187669,7836.82269187669,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,63,10,14.1,14.1,0,7122.53475008062,7122.53475008062,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,64,10,16.4,16.4,0,6721.07294732125,6721.07294732125,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,65,10,12.2,12.2,0,5759.41163487768,5759.41163487768,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,66,10,10.5,10.5,0,3419.59319377673,3419.59319377673,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,67,10,9.5,9.5,0,4166.7091662764,4166.7091662764,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,68,10,12.6,12.6,0,4765.23411106139,4765.23411106139,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,69,10,11.8,11.8,0,4813.22271885896,4813.22271885896,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,70,10,12.5,12.5,0,5253.92729557355,5253.92729557355,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,71,10,11.4,11.4,0,4342.24094172974,4342.24094172974,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,72,10,11.9,11.9,0,5547.44789449994,5547.44789449994,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,73,10,9.1,9.1,0,2975.03679866654,2975.03679866654,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,74,10,30.9,30.9,0,11370.7512036555,11370.7512036555,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,75,10,13.8,13.8,0,8021.22405914962,8021.22405914962,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,76,10,21.9,21.9,0,7611.83460194139,7611.83460194139,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,77,10,8.4,8.4,0,3835.43825049297,3835.43825049297,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,78,10,10.2,10.2,0,3501.74080151843,3501.74080151843,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,79,10,11.3,11.3,0,4182.37224310594,4182.37224310594,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,80,10,9.9,9.9,0,2670.12925201985,2670.12925201985,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,81,10,15.7,15.7,0,5645.39838101427,5645.39838101427,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,82,10,7.1,7.1,0,1710.92265002289,1710.92265002289,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,83,10,10.4,10.4,0,3244.14369181529,3244.14369181529,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,84,10,5.5,5.5,0,1830.70187944737,1830.70187944737,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,85,10,7.8,7.8,0,2134.70959207156,2134.70959207156,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,86,10,3.7,3.7,0,794.404522405419,794.404522405419,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,87,10,10.1,10.1,0,4442.56563972511,4442.56563972511,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,88,10,12,12,0,7545.20800706079,7545.20800706079,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,89,10,7,7,0,1518.97818142659,1518.97818142659,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,90,10,4.8,4.8,0,1518.59869467978,1518.59869467978,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,91,10,5.1,5.1,0,1873.29678411859,1873.29678411859,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,92,10,11.5,11.5,0,5348.05594779209,5348.05594779209,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,93,10,18.8,18.8,0,10652.6372180927,10652.6372180927,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,94,10,6.8,6.8,0,1765.77405595505,1765.77405595505,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,95,10,20.6,20.6,0,7769.17301546779,7769.17301546779,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,96,10,14.6,14.6,0,6452.84007780736,6452.84007780736,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,97,10,10,10,0,3361.81941175727,3361.81941175727,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,98,10,32.3,32.3,0,10802.7575057151,10802.7575057151,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,99,10,10.4,10.4,0,3477.26622462974,3477.26622462974,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,100,10,24.7,24.7,0,13212.6424214026,13212.6424214026,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,101,10,13.5,13.5,0,3873.77086272607,3873.77086272607,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,102,10,7,7,0,3111.65365478438,3111.65365478438,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,103,10,9.3,9.3,0,4037.21694959671,4037.21694959671,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,104,10,9.9,9.9,0,2721.9178683128,2721.9178683128,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,105,10,12.3,12.3,0,3842.62469768706,3842.62469768706,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,106,10,13.8,13.8,0,4828.64372655711,4828.64372655711,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,107,10,3.8,3.8,0,1086.40546561577,1086.40546561577,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,108,10,8,8,0,1982.28151574835,1982.28151574835,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,109,10,16.3,16.3,0,7050.19767513748,7050.19767513748,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,110,10,8.4,8.4,0,2369.83155744334,2369.83155744334,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,111,10,14.1,14.1,0,4252.98056738881,4252.98056738881,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,112,10,9.8,9.8,0,4774.79709097201,4774.79709097201,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,113,10,15,15,0,5279.2306242181,5279.2306242181,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,114,10,9.5,9.5,0,2011.36458721264,2011.36458721264,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,115,10,16,16,0,5377.95875419107,5377.95875419107,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,116,10,7,7,0,2196.54435158807,2196.54435158807,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,117,10,16.8,16.8,0,7001.021789928,7001.021789928,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,118,10,5.1,5.1,0,802.130673345843,802.130673345843,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,119,10,12.7,12.7,0,4370.57883510853,4370.57883510853,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,120,10,15.2,15.2,0,4486.95103032622,4486.95103032622,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,121,10,8.6,8.6,0,2335.16977421392,2335.16977421392,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,122,10,9.7,9.7,0,3241.29369864827,3241.29369864827,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,123,10,15.4,15.4,0,5369.2961020304,5369.2961020304,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,124,10,5.7,5.7,0,871.138725062003,871.138725062003,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,125,10,9.4,9.4,0,3891.89744722304,3891.89744722304,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,126,10,9.8,9.8,0,4785.52297809013,4785.52297809013,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,127,10,18.5,18.5,0,6359.2413026422,6359.2413026422,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,128,10,7.3,7.3,0,2170.04359238032,2170.04359238032,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,129,10,9.9,9.9,0,4608.10233671827,4608.10233671827,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,130,10,6.4,6.4,0,1501.21957538044,1501.21957538044,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,131,10,10.2,10.2,0,3655.46378282902,3655.46378282902,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,132,10,15,15,0,5571.51228755262,5571.51228755262,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,133,10,28.6,28.6,0,11315.9066014048,11315.9066014048,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,134,10,5.5,5.5,0,1511.77472072658,1511.77472072658,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,135,10,18.2,18.2,0,5299.85631755457,5299.85631755457,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,136,10,15.9,15.9,0,5859.38875038488,5859.38875038488,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,137,10,17.1,17.1,0,5724.91740020736,5724.91740020736,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,138,10,16.7,16.7,0,5772.37251827235,5772.37251827235,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,139,10,11.5,11.5,0,7246.17442565692,7246.17442565692,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,140,10,16.4,16.4,0,8103.56678126828,8103.56678126828,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,141,10,17.4,17.4,0,7725.29823376601,7725.29823376601,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,142,10,7,7,0,2185.61882518117,2185.61882518117,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,143,10,7.7,7.7,0,2986.82290831174,2986.82290831174,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,144,10,6.4,6.4,0,1385.66203485691,1385.66203485691,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,145,10,8.1,8.1,0,2416.45841143359,2416.45841143359,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,146,10,15.3,15.3,0,5803.97236417216,5803.97236417216,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,147,10,13.4,13.4,0,5555.75790797368,5555.75790797368,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,148,10,13.4,13.4,0,5645.59585461372,5645.59585461372,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,149,10,7.9,7.9,0,1671.06603539176,1671.06603539176,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,150,10,5.1,5.1,0,1597.54788786712,1597.54788786712,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,151,10,7.5,7.5,0,3042.70641604649,3042.70641604649,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,152,10,17.8,17.8,0,6520.07279478302,6520.07279478302,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,153,10,21.4,21.4,0,7681.01781252602,7681.01781252602,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,154,10,3.2,3.2,0,1191.47549697515,1191.47549697515,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,155,10,15.3,15.3,0,6360.38336233191,6360.38336233191,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,156,10,12.1,12.1,0,4989.26052773874,4989.26052773874,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,157,10,6.6,6.6,0,2919.91152115967,2919.91152115967,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,158,10,7.2,7.2,0,1513.80119246929,1513.80119246929,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,159,10,8.5,8.5,0,3836.10415079734,3836.10415079734,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,160,10,15.2,15.2,0,6630.70390596363,6630.70390596363,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,161,10,10.4,10.4,0,3624.1831652019,3624.1831652019,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,162,10,9.4,9.4,0,2408.05607705065,2408.05607705065,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,163,10,33.9,33.9,0,16115.1217912789,16115.1217912789,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,164,10,15.1,15.1,0,7845.07267539633,7845.07267539633,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,165,10,25.1,25.1,0,9850.7723835749,9850.7723835749,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,166,10,8.9,8.9,0,2603.4762338689,2603.4762338689,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,167,10,7.8,7.8,0,2309.63377336318,2309.63377336318,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,168,10,6.4,6.4,0,2411.76223180048,2411.76223180048,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,169,10,18.5,18.5,0,6757.4803649579,6757.4803649579,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,170,10,13.2,13.2,0,5175.98968822415,5175.98968822415,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,171,10,12.4,12.4,0,4429.76670830496,4429.76670830496,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,172,10,11,11,0,4396.82333287164,4396.82333287164,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,173,10,7.6,7.6,0,2411.44266176359,2411.44266176359,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,174,10,10.4,10.4,0,3415.95920420765,3415.95920420765,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,175,10,7.8,7.8,0,2162.29972997654,2162.29972997654,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,176,10,12.1,12.1,0,5507.40350671503,5507.40350671503,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,177,10,7,7,0,3302.57616799247,3302.57616799247,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,178,10,19.9,19.9,0,8026.53780119138,8026.53780119138,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,179,10,10.5,10.5,0,3242.00545256708,3242.00545256708,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,180,10,16.6,16.6,0,7496.15441549477,7496.15441549477,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,181,10,10.9,10.9,0,4225.73973952257,4225.73973952257,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,182,10,12.4,12.4,0,5066.9863141152,5066.9863141152,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,183,10,9,9,0,3023.46680233647,3023.46680233647,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,184,10,15,15,0,7138.55243082974,7138.55243082974,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,185,10,14.3,14.3,0,6084.13282433763,6084.13282433763,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,186,10,7.5,7.5,0,3396.48490049717,3396.48490049717,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,187,10,7.7,7.7,0,1659.78311868047,1659.78311868047,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,188,10,14.2,14.2,0,5611.84309843475,5611.84309843475,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,189,10,12.6,12.6,0,5205.17219531839,5205.17219531839,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,190,10,5.5,5.5,0,1520.32313459733,1520.32313459733,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,191,10,11.6,11.6,0,3635.05938447312,3635.05938447312,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,192,10,9.8,9.8,0,3729.02613544194,3729.02613544194,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,193,10,8.3,8.3,0,3019.30613249371,3019.30613249371,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,194,10,12.6,12.6,0,5316.25766022466,5316.25766022466,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,195,10,16.5,16.5,0,4581.31455955968,4581.31455955968,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,196,10,15.2,15.2,0,6901.61753797922,6901.61753797922,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,197,10,7.5,7.5,0,1341.57719568761,1341.57719568761,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,198,10,22.6,22.6,0,6231.42349911422,6231.42349911422,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,199,10,11.7,11.7,0,4205.02176875443,4205.02176875443,0,0,0
+"hcw_exposure","hcw_exposure_150","HCW exposure +50%",1,2,"full_obv80",0.8,200,10,8.5,8.5,0,1977.29071437802,1977.29071437802,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,1,10,14.9,14.9,0,7274.39219357715,7274.39219357715,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,2,10,8,8,0,2711.91336078287,2711.91336078287,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,3,10,21,21,0,6578.95317768252,6578.95317768252,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,4,10,25,25,0,8978.83603273955,8978.83603273955,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,5,10,7.6,7.6,0,3758.92184070256,3758.92184070256,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,6,10,10.2,10.2,0,5027.71787418414,5027.71787418414,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,7,10,10.2,10.2,0,4831.24052709799,4831.24052709799,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,8,10,13,13,0,5885.44780849274,5885.44780849274,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,9,10,11.2,11.2,0,2748.18264315818,2748.18264315818,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,10,10,10.8,10.8,0,6318.6884628916,6318.6884628916,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,11,10,5.7,5.7,0,1754.4291331084,1754.4291331084,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,12,10,15.9,15.9,0,7063.5576160435,7063.5576160435,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,13,10,7.8,7.8,0,4273.31642296419,4273.31642296419,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,14,10,12,12,0,5343.42177239342,5343.42177239342,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,15,10,5.8,5.8,0,3380.09270166548,3380.09270166548,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,16,10,17,17,0,7759.75118549564,7759.75118549564,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,17,10,15.4,15.4,0,3763.49351071051,3763.49351071051,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,18,10,11.8,11.8,0,5315.91151988066,5315.91151988066,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,19,10,21.7,21.7,0,10666.5409952495,10666.5409952495,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,20,10,19.6,19.6,0,11712.0598213821,11712.0598213821,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,21,10,13.5,13.5,0,4801.32547949736,4801.32547949736,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,22,10,11.2,11.2,0,3883.46962361788,3883.46962361788,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,23,10,14.6,14.6,0,4744.36590630334,4744.36590630334,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,24,10,14.1,14.1,0,7907.40490169205,7907.40490169205,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,25,10,9.3,9.3,0,3061.97464391537,3061.97464391537,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,26,10,12.2,12.2,0,7015.43213304806,7015.43213304806,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,27,10,17.2,17.2,0,6460.7244697204,6460.7244697204,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,28,10,9.5,9.5,0,3671.15333417181,3671.15333417181,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,29,10,27.9,27.9,0,12335.3237049216,12335.3237049216,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,30,10,15.7,15.7,0,6430.74241648414,6430.74241648414,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,31,10,14.5,14.5,0,7515.76357366914,7515.76357366914,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,32,10,16.6,16.6,0,7524.83620784149,7524.83620784149,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,33,10,16.3,16.3,0,6584.61361803425,6584.61361803425,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,34,10,12.3,12.3,0,3768.42990489233,3768.42990489233,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,35,10,15.5,15.5,0,6667.58377252802,6667.58377252802,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,36,10,8.9,8.9,0,3224.84939722688,3224.84939722688,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,37,10,8.1,8.1,0,4624.78135031764,4624.78135031764,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,38,10,18.3,18.3,0,8133.7626539492,8133.7626539492,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,39,10,9.7,9.7,0,6658.82070952791,6658.82070952791,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,40,10,14.7,14.7,0,7096.21186293854,7096.21186293854,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,41,10,11.6,11.6,0,7161.38754815003,7161.38754815003,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,42,10,25,25,0,10247.871031689,10247.871031689,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,43,10,14.5,14.5,0,7654.15616988987,7654.15616988987,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,44,10,14.6,14.6,0,7307.80398086611,7307.80398086611,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,45,10,11.9,11.9,0,4458.65825776462,4458.65825776462,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,46,10,12.5,12.5,0,7844.51763523461,7844.51763523461,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,47,10,14.8,14.8,0,4424.05169544584,4424.05169544584,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,48,10,5.9,5.9,0,4492.75356807894,4492.75356807894,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,49,10,11.3,11.3,0,5840.89183189357,5840.89183189357,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,50,10,12.1,12.1,0,5660.37962977223,5660.37962977223,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,51,10,15.2,15.2,0,4671.29490774458,4671.29490774458,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,52,10,22.1,22.1,0,7316.01861067234,7316.01861067234,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,53,10,10.8,10.8,0,4309.58496648743,4309.58496648743,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,54,10,14.7,14.7,0,6047.31088089363,6047.31088089363,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,55,10,5.8,5.8,0,2037.07523262089,2037.07523262089,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,56,10,11.4,11.4,0,6817.65499354216,6817.65499354216,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,57,10,13.4,13.4,0,5385.92651302595,5385.92651302595,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,58,10,10.4,10.4,0,6333.73887292248,6333.73887292248,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,59,10,9.4,9.4,0,3001.3035916984,3001.3035916984,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,60,10,6.1,6.1,0,2533.87416285094,2533.87416285094,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,61,10,9.8,9.8,0,3908.21673923582,3908.21673923582,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,62,10,10,10,0,2843.18859864281,2843.18859864281,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,63,10,9.6,9.6,0,4368.80813255801,4368.80813255801,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,64,10,13.9,13.9,0,8130.35575713567,8130.35575713567,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,65,10,16.1,16.1,0,7637.26741241233,7637.26741241233,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,66,10,13.8,13.8,0,6408.10635344351,6408.10635344351,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,67,10,12.5,12.5,0,5633.09354885157,5633.09354885157,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,68,10,16,16,0,7941.3737437754,7941.3737437754,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,69,10,18.5,18.5,0,7246.26107400727,7246.26107400727,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,70,10,10.1,10.1,0,4900.67286567887,4900.67286567887,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,71,10,9.6,9.6,0,4892.44093563072,4892.44093563072,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,72,10,19.3,19.3,0,9127.12848440837,9127.12848440837,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,73,10,5.5,5.5,0,1905.51195422094,1905.51195422094,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,74,10,21.2,21.2,0,8962.26954746606,8962.26954746606,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,75,10,16,16,0,6799.67177016942,6799.67177016942,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,76,10,7.8,7.8,0,3872.83019292581,3872.83019292581,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,77,10,5.1,5.1,0,1835.47561557532,1835.47561557532,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,78,10,12.7,12.7,0,7471.50486038329,7471.50486038329,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,79,10,14.1,14.1,0,5531.72117118197,5531.72117118197,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,80,10,6.1,6.1,0,2876.22649760122,2876.22649760122,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,81,10,9.1,9.1,0,4151.48026937214,4151.48026937214,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,82,10,15.9,15.9,0,6269.02113114813,6269.02113114813,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,83,10,9.6,9.6,0,3644.28095243138,3644.28095243138,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,84,10,9.6,9.6,0,5153.06102254364,5153.06102254364,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,85,10,17,17,0,6634.12388041378,6634.12388041378,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,86,10,9.1,9.1,0,5888.34722796523,5888.34722796523,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,87,10,4.5,4.5,0,1323.53210539297,1323.53210539297,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,88,10,16.3,16.3,0,7446.03745886317,7446.03745886317,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,89,10,16.7,16.7,0,5213.64873262997,5213.64873262997,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,90,10,7.3,7.3,0,4421.17729847696,4421.17729847696,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,91,10,3.7,3.7,0,1230.76699782044,1230.76699782044,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,92,10,11.8,11.8,0,2759.42997925266,2759.42997925266,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,93,10,19,19,0,6784.05648960165,6784.05648960165,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,94,10,8.2,8.2,0,4099.95927506671,4099.95927506671,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,95,10,3.2,3.2,0,1021.40720974948,1021.40720974948,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,96,10,22.5,22.5,0,7674.02339386671,7674.02339386671,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,97,10,15.6,15.6,0,6907.11810657152,6907.11810657152,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,98,10,13.4,13.4,0,5147.2169048405,5147.2169048405,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,99,10,21,21,0,8393.62179854272,8393.62179854272,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,100,10,18.1,18.1,0,6383.19691056845,6383.19691056845,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,101,10,14.9,14.9,0,7174.13694508966,7174.13694508966,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,102,10,11.3,11.3,0,4327.09841064239,4327.09841064239,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,103,10,5.5,5.5,0,1946.51651203851,1946.51651203851,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,104,10,11.2,11.2,0,3398.7632012043,3398.7632012043,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,105,10,14.6,14.6,0,6101.55092653565,6101.55092653565,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,106,10,18.6,18.6,0,11192.664956508,11192.664956508,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,107,10,15.2,15.2,0,8390.94430627084,8390.94430627084,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,108,10,6.6,6.6,0,2751.75163023936,2751.75163023936,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,109,10,16.5,16.5,0,7374.10596557888,7374.10596557888,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,110,10,11.1,11.1,0,5449.724708099,5449.724708099,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,111,10,17.2,17.2,0,7019.36731618631,7019.36731618631,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,112,10,9.5,9.5,0,3483.86726148923,3483.86726148923,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,113,10,9.6,9.6,0,4060.02806508334,4060.02806508334,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,114,10,6.9,6.9,0,3840.99002220875,3840.99002220875,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,115,10,14.1,14.1,0,8641.67048772395,8641.67048772395,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,116,10,8,8,0,3383.13647187603,3383.13647187603,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,117,10,5.5,5.5,0,2989.93128075727,2989.93128075727,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,118,10,13.3,13.3,0,8464.534609323,8464.534609323,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,119,10,12.7,12.7,0,5391.68455993186,5391.68455993186,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,120,10,10.9,10.9,0,5847.31881195652,5847.31881195652,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,121,10,7.8,7.8,0,2387.46342809962,2387.46342809962,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,122,10,7.1,7.1,0,3082.5500082372,3082.5500082372,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,123,10,16.1,16.1,0,5252.31565928427,5252.31565928427,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,124,10,3.8,3.8,0,1394.90904956128,1394.90904956128,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,125,10,13.5,13.5,0,4460.34545962835,4460.34545962835,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,126,10,10.4,10.4,0,5387.80104713679,5387.80104713679,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,127,10,20,20,0,8122.76962664237,8122.76962664237,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,128,10,2.7,2.7,0,770.492053672658,770.492053672658,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,129,10,20.3,20.3,0,7804.70810197143,7804.70810197143,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,130,10,13.3,13.3,0,4263.49931824062,4263.49931824062,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,131,10,12,12,0,5892.86745771791,5892.86745771791,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,132,10,13.1,13.1,0,6871.54738215582,6871.54738215582,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,133,10,14.4,14.4,0,8119.79502888519,8119.79502888519,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,134,10,9.6,9.6,0,3843.52648647761,3843.52648647761,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,135,10,10.6,10.6,0,4181.00045771918,4181.00045771918,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,136,10,11,11,0,5669.14017031706,5669.14017031706,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,137,10,11.6,11.6,0,4710.13089579204,4710.13089579204,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,138,10,6.8,6.8,0,2376.93114534257,2376.93114534257,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,139,10,16.3,16.3,0,3307.4802565448,3307.4802565448,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,140,10,21.6,21.6,0,9266.47277305885,9266.47277305885,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,141,10,21.5,21.5,0,7612.30098506894,7612.30098506894,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,142,10,13.8,13.8,0,3365.38614392819,3365.38614392819,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,143,10,6.8,6.8,0,1754.09426986546,1754.09426986546,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,144,10,14.2,14.2,0,7348.45042859743,7348.45042859743,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,145,10,6.6,6.6,0,2769.43038969655,2769.43038969655,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,146,10,25.6,25.6,0,8825.99528239769,8825.99528239769,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,147,10,7.2,7.2,0,2877.0542214284,2877.0542214284,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,148,10,17.6,17.6,0,6667.20758255461,6667.20758255461,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,149,10,6.5,6.5,0,3431.08692960802,3431.08692960802,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,150,10,4.5,4.5,0,1316.83528559632,1316.83528559632,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,151,10,12,12,0,5069.30247246569,5069.30247246569,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,152,10,13.8,13.8,0,9227.37381650562,9227.37381650562,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,153,10,11.5,11.5,0,4237.44155746976,4237.44155746976,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,154,10,5,5,0,2140.05245802229,2140.05245802229,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,155,10,27.1,27.1,0,11563.1913387225,11563.1913387225,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,156,10,6.2,6.2,0,2874.91561853559,2874.91561853559,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,157,10,10.7,10.7,0,3743.84528004679,3743.84528004679,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,158,10,18.2,18.2,0,6437.71252969998,6437.71252969998,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,159,10,11.3,11.3,0,7112.48948536842,7112.48948536842,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,160,10,6.7,6.7,0,3727.78275631704,3727.78275631704,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,161,10,12.2,12.2,0,6552.50161656999,6552.50161656999,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,162,10,8.3,8.3,0,3625.2448378876,3625.2448378876,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,163,10,26.8,26.8,0,13396.2754879809,13396.2754879809,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,164,10,13.6,13.6,0,5019.34794183358,5019.34794183358,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,165,10,12.2,12.2,0,4479.74090905304,4479.74090905304,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,166,10,8,8,0,2076.80606530795,2076.80606530795,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,167,10,9.8,9.8,0,3844.90198935109,3844.90198935109,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,168,10,14.4,14.4,0,7020.50068533529,7020.50068533529,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,169,10,14.4,14.4,0,8700.21080445419,8700.21080445419,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,170,10,17.2,17.2,0,7125.6204751862,7125.6204751862,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,171,10,9.7,9.7,0,4442.41160800718,4442.41160800718,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,172,10,6.2,6.2,0,2571.6388260721,2571.6388260721,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,173,10,17.8,17.8,0,8575.81658506783,8575.81658506783,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,174,10,10.9,10.9,0,5595.96956767636,5595.96956767636,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,175,10,7.4,7.4,0,3839.39119532523,3839.39119532523,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,176,10,20.6,20.6,0,7570.34718860906,7570.34718860906,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,177,10,12.9,12.9,0,5129.73665837025,5129.73665837025,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,178,10,17.2,17.2,0,7920.44837204888,7920.44837204888,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,179,10,26,26,0,10011.0527280336,10011.0527280336,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,180,10,8.1,8.1,0,2443.67570564196,2443.67570564196,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,181,10,19.4,19.4,0,7417.30425486076,7417.30425486076,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,182,10,16.3,16.3,0,5712.48880227448,5712.48880227448,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,183,10,19.5,19.5,0,11886.9715326953,11886.9715326953,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,184,10,18.2,18.2,0,9755.9059272782,9755.9059272782,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,185,10,19.6,19.6,0,9696.63827164291,9696.63827164291,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,186,10,9.2,9.2,0,4338.77277511304,4338.77277511304,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,187,10,12.6,12.6,0,4921.28453779738,4921.28453779738,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,188,10,11.3,11.3,0,6891.14063650747,6891.14063650747,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,189,10,10.8,10.8,0,7254.48925287775,7254.48925287775,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,190,10,20.9,20.9,0,7726.16407905159,7726.16407905159,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,191,10,12.6,12.6,0,4484.98931772129,4484.98931772129,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,192,10,6.8,6.8,0,4282.16313074177,4282.16313074177,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,193,10,13.5,13.5,0,7316.55814794648,7316.55814794648,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,194,10,13.8,13.8,0,4954.22013205516,4954.22013205516,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,195,10,9.3,9.3,0,3279.06756465669,3279.06756465669,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,196,10,7.4,7.4,0,2408.12460675004,2408.12460675004,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,197,10,14.8,14.8,0,7627.20982777023,7627.20982777023,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,198,10,14.7,14.7,0,6676.76619590661,6676.76619590661,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,199,10,17.6,17.6,0,9441.62266804246,9441.62266804246,0,0,0
+"reference","reference","DRC as-fitted (x1.00)",1,1,"full_obv80",0.8,200,10,18.5,18.5,0,8635.28033371364,8635.28033371364,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,1,10,36,36,0,10427.8032311507,10427.8032311507,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,2,10,28.5,28.5,0,12950.9704297616,12950.9704297616,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,3,10,33.5,33.5,0,7292.73221936194,7292.73221936194,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,4,10,41.8,41.8,0,8142.9265581279,8142.9265581279,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,5,10,31.8,31.8,0,7909.96579775261,7909.96579775261,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,6,10,34.4,34.4,0,6706.30879194401,6706.30879194401,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,7,10,35.4,35.4,0,12729.5158723588,12729.5158723588,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,8,10,31.1,31.1,0,8370.32345008249,8370.32345008249,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,9,10,25.7,25.7,0,7731.51121909964,7731.51121909964,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,10,10,33.6,33.6,0,8659.25894830375,8659.25894830375,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,11,10,28.7,28.7,0,8633.25987192328,8633.25987192328,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,12,10,29.4,29.4,0,10430.0797005697,10430.0797005697,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,13,10,29.4,29.4,0,8311.66439781801,8311.66439781801,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,14,10,29.8,29.8,0,9067.33643819827,9067.33643819827,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,15,10,29.6,29.6,0,9839.8796211502,9839.8796211502,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,16,10,26.6,26.6,0,6796.0478767793,6796.0478767793,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,17,10,31.7,31.7,0,6006.85117296392,6006.85117296392,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,18,10,28.5,28.5,0,6661.94957975976,6661.94957975976,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,19,10,39.2,39.2,0,8991.35103235553,8991.35103235553,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,20,10,39.2,39.2,0,8764.42393815838,8764.42393815838,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,21,10,41.6,41.6,0,8755.46999161951,8755.46999161951,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,22,10,32.3,32.3,0,6198.47277070927,6198.47277070927,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,23,10,33.1,33.1,0,7659.11327837537,7659.11327837537,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,24,10,39.2,39.2,0,8630.24259713245,8630.24259713245,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,25,10,30.7,30.7,0,6196.84837437618,6196.84837437618,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,26,10,28.6,28.6,0,6820.29159706815,6820.29159706815,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,27,10,36.6,36.6,0,7061.86396644644,7061.86396644644,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,28,10,40.3,40.3,0,13654.4511089616,13654.4511089616,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,29,10,36.4,36.4,0,7479.20848784377,7479.20848784377,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,30,10,38,38,0,7623.77713496972,7623.77713496972,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,31,10,35.9,35.9,0,7377.35134659867,7377.35134659867,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,32,10,30.2,30.2,0,8458.19686874849,8458.19686874849,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,33,10,32.9,32.9,0,6291.97089692234,6291.97089692234,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,34,10,39.6,39.6,0,8536.32409288968,8536.32409288968,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,35,10,32.9,32.9,0,8927.89765144848,8927.89765144848,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,36,10,28.4,28.4,0,6075.91527560186,6075.91527560186,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,37,10,35.9,35.9,0,12146.0131088531,12146.0131088531,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,38,10,35,35,0,9050.39293654286,9050.39293654286,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,39,10,29.1,29.1,0,6726.79517870925,6726.79517870925,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,40,10,25,25,0,6975.89428195058,6975.89428195058,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,41,10,29.9,29.9,0,10713.3883192776,10713.3883192776,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,42,10,35.1,35.1,0,6591.91959780852,6591.91959780852,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,43,10,32.6,32.6,0,6432.84078162083,6432.84078162083,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,44,10,33.6,33.6,0,7493.63391730435,7493.63391730435,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,45,10,39.6,39.6,0,8403.3704251367,8403.3704251367,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,46,10,35.4,35.4,0,9335.50210778383,9335.50210778383,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,47,10,26.6,26.6,0,5542.93956369616,5542.93956369616,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,48,10,24.4,24.4,0,8974.68831852338,8974.68831852338,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,49,10,27,27,0,6386.44236469326,6386.44236469326,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,50,10,32.8,32.8,0,7524.03832170295,7524.03832170295,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,51,10,43.2,43.2,0,9401.399541233,9401.399541233,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,52,10,33.4,33.4,0,7170.98484168986,7170.98484168986,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,53,10,25.3,25.3,0,7369.87661827145,7369.87661827145,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,54,10,40.1,40.1,0,19120.1818540456,19120.1818540456,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,55,10,25.6,25.6,0,6858.86772993516,6858.86772993516,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,56,10,30.4,30.4,0,6564.98916284609,6564.98916284609,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,57,10,43,43,0,7919.37308542298,7919.37308542298,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,58,10,40.9,40.9,0,10601.1063607009,10601.1063607009,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,59,10,37.3,37.3,0,15561.9772008062,15561.9772008062,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,60,10,31.6,31.6,0,8034.07732252171,8034.07732252171,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,61,10,36.7,36.7,0,9258.43554591128,9258.43554591128,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,62,10,33.5,33.5,0,6485.66079914993,6485.66079914993,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,63,10,39.2,39.2,0,7821.39857585555,7821.39857585555,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,64,10,41.2,41.2,0,7646.90689963127,7646.90689963127,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,65,10,36,36,0,10386.5587399362,10386.5587399362,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,66,10,26.8,26.8,0,6891.94124854434,6891.94124854434,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,67,10,32.6,32.6,0,12161.1644706438,12161.1644706438,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,68,10,31.1,31.1,0,6433.37941265358,6433.37941265358,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,69,10,30,30,0,7413.26632518301,7413.26632518301,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,70,10,33,33,0,9620.28231198038,9620.28231198038,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,71,10,39.6,39.6,0,9049.14466303276,9049.14466303276,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,72,10,39.4,39.4,0,16771.0129946062,16771.0129946062,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,73,10,18.2,18.2,0,5041.32616390316,5041.32616390316,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,74,10,43.6,43.6,0,9334.99743463003,9334.99743463003,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,75,10,30.5,30.5,0,6966.32018453328,6966.32018453328,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,76,10,29.6,29.6,0,8345.28191052123,8345.28191052123,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,77,10,22.7,22.7,0,11385.2482405197,11385.2482405197,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,78,10,33,33,0,6786.18161420629,6786.18161420629,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,79,10,40.4,40.4,0,8424.84141698256,8424.84141698256,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,80,10,31.5,31.5,0,8282.34769503925,8282.34769503925,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,81,10,35.7,35.7,0,7846.12155147937,7846.12155147937,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,82,10,33.7,33.7,0,10512.0615827007,10512.0615827007,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,83,10,44.4,44.4,0,10095.6148182107,10095.6148182107,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,84,10,37.7,37.7,0,9421.49168966202,9421.49168966202,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,85,10,32.6,32.6,0,8316.34011938278,8316.34011938278,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,86,10,27.7,27.7,0,6384.21959195907,6384.21959195907,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,87,10,25.8,25.8,0,8297.53841662004,8297.53841662004,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,88,10,34.8,34.8,0,7867.21742330143,7867.21742330143,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,89,10,30.6,30.6,0,6942.69659262824,6942.69659262824,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,90,10,33.4,33.4,0,7690.79473487195,7690.79473487195,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,91,10,29.4,29.4,0,6256.48836360312,6256.48836360312,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,92,10,24.3,24.3,0,5667.40444315455,5667.40444315455,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,93,10,32.2,32.2,0,6551.70512941917,6551.70512941917,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,94,10,31.4,31.4,0,6182.02944155737,6182.02944155737,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,95,10,38.6,38.6,0,10792.7526628232,10792.7526628232,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,96,10,42.3,42.3,0,9283.81120285703,9283.81120285703,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,97,10,36.4,36.4,0,11796.6862265412,11796.6862265412,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,98,10,30.1,30.1,0,6473.79953128898,6473.79953128898,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,99,10,27.5,27.5,0,7747.27266623289,7747.27266623289,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,100,10,35.9,35.9,0,6799.32748802121,6799.32748802121,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,101,10,39.2,39.2,0,7148.00391227537,7148.00391227537,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,102,10,29.2,29.2,0,7115.34539953793,7115.34539953793,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,103,10,36.9,36.9,0,8344.980378281,8344.980378281,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,104,10,32.3,32.3,0,9944.7938659474,9944.7938659474,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,105,10,31.5,31.5,0,7005.36958553777,7005.36958553777,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,106,10,36.1,36.1,0,7103.42691154586,7103.42691154586,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,107,10,31.3,31.3,0,7359.72176527396,7359.72176527396,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,108,10,26,26,0,6849.38227351126,6849.38227351126,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,109,10,43.9,43.9,0,10051.9574175303,10051.9574175303,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,110,10,33,33,0,6769.21742896708,6769.21742896708,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,111,10,36.1,36.1,0,8522.83296794787,8522.83296794787,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,112,10,36.5,36.5,0,8381.2263296294,8381.2263296294,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,113,10,36.6,36.6,0,8037.61845961328,8037.61845961328,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,114,10,34,34,0,7712.55400280909,7712.55400280909,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,115,10,44.6,44.6,0,11353.8403650282,11353.8403650282,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,116,10,25.7,25.7,0,5023.1746327133,5023.1746327133,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,117,10,28.5,28.5,0,14911.8110378539,14911.8110378539,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,118,10,28.9,28.9,0,7246.72103766322,7246.72103766322,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,119,10,30.8,30.8,0,6802.27821528727,6802.27821528727,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,120,10,36.1,36.1,0,8687.50173701732,8687.50173701732,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,121,10,26.3,26.3,0,7328.15749446997,7328.15749446997,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,122,10,39.7,39.7,0,8304.95579794365,8304.95579794365,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,123,10,32.9,32.9,0,6428.46222735658,6428.46222735658,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,124,10,36.1,36.1,0,11172.5546862842,11172.5546862842,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,125,10,38.5,38.5,0,7762.9567089112,7762.9567089112,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,126,10,36.8,36.8,0,9910.47760004382,9910.47760004382,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,127,10,33.8,33.8,0,9594.83120745662,9594.83120745662,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,128,10,34.1,34.1,0,9463.38725901495,9463.38725901495,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,129,10,34.6,34.6,0,8142.68985442185,8142.68985442185,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,130,10,27.7,27.7,0,10071.1545030681,10071.1545030681,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,131,10,21.8,21.8,0,9479.49671851134,9479.49671851134,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,132,10,35.1,35.1,0,10234.881045014,10234.881045014,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,133,10,46.2,46.2,0,9067.27079713412,9067.27079713412,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,134,10,36.4,36.4,0,8041.63887714681,8041.63887714681,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,135,10,42.5,42.5,0,8885.58148685103,8885.58148685103,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,136,10,25.7,25.7,0,6199.11912082495,6199.11912082495,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,137,10,31.5,31.5,0,9278.59968153167,9278.59968153167,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,138,10,33.9,33.9,0,6888.21619739084,6888.21619739084,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,139,10,30.6,30.6,0,5782.06970402722,5782.06970402722,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,140,10,25.4,25.4,0,8788.2859736714,8788.2859736714,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,141,10,36.2,36.2,0,7709.17300191596,7709.17300191596,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,142,10,32.8,32.8,0,7174.54286965653,7174.54286965653,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,143,10,40.9,40.9,0,10140.8604290356,10140.8604290356,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,144,10,23.5,23.5,0,5991.12975982977,5991.12975982977,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,145,10,28.7,28.7,0,6373.1328875494,6373.1328875494,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,146,10,35.2,35.2,0,6571.61524084127,6571.61524084127,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,147,10,34.9,34.9,0,7199.61579511561,7199.61579511561,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,148,10,27.1,27.1,0,7442.00774432232,7442.00774432232,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,149,10,31.1,31.1,0,6838.48768980711,6838.48768980711,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,150,10,32.4,32.4,0,13736.7270121013,13736.7270121013,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,151,10,36.4,36.4,0,14670.8879886145,14670.8879886145,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,152,10,34.7,34.7,0,11722.8116178682,11722.8116178682,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,153,10,31.7,31.7,0,7147.62607551729,7147.62607551729,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,154,10,24.2,24.2,0,6746.58479808332,6746.58479808332,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,155,10,38.5,38.5,0,7133.61826672259,7133.61826672259,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,156,10,33.7,33.7,0,9916.82628960722,9916.82628960722,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,157,10,32.4,32.4,0,11808.9507917793,11808.9507917793,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,158,10,41.4,41.4,0,8843.86446852184,8843.86446852184,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,159,10,37.4,37.4,0,8790.21466889579,8790.21466889579,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,160,10,34.4,34.4,0,6428.62492832839,6428.62492832839,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,161,10,42.6,42.6,0,12268.5171959476,12268.5171959476,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,162,10,38.1,38.1,0,10444.8107084255,10444.8107084255,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,163,10,35.8,35.8,0,7217.41926077156,7217.41926077156,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,164,10,29.9,29.9,0,7306.57069163352,7306.57069163352,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,165,10,37.2,37.2,0,7641.63164060079,7641.63164060079,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,166,10,34.7,34.7,0,6870.91246614393,6870.91246614393,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,167,10,33.4,33.4,0,6840.27314808212,6840.27314808212,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,168,10,27.3,27.3,0,8127.07963286985,8127.07963286985,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,169,10,34.1,34.1,0,7390.92149787448,7390.92149787448,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,170,10,33.6,33.6,0,7826.23407939649,7826.23407939649,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,171,10,39.7,39.7,0,9730.99298620463,9730.99298620463,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,172,10,37.5,37.5,0,13667.7618063788,13667.7618063788,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,173,10,32.4,32.4,0,6538.52813699755,6538.52813699755,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,174,10,37,37,0,14389.906781081,14389.906781081,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,175,10,23.1,23.1,0,6837.01132072043,6837.01132072043,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,176,10,39.4,39.4,0,9586.52677523736,9586.52677523736,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,177,10,31.6,31.6,0,7647.06119798273,7647.06119798273,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,178,10,42.9,42.9,0,9596.63889537721,9596.63889537721,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,179,10,24.9,24.9,0,8903.9973127162,8903.9973127162,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,180,10,39.9,39.9,0,10638.3915977175,10638.3915977175,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,181,10,38.4,38.4,0,13475.6487753604,13475.6487753604,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,182,10,35.6,35.6,0,7243.76683690675,7243.76683690675,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,183,10,25.9,25.9,0,4997.73951163546,4997.73951163546,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,184,10,37.1,37.1,0,8966.52938378601,8966.52938378601,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,185,10,42.8,42.8,0,8874.52587618693,8874.52587618693,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,186,10,33,33,0,8167.70164293833,8167.70164293833,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,187,10,26.6,26.6,0,12880.8446825681,12880.8446825681,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,188,10,42.4,42.4,0,10456.5480520897,10456.5480520897,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,189,10,15.4,15.4,0,3606.74493722584,3606.74493722584,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,190,10,38.4,38.4,0,10026.8939188448,10026.8939188448,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,191,10,35.1,35.1,0,8405.13108768722,8405.13108768722,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,192,10,41.4,41.4,0,14251.0086047003,14251.0086047003,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,193,10,32.3,32.3,0,7457.4935437747,7457.4935437747,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,194,10,34.5,34.5,0,13485.6526924278,13485.6526924278,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,195,10,24.8,24.8,0,5714.81105460823,5714.81105460823,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,196,10,34.8,34.8,0,6799.96764078997,6799.96764078997,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,197,10,39.5,39.5,0,8266.05657239075,8266.05657239075,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,198,10,31.2,31.2,0,6990.65915486914,6990.65915486914,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,199,10,26.9,26.9,0,7069.30471928839,7069.30471928839,0,0,0
+"transmissibility","transmissibility_110","Transmissibility +10%",1.1,1,"full_obv80",0.8,200,10,40.2,40.2,0,8301.44102735227,8301.44102735227,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,1,10,41.8,41.8,0,8123.15551876141,8123.15551876141,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,2,10,45.8,45.8,0,9665.22485113602,9665.22485113602,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,3,10,41.7,41.7,0,8046.24537805403,8046.24537805403,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,4,10,46.6,46.6,0,7508.2052679057,7508.2052679057,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,5,10,46.5,46.5,0,9901.83193823208,9901.83193823208,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,6,10,35.4,35.4,0,6325.81329615156,6325.81329615156,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,7,10,45.4,45.4,0,9074.71576583912,9074.71576583912,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,8,10,33.7,33.7,0,5307.99065894784,5307.99065894784,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,9,10,33.3,33.3,0,5533.1287970851,5533.1287970851,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,10,10,49.4,49.4,0,9493.86124769277,9493.86124769277,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,11,10,38.7,38.7,0,6995.59828248091,6995.59828248091,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,12,10,37.4,37.4,0,7318.11208454226,7318.11208454226,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,13,10,38.5,38.5,0,6186.27245270158,6186.27245270158,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,14,10,34.2,34.2,0,6245.21573815128,6245.21573815128,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,15,10,42.7,42.7,0,9048.83092782436,9048.83092782436,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,16,10,29.6,29.6,0,4763.59891414336,4763.59891414336,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,17,10,35.1,35.1,0,5946.24685831797,5946.24685831797,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,18,10,43.4,43.4,0,6829.98319086803,6829.98319086803,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,19,10,39,39,0,6653.02386743844,6653.02386743844,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,20,10,52,52,0,7727.7074774795,7727.7074774795,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,21,10,41.3,41.3,0,7583.85589244983,7583.85589244983,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,22,10,40.3,40.3,0,6615.2596427341,6615.2596427341,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,23,10,48.1,48.1,0,8464.65651316778,8464.65651316778,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,24,10,42.3,42.3,0,7685.07886572681,7685.07886572681,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,25,10,41.7,41.7,0,6490.42374371267,6490.42374371267,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,26,10,50.8,50.8,0,10314.9156130061,10314.9156130061,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,27,10,30.6,30.6,0,4642.94333567897,4642.94333567897,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,28,10,47.4,47.4,0,8961.4431294057,8961.4431294057,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,29,10,46.2,46.2,0,6930.92894564435,6930.92894564435,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,30,10,34.8,34.8,0,6335.24763647349,6335.24763647349,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,31,10,40.7,40.7,0,6247.76046160288,6247.76046160288,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,32,10,40.2,40.2,0,7450.95365052271,7450.95365052271,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,33,10,37.9,37.9,0,5844.60638486303,5844.60638486303,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,34,10,34.4,34.4,0,6011.08401478988,6011.08401478988,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,35,10,36.9,36.9,0,7123.26822309966,7123.26822309966,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,36,10,36.8,36.8,0,8441.29773003576,8441.29773003576,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,37,10,44.6,44.6,0,8942.82225032003,8942.82225032003,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,38,10,37.2,37.2,0,5968.77809560938,5968.77809560938,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,39,10,36.4,36.4,0,6385.73409653913,6385.73409653913,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,40,10,36.4,36.4,0,6000.3671062553,6000.3671062553,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,41,10,37.4,37.4,0,7958.6853208926,7958.6853208926,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,42,10,35.7,35.7,0,5441.69198858047,5441.69198858047,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,43,10,38.1,38.1,0,6982.40272430577,6982.40272430577,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,44,10,42.2,42.2,0,7293.07097726296,7293.07097726296,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,45,10,46.7,46.7,0,7998.16818474311,7998.16818474311,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,46,10,48.7,48.7,0,7877.58292878802,7877.58292878802,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,47,10,41.7,41.7,0,7245.6821489181,7245.6821489181,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,48,10,45,45,0,8739.08036340403,8739.08036340403,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,49,10,32.4,32.4,0,6843.78256797517,6843.78256797517,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,50,10,45.2,45.2,0,7182.03281863576,7182.03281863576,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,51,10,46.4,46.4,0,8505.27087554601,8505.27087554601,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,52,10,32.6,32.6,0,6237.52330401236,6237.52330401236,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,53,10,39.2,39.2,0,7169.11341834266,7169.11341834266,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,54,10,43.3,43.3,0,13059.6186282452,13059.6186282452,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,55,10,40.3,40.3,0,6867.72391739732,6867.72391739732,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,56,10,36,36,0,6709.90179255327,6709.90179255327,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,57,10,50.5,50.5,0,8343.48502113752,8343.48502113752,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,58,10,43.7,43.7,0,8662.20737753654,8662.20737753654,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,59,10,41,41,0,7991.89349121728,7991.89349121728,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,60,10,40.5,40.5,0,6149.04397631977,6149.04397631977,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,61,10,38.5,38.5,0,9016.28183873541,9016.28183873541,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,62,10,32.2,32.2,0,5154.41829561057,5154.41829561057,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,63,10,44.5,44.5,0,7501.273591737,7501.273591737,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,64,10,46.3,46.3,0,7787.98722781588,7787.98722781588,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,65,10,35.2,35.2,0,6938.03388897088,6938.03388897088,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,66,10,37.1,37.1,0,6270.19676403233,6270.19676403233,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,67,10,44.5,44.5,0,7239.62787420414,7239.62787420414,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,68,10,36.8,36.8,0,6336.48524640688,6336.48524640688,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,69,10,44.8,44.8,0,8104.95481232721,8104.95481232721,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,70,10,38.5,38.5,0,7583.54995844579,7583.54995844579,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,71,10,44.1,44.1,0,7757.00616246576,7757.00616246576,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,72,10,43.8,43.8,0,8424.05675777407,8424.05675777407,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,73,10,38.1,38.1,0,7795.5292125321,7795.5292125321,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,74,10,45.3,45.3,0,8191.00021678564,8191.00021678564,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,75,10,43.6,43.6,0,7167.7849464325,7167.7849464325,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,76,10,30.7,30.7,0,5583.39756608758,5583.39756608758,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,77,10,42.6,42.6,0,7675.77474538738,7675.77474538738,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,78,10,42.1,42.1,0,7911.10018024582,7911.10018024582,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,79,10,47,47,0,7989.36191746013,7989.36191746013,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,80,10,33.9,33.9,0,6666.55670970926,6666.55670970926,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,81,10,44.2,44.2,0,8996.99679358609,8996.99679358609,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,82,10,39.6,39.6,0,8009.64862190724,8009.64862190724,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,83,10,45.1,45.1,0,8074.72115067074,8074.72115067074,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,84,10,37.9,37.9,0,7105.76343211553,7105.76343211553,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,85,10,37.8,37.8,0,7913.00651686658,7913.00651686658,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,86,10,33.2,33.2,0,6187.51808818482,6187.51808818482,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,87,10,34.1,34.1,0,6558.22501945736,6558.22501945736,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,88,10,37.6,37.6,0,5667.39210836367,5667.39210836367,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,89,10,38.2,38.2,0,5941.49807255341,5941.49807255341,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,90,10,39.2,39.2,0,7566.43221240076,7566.43221240076,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,91,10,36.4,36.4,0,6757.66822516009,6757.66822516009,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,92,10,39.2,39.2,0,5959.02403499785,5959.02403499785,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,93,10,36.3,36.3,0,5871.71937348572,5871.71937348572,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,94,10,36.6,36.6,0,5998.51051186609,5998.51051186609,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,95,10,38.7,38.7,0,6512.30778896704,6512.30778896704,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,96,10,41.7,41.7,0,6038.47410409693,6038.47410409693,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,97,10,41.4,41.4,0,8237.65471821237,8237.65471821237,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,98,10,37.7,37.7,0,5678.21880253469,5678.21880253469,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,99,10,39.7,39.7,0,5966.33473808649,5966.33473808649,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,100,10,46.2,46.2,0,7770.2022820979,7770.2022820979,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,101,10,35.9,35.9,0,5392.40263710117,5392.40263710117,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,102,10,41,41,0,7806.42214409853,7806.42214409853,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,103,10,31.1,31.1,0,5037.40225580794,5037.40225580794,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,104,10,33,33,0,6128.95670361177,6128.95670361177,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,105,10,43.4,43.4,0,6827.74924128263,6827.74924128263,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,106,10,47.4,47.4,0,7512.80720477668,7512.80720477668,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,107,10,33.3,33.3,0,6192.40680923363,6192.40680923363,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,108,10,39.5,39.5,0,8191.2530224855,8191.2530224855,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,109,10,43.6,43.6,0,6924.20860298941,6924.20860298941,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,110,10,30.5,30.5,0,6844.3606661243,6844.3606661243,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,111,10,41.2,41.2,0,7490.45686483732,7490.45686483732,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,112,10,32.6,32.6,0,6215.3101111592,6215.3101111592,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,113,10,34.8,34.8,0,5726.0156935787,5726.0156935787,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,114,10,36.2,36.2,0,6331.60940073643,6331.60940073643,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,115,10,36.6,36.6,0,6540.92656176169,6540.92656176169,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,116,10,34.5,34.5,0,6113.178780768,6113.178780768,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,117,10,38.6,38.6,0,7779.34515104603,7779.34515104603,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,118,10,42.2,42.2,0,7920.96353926172,7920.96353926172,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,119,10,35.1,35.1,0,5960.59140909479,5960.59140909479,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,120,10,38.7,38.7,0,5785.89606584353,5785.89606584353,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,121,10,34.6,34.6,0,6779.79657388457,6779.79657388457,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,122,10,40.8,40.8,0,7772.72533599731,7772.72533599731,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,123,10,38.3,38.3,0,6402.26816497415,6402.26816497415,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,124,10,42.8,42.8,0,7989.3640918637,7989.3640918637,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,125,10,40.7,40.7,0,7286.89481209551,7286.89481209551,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,126,10,55.6,55.6,0,9801.55661252111,9801.55661252111,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,127,10,36.8,36.8,0,6065.13149844089,6065.13149844089,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,128,10,48.8,48.8,0,8493.86932225465,8493.86932225465,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,129,10,45.5,45.5,0,8837.04217241938,8837.04217241938,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,130,10,36.1,36.1,0,6359.32910166262,6359.32910166262,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,131,10,34.8,34.8,0,6731.56114840322,6731.56114840322,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,132,10,43.2,43.2,0,6763.99770128927,6763.99770128927,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,133,10,38.6,38.6,0,6092.69681963583,6092.69681963583,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,134,10,43.7,43.7,0,7913.21382542799,7913.21382542799,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,135,10,43.1,43.1,0,6940.40795592834,6940.40795592834,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,136,10,34,34,0,6695.41338263816,6695.41338263816,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,137,10,35.6,35.6,0,6225.2873288818,6225.2873288818,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,138,10,40.9,40.9,0,7644.66947110562,7644.66947110562,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,139,10,30.8,30.8,0,4739.38910752425,4739.38910752425,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,140,10,37.6,37.6,0,6556.64128271895,6556.64128271895,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,141,10,33.9,33.9,0,5693.34753405175,5693.34753405175,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,142,10,37.3,37.3,0,5989.6824737663,5989.6824737663,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,143,10,39.6,39.6,0,7892.64043957862,7892.64043957862,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,144,10,46.7,46.7,0,8719.91721384594,8719.91721384594,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,145,10,27.8,27.8,0,4685.35816717407,4685.35816717407,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,146,10,44.1,44.1,0,7155.59803768641,7155.59803768641,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,147,10,40.3,40.3,0,6730.2026893665,6730.2026893665,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,148,10,40.2,40.2,0,7318.0077630427,7318.0077630427,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,149,10,37.3,37.3,0,6762.63229179006,6762.63229179006,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,150,10,46.7,46.7,0,11331.2691587435,11331.2691587435,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,151,10,39.5,39.5,0,7552.86617433936,7552.86617433936,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,152,10,37.5,37.5,0,6708.48336040101,6708.48336040101,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,153,10,39.6,39.6,0,6230.79264637724,6230.79264637724,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,154,10,37.7,37.7,0,6492.96082443586,6492.96082443586,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,155,10,42.9,42.9,0,7957.10337467654,7957.10337467654,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,156,10,32.9,32.9,0,5734.11339040064,5734.11339040064,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,157,10,52.6,52.6,0,14273.8993314678,14273.8993314678,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,158,10,46.3,46.3,0,8267.917639039,8267.917639039,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,159,10,49.2,49.2,0,8185.74925020186,8185.74925020186,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,160,10,39.6,39.6,0,6559.47687913795,6559.47687913795,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,161,10,46.9,46.9,0,8610.99025167748,8610.99025167748,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,162,10,35,35,0,5744.68223665893,5744.68223665893,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,163,10,44.7,44.7,0,7752.16160442114,7752.16160442114,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,164,10,40.5,40.5,0,6613.62608164285,6613.62608164285,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,165,10,46.6,46.6,0,7478.42352214275,7478.42352214275,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,166,10,37.3,37.3,0,7197.83612986763,7197.83612986763,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,167,10,38.7,38.7,0,5764.08693364622,5764.08693364622,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,168,10,37.1,37.1,0,6634.59600855237,6634.59600855237,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,169,10,37,37,0,6339.88066849681,6339.88066849681,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,170,10,38.2,38.2,0,6455.74600907677,6455.74600907677,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,171,10,40.3,40.3,0,6643.6663331243,6643.6663331243,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,172,10,40.4,40.4,0,7296.07803483601,7296.07803483601,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,173,10,43.1,43.1,0,7102.84707300407,7102.84707300407,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,174,10,34.9,34.9,0,6915.52390061793,6915.52390061793,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,175,10,42.2,42.2,0,8479.39859330988,8479.39859330988,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,176,10,47,47,0,8169.52422639015,8169.52422639015,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,177,10,37.3,37.3,0,5932.55051179728,5932.55051179728,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,178,10,48.4,48.4,0,7772.60765875882,7772.60765875882,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,179,10,39.6,39.6,0,6063.39682924706,6063.39682924706,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,180,10,46.3,46.3,0,9358.34797466595,9358.34797466595,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,181,10,35.6,35.6,0,5642.70723680289,5642.70723680289,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,182,10,42.7,42.7,0,7611.58311523174,7611.58311523174,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,183,10,44.1,44.1,0,6997.03854504158,6997.03854504158,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,184,10,46.1,46.1,0,9082.79850504259,9082.79850504259,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,185,10,46.1,46.1,0,8402.87108908189,8402.87108908189,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,186,10,34.2,34.2,0,6307.58482367806,6307.58482367806,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,187,10,46.7,46.7,0,8735.8880936268,8735.8880936268,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,188,10,43.6,43.6,0,6906.17884328671,6906.17884328671,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,189,10,33.5,33.5,0,7126.06926472285,7126.06926472285,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,190,10,41.5,41.5,0,7743.18136468442,7743.18136468442,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,191,10,39.8,39.8,0,7089.88603489536,7089.88603489536,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,192,10,41.5,41.5,0,8561.61243984968,8561.61243984968,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,193,10,39.5,39.5,0,5895.28943062447,5895.28943062447,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,194,10,46.3,46.3,0,8795.12260058588,8795.12260058588,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,195,10,37.1,37.1,0,6233.98805869331,6233.98805869331,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,196,10,32.4,32.4,0,5974.57328292926,5974.57328292926,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,197,10,46.9,46.9,0,8356.44366351253,8356.44366351253,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,198,10,34.5,34.5,0,5750.13141325787,5750.13141325787,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,199,10,36.6,36.6,0,5623.23095198069,5623.23095198069,0,0,0
+"transmissibility","transmissibility_120","Transmissibility +20%",1.2,1,"full_obv80",0.8,200,10,44.4,44.4,0,7007.01336668031,7007.01336668031,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,1,10,40.3,40.3,0,5425.94404593199,5425.94404593199,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,2,10,51.5,51.5,0,9071.89598381205,9071.89598381205,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,3,10,41.3,41.3,0,6082.73274045569,6082.73274045569,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,4,10,46.8,46.8,0,5377.53804520976,5377.53804520976,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,5,10,50.1,50.1,0,7892.3082356865,7892.3082356865,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,6,10,40.6,40.6,0,5621.22522996236,5621.22522996236,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,7,10,50.5,50.5,0,8745.32346267337,8745.32346267337,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,8,10,34.2,34.2,0,4237.07018583706,4237.07018583706,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,9,10,34.4,34.4,0,5088.35157814131,5088.35157814131,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,10,10,41.3,41.3,0,5310.61213356687,5310.61213356687,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,11,10,41.5,41.5,0,5571.9605353274,5571.9605353274,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,12,10,38.4,38.4,0,5659.20278879179,5659.20278879179,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,13,10,41.6,41.6,0,6337.21520754963,6337.21520754963,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,14,10,43.8,43.8,0,6095.70329745184,6095.70329745184,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,15,10,50.2,50.2,0,7782.80218642024,7782.80218642024,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,16,10,31.9,31.9,0,4056.96482801465,4056.96482801465,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,17,10,40.1,40.1,0,5354.7349587531,5354.7349587531,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,18,10,37.4,37.4,0,4738.88784359286,4738.88784359286,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,19,10,50.3,50.3,0,6881.23405449119,6881.23405449119,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,20,10,49.7,49.7,0,6083.35170496653,6083.35170496653,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,21,10,50.4,50.4,0,6982.82062954101,6982.82062954101,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,22,10,37,37,0,5337.84800531531,5337.84800531531,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,23,10,50.7,50.7,0,5739.47119166782,5739.47119166782,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,24,10,36.4,36.4,0,5306.6741287148,5306.6741287148,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,25,10,44.1,44.1,0,6039.25428986397,6039.25428986397,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,26,10,51.9,51.9,0,8004.73901923364,8004.73901923364,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,27,10,38.1,38.1,0,5068.77694733531,5068.77694733531,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,28,10,49,49,0,8319.36331937136,8319.36331937136,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,29,10,51.7,51.7,0,6098.09474910033,6098.09474910033,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,30,10,41,41,0,5045.24069471581,5045.24069471581,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,31,10,40.8,40.8,0,5119.80504719713,5119.80504719713,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,32,10,45,45,0,7181.93256116494,7181.93256116494,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,33,10,32.5,32.5,0,4595.87910034239,4595.87910034239,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,34,10,39.6,39.6,0,4941.97154139137,4941.97154139137,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,35,10,43.8,43.8,0,5784.28067177949,5784.28067177949,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,36,10,40.3,40.3,0,6180.78659730533,6180.78659730533,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,37,10,42.6,42.6,0,6117.04184659142,6117.04184659142,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,38,10,36.5,36.5,0,5357.42117871928,5357.42117871928,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,39,10,40.1,40.1,0,5553.47587113368,5553.47587113368,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,40,10,36.1,36.1,0,5181.65427547152,5181.65427547152,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,41,10,51,51,0,8699.00467264811,8699.00467264811,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,42,10,30.2,30.2,0,3778.03579866629,3778.03579866629,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,43,10,30.4,30.4,0,4351.29635691268,4351.29635691268,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,44,10,42,42,0,6061.65706305882,6061.65706305882,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,45,10,45,45,0,5787.70431564052,5787.70431564052,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,46,10,42.9,42.9,0,5726.57741313871,5726.57741313871,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,47,10,41.2,41.2,0,5078.99210942856,5078.99210942856,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,48,10,42.9,42.9,0,6349.67599873753,6349.67599873753,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,49,10,39.5,39.5,0,5698.80087569392,5698.80087569392,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,50,10,42.7,42.7,0,5309.94515445408,5309.94515445408,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,51,10,47.4,47.4,0,5846.09425023141,5846.09425023141,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,52,10,36.5,36.5,0,5163.9130842803,5163.9130842803,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,53,10,31.5,31.5,0,4983.0205554659,4983.0205554659,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,54,10,51.5,51.5,0,8268.67093398847,8268.67093398847,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,55,10,37.9,37.9,0,5239.41247813138,5239.41247813138,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,56,10,34.3,34.3,0,4859.66183138538,4859.66183138538,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,57,10,49.8,49.8,0,7459.00505818941,7459.00505818941,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,58,10,44.1,44.1,0,6732.56760375043,6732.56760375043,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,59,10,40.4,40.4,0,6301.87737669847,6301.87737669847,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,60,10,37.7,37.7,0,4914.60310660639,4914.60310660639,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,61,10,41,41,0,5629.93136560953,5629.93136560953,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,62,10,30.7,30.7,0,3718.55514018461,3718.55514018461,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,63,10,45.4,45.4,0,5649.60019187628,5649.60019187628,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,64,10,46.4,46.4,0,5471.7426578717,5471.7426578717,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,65,10,40.4,40.4,0,5802.11657819787,5802.11657819787,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,66,10,37.2,37.2,0,4788.88767120261,4788.88767120261,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,67,10,44.3,44.3,0,6039.21208023599,6039.21208023599,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,68,10,40.4,40.4,0,4806.06934156505,4806.06934156505,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,69,10,45.2,45.2,0,5937.18938164455,5937.18938164455,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,70,10,43.7,43.7,0,6034.78626020875,6034.78626020875,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,71,10,42.2,42.2,0,5144.8714606308,5144.8714606308,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,72,10,51.2,51.2,0,6894.33590043453,6894.33590043453,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,73,10,45.9,45.9,0,7368.03758188284,7368.03758188284,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,74,10,47.2,47.2,0,6815.88666482096,6815.88666482096,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,75,10,40.8,40.8,0,5328.46325537819,5328.46325537819,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,76,10,40.1,40.1,0,5124.31822830215,5124.31822830215,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,77,10,42.8,42.8,0,6377.67895859062,6377.67895859062,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,78,10,41.1,41.1,0,4842.85019553554,4842.85019553554,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,79,10,45.2,45.2,0,6147.27264530307,6147.27264530307,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,80,10,35.2,35.2,0,5239.40813517672,5239.40813517672,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,81,10,47.5,47.5,0,6855.21776021506,6855.21776021506,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,82,10,42.9,42.9,0,6795.16425975038,6795.16425975038,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,83,10,42.5,42.5,0,5259.14291099087,5259.14291099087,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,84,10,41.5,41.5,0,5894.52976539943,5894.52976539943,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,85,10,41.6,41.6,0,6328.7183090309,6328.7183090309,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,86,10,38.7,38.7,0,5331.03395670263,5331.03395670263,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,87,10,36,36,0,6041.58203274969,6041.58203274969,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,88,10,38.7,38.7,0,4174.33182511059,4174.33182511059,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,89,10,35.2,35.2,0,4770.50217393254,4770.50217393254,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,90,10,41.2,41.2,0,5893.07754477223,5893.07754477223,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,91,10,36.7,36.7,0,5694.80031015137,5694.80031015137,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,92,10,37.6,37.6,0,4878.06227721012,4878.06227721012,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,93,10,33,33,0,4437.7679194133,4437.7679194133,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,94,10,32,32,0,4696.84285101553,4696.84285101553,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,95,10,36.4,36.4,0,4633.40197266659,4633.40197266659,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,96,10,46.9,46.9,0,6939.96345801897,6939.96345801897,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,97,10,46.5,46.5,0,7072.33341769157,7072.33341769157,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,98,10,34.9,34.9,0,4552.01976763636,4552.01976763636,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,99,10,38.8,38.8,0,5276.60773707789,5276.60773707789,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,100,10,47.5,47.5,0,5755.41375042804,5755.41375042804,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,101,10,36.7,36.7,0,4738.1873217905,4738.1873217905,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,102,10,35,35,0,4793.87606559007,4793.87606559007,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,103,10,37,37,0,5129.30354611195,5129.30354611195,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,104,10,42.2,42.2,0,6487.56864996916,6487.56864996916,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,105,10,44.3,44.3,0,5442.29461632571,5442.29461632571,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,106,10,42.9,42.9,0,6064.99412319178,6064.99412319178,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,107,10,35.5,35.5,0,4512.12399886135,4512.12399886135,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,108,10,45.7,45.7,0,5594.04032543447,5594.04032543447,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,109,10,37.5,37.5,0,5978.49456447972,5978.49456447972,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,110,10,37.8,37.8,0,5459.92008480616,5459.92008480616,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,111,10,44.2,44.2,0,5628.07556787136,5628.07556787136,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,112,10,35.8,35.8,0,4998.60402533877,4998.60402533877,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,113,10,36.1,36.1,0,4676.57319905253,4676.57319905253,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,114,10,36.4,36.4,0,5314.69887476784,5314.69887476784,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,115,10,49.9,49.9,0,6502.9207765747,6502.9207765747,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,116,10,36.5,36.5,0,5440.58408878344,5440.58408878344,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,117,10,46.8,46.8,0,6967.98611523933,6967.98611523933,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,118,10,44.9,44.9,0,7028.47536020326,7028.47536020326,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,119,10,36.4,36.4,0,5098.1007881663,5098.1007881663,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,120,10,43.8,43.8,0,4962.31098307461,4962.31098307461,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,121,10,40.8,40.8,0,5806.97611794839,5806.97611794839,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,122,10,39,39,0,5227.86293673218,5227.86293673218,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,123,10,39.7,39.7,0,4754.48152581704,4754.48152581704,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,124,10,46.3,46.3,0,7148.21692903172,7148.21692903172,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,125,10,40.5,40.5,0,5517.11756955635,5517.11756955635,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,126,10,44.9,44.9,0,6658.81289290456,6658.81289290456,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,127,10,35.7,35.7,0,4946.9547062883,4946.9547062883,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,128,10,41.5,41.5,0,5660.89953769429,5660.89953769429,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,129,10,46,46,0,5771.06001967924,5771.06001967924,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,130,10,38.3,38.3,0,4815.10520158806,4815.10520158806,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,131,10,38.8,38.8,0,6544.88598916114,6544.88598916114,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,132,10,47.7,47.7,0,5796.37597645168,5796.37597645168,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,133,10,39.4,39.4,0,4620.99461362452,4620.99461362452,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,134,10,42.1,42.1,0,5553.11622828605,5553.11622828605,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,135,10,48.3,48.3,0,6241.49345702678,6241.49345702678,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,136,10,43.3,43.3,0,6153.2022811325,6153.2022811325,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,137,10,35.8,35.8,0,4869.90821369142,4869.90821369142,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,138,10,46.3,46.3,0,6141.86061247272,6141.86061247272,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,139,10,33.2,33.2,0,4208.05332962043,4208.05332962043,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,140,10,34.5,34.5,0,4269.23690600388,4269.23690600388,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,141,10,37.3,37.3,0,4743.6837380495,4743.6837380495,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,142,10,34.8,34.8,0,4683.6427565136,4683.6427565136,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,143,10,41.9,41.9,0,5883.55459346217,5883.55459346217,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,144,10,40.5,40.5,0,5328.85222487663,5328.85222487663,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,145,10,33.2,33.2,0,4429.29412354189,4429.29412354189,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,146,10,39.3,39.3,0,4536.47667325422,4536.47667325422,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,147,10,39.3,39.3,0,4898.38515013439,4898.38515013439,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,148,10,40.4,40.4,0,5625.37094319048,5625.37094319048,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,149,10,36.5,36.5,0,5780.45515821644,5780.45515821644,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,150,10,53,53,0,8932.85698572309,8932.85698572309,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,151,10,45.6,45.6,0,7026.32667015517,7026.32667015517,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,152,10,39,39,0,5178.39091530877,5178.39091530877,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,153,10,40.1,40.1,0,5515.65595520534,5515.65595520534,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,154,10,34.5,34.5,0,4888.74408551813,4888.74408551813,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,155,10,42.7,42.7,0,5348.43742663111,5348.43742663111,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,156,10,35.9,35.9,0,5453.66480916298,5453.66480916298,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,157,10,52.3,52.3,0,9613.53730675904,9613.53730675904,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,158,10,47.2,47.2,0,6294.75626851988,6294.75626851988,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,159,10,44.5,44.5,0,6007.64111245279,6007.64111245279,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,160,10,39.1,39.1,0,5511.44462862075,5511.44462862075,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,161,10,41.7,41.7,0,5987.0529933687,5987.0529933687,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,162,10,35.2,35.2,0,4754.49238909904,4754.49238909904,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,163,10,43.4,43.4,0,6174.49073983371,6174.49073983371,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,164,10,38,38,0,5040.87694510544,5040.87694510544,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,165,10,45.4,45.4,0,6204.11000101448,6204.11000101448,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,166,10,41.8,41.8,0,5547.71607927769,5547.71607927769,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,167,10,35.9,35.9,0,4930.70405555168,4930.70405555168,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,168,10,32.7,32.7,0,4407.25459863103,4407.25459863103,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,169,10,33.6,33.6,0,4128.87379444079,4128.87379444079,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,170,10,40,40,0,5285.42186073766,5285.42186073766,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,171,10,35.2,35.2,0,4059.07087206653,4059.07087206653,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,172,10,42.2,42.2,0,6068.57183505058,6068.57183505058,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,173,10,43.8,43.8,0,5471.58046370592,5471.58046370592,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,174,10,42.5,42.5,0,6223.23278183034,6223.23278183034,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,175,10,43.6,43.6,0,6966.83643899866,6966.83643899866,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,176,10,48.1,48.1,0,6943.43668995816,6943.43668995816,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,177,10,34,34,0,4794.36131281334,4794.36131281334,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,178,10,42,42,0,5532.00843625598,5532.00843625598,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,179,10,39.8,39.8,0,5025.59852065281,5025.59852065281,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,180,10,49.4,49.4,0,7865.26975602709,7865.26975602709,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,181,10,41.3,41.3,0,5489.3154823865,5489.3154823865,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,182,10,39.6,39.6,0,5306.88837797519,5306.88837797519,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,183,10,46.5,46.5,0,6356.3967238377,6356.3967238377,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,184,10,54.9,54.9,0,7393.07786429533,7393.07786429533,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,185,10,46.3,46.3,0,7201.07100231557,7201.07100231557,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,186,10,36.9,36.9,0,5653.45096635308,5653.45096635308,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,187,10,46.5,46.5,0,8477.19238005093,8477.19238005093,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,188,10,41.4,41.4,0,5065.52587264535,5065.52587264535,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,189,10,37.9,37.9,0,5539.57579409095,5539.57579409095,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,190,10,47.2,47.2,0,7280.9247087613,7280.9247087613,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,191,10,38,38,0,5377.23666577358,5377.23666577358,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,192,10,48.3,48.3,0,6884.84619413144,6884.84619413144,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,193,10,36.2,36.2,0,5209.86675643905,5209.86675643905,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,194,10,51.5,51.5,0,8353.87341417893,8353.87341417893,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,195,10,34.6,34.6,0,4461.59779487652,4461.59779487652,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,196,10,37.1,37.1,0,4891.353529107,4891.353529107,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,197,10,46.2,46.2,0,6531.83641317294,6531.83641317294,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,198,10,39,39,0,4100.50420853545,4100.50420853545,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,199,10,40.8,40.8,0,5819.13671107522,5819.13671107522,0,0,0
+"transmissibility","transmissibility_130","Transmissibility +30%",1.3,1,"full_obv80",0.8,200,10,39.4,39.4,0,4986.21218886899,4986.21218886899,0,0,0
