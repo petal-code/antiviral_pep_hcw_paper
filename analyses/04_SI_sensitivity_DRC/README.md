@@ -21,8 +21,8 @@ quantity, injected at the `build_abc_model_args_decoupled()` step.
    *Reports:* no-PEP baseline HCW deaths, HCW deaths averted, % reduction.
 
 2. **HCW-exposure upshift (`hcw_risk_scalar` ↑).** The HCW exposure scalar is
-   scaled up by **+10 % / +25 % / +50 %**. It enters as
-   `prob_hcw_cond_*_hospital = pmin(hcw_base_prob · hcw_risk_scalar · f, 1)`.
+   scaled up by **+25 % / +50 % / +100 %** (factors 1.25 / 1.50 / 2.00). It enters
+   as `prob_hcw_cond_*_hospital = pmin(hcw_base_prob · hcw_risk_scalar · f, 1)`.
    *Reports:* baseline HCW deaths, HCW deaths averted, HCW-days lost averted,
    % reduction.
 
@@ -31,17 +31,28 @@ reference level in both analyses.
 
 ## PEP scenarios (arms)
 
-The full-coverage antiviral-efficacy sweep from Figure 2 (100 % coverage,
-50–90 % efficacy; `full_obv80` is the headline arm). The no-PEP baseline is the
-matched counterfactual reconstructed as `tdf + prevented_completed` (same
-convention as the figures). Extend `ARMS` / `COVERAGE_FNS` in
-`01_run_SI_sensitivity_DRC.R` to add the Figure-3 ramp-coverage scenarios.
+By default the single headline arm `full_obv80` (100 % coverage, 80 % antiviral
+efficacy). Set `ARM_EFFICACIES <- c(0.50, 0.60, 0.70, 0.80, 0.90)` for the full
+Figure-2 efficacy sweep, or add ramp-coverage entries to `ARMS` / `COVERAGE_FNS`
+for the Figure-3 scenarios.
+
+**No-PEP baseline — explicit paired runs.** For each (scaling, particle, rep) the
+script runs a no-PEP simulation (`obv_pep_enabled = FALSE`) and the with-PEP arms
+at the **same takeoff seed** (the variance-reduction pairing documented in
+`functions/simulation_helpers.R`), and takes HCW deaths averted = baseline −
+with-PEP as a matched difference. It deliberately does **not** reconstruct the
+baseline from `out$prevented_completed`: that channel comes back empty under some
+`fiber` builds, which silently collapses the baseline onto the with-PEP `tdf`
+(baseline ≈ with-PEP, averted ≈ 0). The script still records the
+`prevented_completed` row count / `obv_pep_num_treated` as a cross-check and
+prints a per-analysis sanity summary at the end of the run.
 
 ## Running
 
 ```r
-# 1. Heavy compute (needs the `fiber` package). ~7 scalings × 5 arms ×
-#    200 particles × 10 reps = 70,000 branching-process simulations.
+# 1. Heavy compute (needs the `fiber` package). With the default single arm:
+#    7 scalings × 200 particles × 10 reps × (1 no-PEP baseline + 1 PEP arm)
+#    = 28,000 branching-process simulations.
 source("analyses/04_SI_sensitivity_DRC/01_run_SI_sensitivity_DRC.R")
 
 # 2. Tables + SI figures (no `fiber` needed).
@@ -68,12 +79,14 @@ Posterior uncertainty is summarised as **median + 95 % credible interval**
 
 ## Notes / caveats
 
-- **`hcw_risk_scalar` cap.** With the fitted DRC posterior
-  (`hcw_risk_scalar ∈ [1.25, 2.93]`) and `hcw_base_prob = 0.25`, no particles
-  saturate the cap at ×1.10 or ×1.25, and only ~5 % do at ×1.50. The saturation
-  CSV records this so the +50 % level can be interpreted honestly.
-- **`check_final_size` is held at the main-analysis value (10 000)** so only
-  transmissibility/exposure changes between cells. If the stressed epidemics
+- **`hcw_risk_scalar` cap.** `prob_hcw = pmin(hcw_base_prob · hcw_risk_scalar · f, 1)`.
+  With the fitted DRC posterior (`hcw_risk_scalar ∈ [1.25, 2.93]`) and
+  `hcw_base_prob = 0.25`, no particles saturate the cap at ×1.25; a growing
+  fraction does at ×1.50 and ×2.00 (more HCW transmissions hit the ceiling). The
+  `SI_sensitivity_DRC_hcw_saturation.csv` records the saturating fraction per
+  level so the +50 %/+100 % levels can be interpreted honestly.
+- **`check_final_size` is `15000`.** Held fixed across cells so only
+  transmissibility / exposure changes between them. If the stressed epidemics
   saturate this ceiling, raise `DRC$check_final_size` (and note it).
 - **Scenario CSV.** Uses `final_six_scenario_values_original_approach.csv` with
   `id = "Middle_DRC_ConflictSmoothed_PlusPlus"` — the same inputs the posterior

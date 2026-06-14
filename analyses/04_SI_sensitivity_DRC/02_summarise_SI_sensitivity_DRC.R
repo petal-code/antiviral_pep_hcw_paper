@@ -6,9 +6,12 @@
 #
 #   (1) Transmissibility stress test (R0 / offspring means +10/+20/+30%)
 #       Reports: no-PEP baseline HCW deaths, HCW deaths averted, % reduction.
-#   (2) HCW-exposure upshift (hcw_risk_scalar +10/+25/+50%)
+#   (2) HCW-exposure upshift (hcw_risk_scalar +25/+50/+100%)
 #       Reports: baseline HCW deaths, HCW deaths averted, HCW-days lost averted,
 #                % reduction.
+#
+# Stress-level labels are derived from the scaling factors set in script 1, so
+# they always match whatever factors are configured there.
 #
 # Posterior uncertainty is summarised as median + 95% credible interval
 # (2.5/97.5% quantiles across particles) -- the same convention as the main
@@ -44,26 +47,28 @@ level_palette <- function(n) colorRampPalette(c("#b2e4d8", DRC_COL, "#0b4f3c"))(
 
 # -----------------------------------------------------------------------------
 # Attach the shared reference (x1.00) cell to each analysis and label the levels.
+# Labels are DERIVED from the scaling factor (factor 1 -> "+0% (fitted)", factor
+# f -> "+<round((f-1)*100)>%") so they can never disagree with the factors set in
+# 01_run_SI_sensitivity_DRC.R, whatever those happen to be.
 # -----------------------------------------------------------------------------
-make_analysis_df <- function(which_analysis, factor_col, factor_labels) {
+level_label_of <- function(f) {
+  ifelse(abs(f - 1) < 1e-9, "+0% (fitted)", sprintf("+%g%%", round((f - 1) * 100)))
+}
+
+make_analysis_df <- function(which_analysis, factor_col) {
   df <- particle_df %>%
     filter(analysis %in% c("reference", which_analysis)) %>%
     mutate(level_factor = .data[[factor_col]],
-           level_label  = factor_labels[as.character(level_factor)])
-  lev_order <- factor_labels[order(as.numeric(names(factor_labels)))]
-  df$level_label <- factor(df$level_label, levels = lev_order)
+           level_label  = level_label_of(.data[[factor_col]]))
+  ord <- sort(unique(df$level_factor))
+  df$level_label <- factor(df$level_label, levels = level_label_of(ord))
   df$efficacy_label <- factor(EFF_LABEL(df$efficacy),
                               levels = EFF_LABEL(sort(unique(df$efficacy))))
   df
 }
 
-TRANS_LABELS <- c("1"    = "+0% (fitted)", "1.1" = "+10%",
-                  "1.2"  = "+20%",         "1.3" = "+30%")
-HCW_LABELS   <- c("1"    = "+0% (fitted)", "1.1" = "+10%",
-                  "1.25" = "+25%",         "1.5" = "+50%")
-
-trans_df <- make_analysis_df("transmissibility", "r0_factor",  TRANS_LABELS)
-hcw_df   <- make_analysis_df("hcw_exposure",     "hcw_factor", HCW_LABELS)
+trans_df <- make_analysis_df("transmissibility", "r0_factor")
+hcw_df   <- make_analysis_df("hcw_exposure",     "hcw_factor")
 
 # -----------------------------------------------------------------------------
 # Across-particle summary: median + 95% credible interval.
@@ -194,7 +199,7 @@ baseline_panel <- function(df, analysis_name, levels_in_order) {
 }
 
 # ---- Figure: transmissibility stress test ----
-trans_levels <- TRANS_LABELS[order(as.numeric(names(TRANS_LABELS)))]
+trans_levels <- levels(trans_df$level_label)
 fig_trans <- (
   baseline_panel(trans_df, "transmissibility", trans_levels) +
     plot_metric(summary_long, "transmissibility", "hcw_deaths_averted",
@@ -215,7 +220,7 @@ ggsave(file.path(FIG_DIR, "figure_S_DRC_transmissibility_stress_test.png"),
 message("Saved figure: figure_S_DRC_transmissibility_stress_test.{pdf,png}")
 
 # ---- Figure: HCW-exposure upshift ----
-hcw_levels <- HCW_LABELS[order(as.numeric(names(HCW_LABELS)))]
+hcw_levels <- levels(hcw_df$level_label)
 fig_hcw <- (
   baseline_panel(hcw_df, "hcw_exposure", hcw_levels) +
     plot_metric(summary_long, "hcw_exposure", "pct_hcw_deaths_averted",
@@ -225,7 +230,7 @@ fig_hcw <- (
 ) +
   plot_layout(nrow = 1, guides = "collect") +
   plot_annotation(
-    title = "DRC-like HCW-exposure upshift: hcw_risk_scalar +10/+25/+50%",
+    title = "DRC-like HCW-exposure upshift: hcw_risk_scalar +25/+50/+100%",
     subtitle = "HCW-targeted PEP at 100% coverage. Median +/- 95% CrI across posterior particles.",
     tag_levels = "a"
   ) & theme(legend.position = "top")

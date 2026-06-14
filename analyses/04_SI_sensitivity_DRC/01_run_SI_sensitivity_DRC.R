@@ -30,9 +30,8 @@
 #     N_REPS, and HCW_BASE_PROB.
 # The ONLY change is a per-particle multiplicative scaling of R0 (analysis 1) or
 # hcw_risk_scalar (analysis 2), injected at the build step. Everything else --
-# priors, fixed efficacies, the no-PEP baseline reconstruction (tdf +
-# prevented_completed) -- is identical to the main analysis, so the results are
-# directly comparable to the figures.
+# priors, fixed efficacies, the PEP settings -- is identical to the main
+# analysis, so the results are directly comparable to the figures.
 #
 # WHY scaling R0 == scaling the offspring means.
 #   solve_offspring_means(R0, prop_funeral, D, F) returns
@@ -43,11 +42,15 @@
 #   exactly `f` -- a clean `f`x increase in baseline transmissibility that holds
 #   the funeral share (prop_funeral) and the natural-history structure fixed.
 #
-# WHY the no-PEP baseline needs no separate run.
-#   Every simulation is run with OBV/PEP enabled; the matched no-PEP
-#   counterfactual is reconstructed as tdf + prevented_completed (the cases OBV
-#   prevented, added back). This is the same convention used by the figures
-#   (helper_functions_figure_1to4.R / extract_run_summary()).
+# HOW the no-PEP baseline is obtained (explicit paired runs).
+#   For each (scaling, particle, rep) we run a no-PEP simulation
+#   (obv_pep_enabled = FALSE) and the with-PEP arms at the SAME takeoff seed (the
+#   variance-reduction pairing in functions/simulation_helpers.R), then take HCW
+#   deaths averted = baseline - with-PEP as a matched difference. We do NOT
+#   reconstruct the baseline from out$prevented_completed (as the figures do):
+#   that field is empty under some fiber builds and silently collapses the
+#   baseline onto the with-PEP tdf (averted = 0). prevented_completed is still
+#   recorded as a cross-check.
 #
 # Outputs:
 #   outputs/04_SI_sensitivity_DRC/SI_sensitivity_DRC_run_summary.csv  (run-level;
@@ -87,9 +90,9 @@ HCW_BASE_PROB <- 0.25     # hcw_risk_scalar multiplies this (matches figures)
 TAKEOFF_DEATH_THRESHOLD <- 100L
 MAX_RETRIES             <- 50L
 
-# HCW-days-lost convention. FALSE (the figure-2/3 default) counts every infected
-# HCW as absent from symptom onset to the end of the simulation.
-OBV_RETURN <- FALSE
+# HCW-days lost counts every infected HCW as absent from symptom onset to the end
+# of that run's epidemic (the figure-2/3 obv_return = FALSE convention), computed
+# per run from its own tdf.
 
 # --- Quick smoke-test override (uncomment to sanity-check the plumbing fast) ---
 # N_PARTICLES <- 20L; N_REPS <- 2L
@@ -112,11 +115,11 @@ SENS_SCENARIOS <- list(
   list(key = "transmissibility_130", analysis = "transmissibility", label = "Transmissibility +30%",
        r0_factor = 1.30, hcw_factor = 1.00),
 
-  list(key = "hcw_exposure_110",   analysis = "hcw_exposure",     label = "HCW exposure +10%",
-       r0_factor = 1.00, hcw_factor = 1.25),
   list(key = "hcw_exposure_125",   analysis = "hcw_exposure",     label = "HCW exposure +25%",
-       r0_factor = 1.00, hcw_factor = 1.50),
+       r0_factor = 1.00, hcw_factor = 1.25),
   list(key = "hcw_exposure_150",   analysis = "hcw_exposure",     label = "HCW exposure +50%",
+       r0_factor = 1.00, hcw_factor = 1.50),
+  list(key = "hcw_exposure_200",   analysis = "hcw_exposure",     label = "HCW exposure +100%",
        r0_factor = 1.00, hcw_factor = 2.00)
 )
 
@@ -233,51 +236,38 @@ message("hcw_risk_scalar saturation by factor:")
 print(saturation_df, row.names = FALSE)
 
 # =============================================================================
-# Per-run outcome extractor (in-memory analogue of extract_run_summary() with
-# obv_return = OBV_RETURN; the no-PEP baseline = tdf + prevented_completed).
+# Per-run HCW outcomes from a single fiber output (tdf only -- no reliance on
+# out$prevented_completed). HCW-days lost uses the figure-2/3 convention
+# (obv_return = FALSE): every infected HCW is absent from symptom onset to the
+# end of that run's epidemic.
 # =============================================================================
-summarise_one_run <- function(out, obv_return = FALSE) {
-  tdf       <- out$tdf
-  prevented <- out$prevented_completed
-  duration  <- max(tdf$time_outcome_absolute, na.rm = TRUE)
+hcw_metrics <- function(out) {
+  tdf <- out$tdf
+  tdf <- tdf[!is.na(tdf$time_infection_absolute), , drop = FALSE]
+  duration <- max(tdf$time_outcome_absolute, na.rm = TRUE)
 
-  if (!is.null(prevented) && nrow(prevented) > 0) {
-    missing_cols <- setdiff(names(tdf), names(prevented))
-    for (col in missing_cols) prevented[[col]] <- NA
-    prevented  <- prevented[, names(tdf), drop = FALSE]
-    cases_base <- rbind(tdf, prevented)              # no-PEP counterfactual
-  } else {
-    cases_base <- tdf
-  }
+  is_hcw <- !is.na(tdf$class)   & tdf$class == "HCW"
+  died   <- !is.na(tdf$outcome) & tdf$outcome
 
-  .hcw_deaths <- function(cases) {
-    is_hcw <- !is.na(cases$class)   & cases$class == "HCW"
-    died   <- !is.na(cases$outcome) & cases$outcome
-    sum(died & is_hcw)
-  }
-  .days_lost <- function(cases) {
-    hcw <- cases[!is.na(cases$class) & cases$class == "HCW", ]
-    if (nrow(hcw) == 0) return(0)
-    if (obv_return) {
-      died         <- !is.na(hcw$outcome) & hcw$outcome
-      obv_recv     <- !is.na(hcw$obv_pep_received) & hcw$obv_pep_received
-      early_return <- obv_recv & !died
-      absence_end  <- ifelse(early_return, hcw$time_outcome_absolute, duration)
-    } else {
-      absence_end  <- rep(duration, nrow(hcw))
-    }
-    sum(pmax(absence_end - hcw$time_symptom_onset_absolute, 0), na.rm = TRUE)
-  }
+  hcw <- tdf[is_hcw, , drop = FALSE]
+  days_lost <- if (nrow(hcw) == 0) 0 else
+    sum(pmax(duration - hcw$time_symptom_onset_absolute, 0), na.rm = TRUE)
 
-  n_base <- .hcw_deaths(cases_base)
-  n_obv  <- .hcw_deaths(tdf)
   list(
-    n_hcw_deaths       = n_obv,                 # HCW deaths WITH PEP
-    hcw_days_lost      = .days_lost(tdf),       # HCW-days lost WITH PEP
-    counterfactual_hcw = n_base,                # HCW deaths in no-PEP baseline
-    prevented_hcw      = n_base - n_obv,        # HCW deaths averted
-    baseline_days_lost = .days_lost(cases_base) # HCW-days lost in no-PEP baseline
+    n_hcw_deaths = sum(is_hcw & died),
+    days_lost    = days_lost,
+    total_deaths = sum(died)
   )
+}
+
+# Diagnostic: how many cases OBV recorded as prevented (line-list + counter).
+# Reported alongside the paired estimates so the prevented_completed channel can
+# be cross-checked, but it is NOT used to compute the headline outcomes.
+obv_prevented_diag <- function(out) {
+  pc <- out$prevented_completed
+  n_rows <- if (!is.null(pc) && nrow(pc) > 0) nrow(pc) else 0L
+  n_treated <- tryCatch(out$sim_info$obv_pep_num_treated$prevented, error = function(e) NA_real_)
+  list(n_rows = n_rows, n_treated = if (is.null(n_treated)) NA_real_ else n_treated)
 }
 
 # =============================================================================
@@ -289,14 +279,24 @@ particle_chunks <- Filter(function(x) length(x) > 0, particle_chunks)
 
 n_arms <- nrow(ARMS)
 n_sens <- length(SENS_SCENARIOS)
-total_runs <- n_sens * n_arms * N_PARTICLES * N_REPS
+# Per (scaling, particle, rep): 1 no-PEP baseline + n_arms with-PEP runs.
+total_runs <- n_sens * N_PARTICLES * N_REPS * (n_arms + 1L)
 message(sprintf(
-  "%d scalings x %d arms x %d particles x %d reps = %d simulations on %d workers.",
-  n_sens, n_arms, N_PARTICLES, N_REPS, total_runs, length(particle_chunks)))
+  "%d scalings x %d particles x %d reps x (1 baseline + %d arms) = %d simulations on %d workers.",
+  n_sens, N_PARTICLES, N_REPS, n_arms, total_runs, length(particle_chunks)))
 
 # =============================================================================
-# Worker: run every (scaling x arm x rep) for a block of particles, extract the
-# per-run summary inline, and return a tidy data.frame (no heavy RDS per run).
+# Worker: for a block of particles, run -- per (scaling, rep) -- a no-PEP
+# baseline and the with-PEP arms PAIRED at the same takeoff seed, extract HCW
+# outcomes inline, and return a tidy data.frame.
+#
+# Why paired explicit runs (not tdf + prevented_completed). The no-PEP
+# counterfactual is obtained from its OWN run (obv_pep_enabled = FALSE) rather
+# than reconstructed from out$prevented_completed, which is empty under some
+# fiber builds and silently collapses the baseline onto the with-PEP tdf. The
+# baseline and every arm share the same seed (the variance-reduction pairing in
+# simulation_helpers.R), so HCW deaths averted = baseline - with-PEP is a matched
+# difference on the same stochastic realisation.
 # =============================================================================
 run_particle_block <- function(particle_ids) {
   # Re-source the model code once per fresh worker session.
@@ -317,7 +317,7 @@ run_particle_block <- function(particle_ids) {
 
       # Build the particle args with the scaled calibrated quantity. Identical to
       # the figure scripts, except R0 and hcw_risk_scalar carry the scaling.
-      args <- build_abc_model_args_decoupled(
+      args_base <- build_abc_model_args_decoupled(
         R0              = theta$R0[p]              * s$r0_factor,
         prop_funeral    = theta$prop_funeral[p],
         etu_efficacy    = theta$etu_efficacy[p],
@@ -331,45 +331,49 @@ run_particle_block <- function(particle_ids) {
         hcw_base_prob   = HCW_BASE_PROB,
         seeding_cases   = SEEDING_CASES
       )
-      args$check_final_size <- DRC$check_final_size
+      args_base$check_final_size <- DRC$check_final_size
 
-      for (arm_idx in seq_len(nrow(ARMS))) {
-        arm    <- ARMS[arm_idx, ]
-        cov_fn <- COVERAGE_FNS[[arm$coverage]]
+      for (r in seq_len(N_REPS)) {
+        # One seed per (scaling, particle, rep); shared by baseline and all arms.
+        seed0 <- SEED_BASE +
+          (s_idx - 1L) * (N_PARTICLES * N_REPS) +
+          (p     - 1L) * N_REPS +
+          (r     - 1L)
 
-        # OBV / PEP settings (identical to 01_analysis_figure2.R).
-        args$obv_pep_enabled          <- TRUE
-        args$obv_pep_coverage         <- cov_fn
-        args$obv_pep_adherence        <- 1.0
-        args$obv_pep_dpc              <- 0
-        args$obv_pep_efficacy         <- arm$efficacy
-        args$obv_pep_target_class     <- "HCW"
-        args$obv_pep_target_locations <- c("hospital", "community", "funeral")
+        # --- no-PEP baseline: retry until takeoff, then fix the seed ---
+        a0 <- args_base
+        a0$obv_pep_enabled <- FALSE
+        retry <- 0L; takeoff_seed <- seed0; out0 <- NULL
+        repeat {
+          a0$seed <- takeoff_seed
+          out0    <- do.call(fiber::branching_process_main, a0)
+          tdf0    <- out0$tdf[!is.na(out0$tdf$time_infection_absolute), ]
+          base_deaths <- sum(!is.na(tdf0$outcome) & tdf0$outcome)
+          if (base_deaths >= TAKEOFF_DEATH_THRESHOLD) break
+          retry        <- retry + 1L
+          takeoff_seed <- takeoff_seed + 1L
+          if (retry >= MAX_RETRIES) break
+        }
+        base_m <- hcw_metrics(out0)
+        took_off <- base_m$total_deaths >= TAKEOFF_DEATH_THRESHOLD
 
-        for (r in seq_len(N_REPS)) {
-          # Deterministic, collision-free seed across (scaling, arm, particle, rep).
-          seed <- SEED_BASE +
-            (s_idx   - 1L) * (nrow(ARMS) * N_PARTICLES * N_REPS) +
-            (arm_idx - 1L) * (N_PARTICLES * N_REPS) +
-            (p       - 1L) * N_REPS +
-            (r       - 1L)
+        # --- with-PEP arms at the SAME takeoff seed (paired) ---
+        for (arm_idx in seq_len(nrow(ARMS))) {
+          arm <- ARMS[arm_idx, ]
+          a1  <- args_base
+          a1$obv_pep_enabled          <- TRUE
+          a1$obv_pep_coverage         <- COVERAGE_FNS[[arm$coverage]]
+          a1$obv_pep_adherence        <- 1.0
+          a1$obv_pep_dpc              <- 0
+          a1$obv_pep_efficacy         <- arm$efficacy
+          a1$obv_pep_target_class     <- "HCW"
+          a1$obv_pep_target_locations <- c("hospital", "community", "funeral")
+          a1$seed                     <- takeoff_seed
 
-          # Retry until the epidemic takes off (matches the figure pipeline).
-          out          <- NULL
-          retry        <- 0L
-          current_seed <- seed
-          repeat {
-            args$seed <- current_seed
-            out       <- do.call(fiber::branching_process_main, args)
-            tdf_all   <- out$tdf[!is.na(out$tdf$time_infection_absolute), ]
-            n_deaths  <- sum(!is.na(tdf_all$outcome) & tdf_all$outcome)
-            if (n_deaths >= TAKEOFF_DEATH_THRESHOLD) break
-            retry        <- retry + 1L
-            current_seed <- current_seed + 1L
-            if (retry >= MAX_RETRIES) break
-          }
+          out1  <- do.call(fiber::branching_process_main, a1)
+          arm_m <- hcw_metrics(out1)
+          diag  <- obv_prevented_diag(out1)
 
-          m <- summarise_one_run(out, obv_return = OBV_RETURN)
           rows[[length(rows) + 1L]] <- data.frame(
             analysis           = s$analysis,
             scenario_key       = s$key,
@@ -380,12 +384,16 @@ run_particle_block <- function(particle_ids) {
             efficacy           = arm$efficacy,
             particle_id        = p,
             rep                = r,
-            took_off           = n_deaths >= TAKEOFF_DEATH_THRESHOLD,
-            n_hcw_deaths       = m$n_hcw_deaths,
-            counterfactual_hcw = m$counterfactual_hcw,
-            prevented_hcw      = m$prevented_hcw,
-            hcw_days_lost      = m$hcw_days_lost,
-            baseline_days_lost = m$baseline_days_lost,
+            took_off           = took_off,
+            n_hcw_deaths       = arm_m$n_hcw_deaths,                 # WITH PEP
+            counterfactual_hcw = base_m$n_hcw_deaths,                # no-PEP baseline
+            prevented_hcw      = base_m$n_hcw_deaths - arm_m$n_hcw_deaths,
+            hcw_days_lost      = arm_m$days_lost,                    # WITH PEP
+            baseline_days_lost = base_m$days_lost,                   # no-PEP baseline
+            total_deaths_obv   = arm_m$total_deaths,
+            total_deaths_base  = base_m$total_deaths,
+            obv_prevented_rows = diag$n_rows,                        # diagnostic only
+            obv_num_treated    = diag$n_treated,                     # diagnostic only
             stringsAsFactors   = FALSE
           )
         }
@@ -407,10 +415,11 @@ results <- future_lapply(
     theta = theta, base_args = base_args, tv_args = tv_args, inv = inv,
     ARMS = ARMS, COVERAGE_FNS = COVERAGE_FNS, SENS_SCENARIOS = SENS_SCENARIOS,
     DRC = DRC, FN_PATHS = FN_PATHS,
-    summarise_one_run = summarise_one_run, run_particle_block = run_particle_block,
+    hcw_metrics = hcw_metrics, obv_prevented_diag = obv_prevented_diag,
+    run_particle_block = run_particle_block,
     N_REPS = N_REPS, N_PARTICLES = N_PARTICLES, SEED_BASE = SEED_BASE,
     SEEDING_CASES = SEEDING_CASES, HCW_BASE_PROB = HCW_BASE_PROB,
-    OBV_RETURN = OBV_RETURN, TAKEOFF_DEATH_THRESHOLD = TAKEOFF_DEATH_THRESHOLD,
+    TAKEOFF_DEATH_THRESHOLD = TAKEOFF_DEATH_THRESHOLD,
     MAX_RETRIES = MAX_RETRIES
   ),
   future.packages = c("fiber"),
@@ -421,6 +430,28 @@ plan(sequential)
 run_df <- do.call(rbind, results)
 elapsed <- (proc.time() - t_start)["elapsed"]
 message(sprintf("Done %d simulations in %.1f minutes.", nrow(run_df), elapsed / 60))
+
+# =============================================================================
+# Sanity check: OBV impact must be non-zero, and report whether the
+# prevented_completed channel was populated (cross-check only -- the headline
+# numbers come from the paired no-PEP baseline, not from prevented_completed).
+# =============================================================================
+sanity <- run_df %>%
+  group_by(analysis) %>%
+  summarise(
+    mean_baseline_hcw_deaths = mean(counterfactual_hcw),
+    mean_pep_hcw_deaths      = mean(n_hcw_deaths),
+    mean_hcw_deaths_averted  = mean(prevented_hcw),
+    mean_prevented_rows      = mean(obv_prevented_rows),
+    .groups = "drop"
+  )
+message("Per-analysis sanity (paired no-PEP vs with-PEP):")
+print(as.data.frame(sanity), row.names = FALSE)
+if (max(sanity$mean_hcw_deaths_averted, na.rm = TRUE) <= 0)
+  warning("HCW deaths averted is <= 0 everywhere -- check the OBV/PEP settings.")
+if (all(sanity$mean_prevented_rows == 0))
+  message("NB: out$prevented_completed was empty in every run (expected with this ",
+          "fiber build); the paired-baseline method does not rely on it.")
 
 # =============================================================================
 # Save run-level results (heavy; gitignored under outputs/).
