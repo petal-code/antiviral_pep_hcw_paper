@@ -52,8 +52,8 @@ SCENARIO_ID    <- "Worst_WestAfrica"
 # eff_i(s) = mid_i + s*(max_i-min_i)/2, with mid_i the midpoint of [min,max].
 # Relative widths set how strongly the scaler leans on PPE vs ETU.
 NPI_SPEC <- list(
-  ppe_efficacy = list(min = 0.20, max = 0.90),   # PLACEHOLDER
-  etu_efficacy = list(min = 0.50, max = 0.95)    # PLACEHOLDER
+  ppe_efficacy = list(min = 0.30, max = 0.90),   # PLACEHOLDER
+  etu_efficacy = list(min = 0.60, max = 0.95)    # PLACEHOLDER
 )
 
 # Scalar overrides layered on DEFAULT_SCALAR_INPUTS.
@@ -82,7 +82,7 @@ ABC_CONFIG <- list(
 
 ABC_SETTINGS <- list(
   method              = "Delmoral",
-  nb_simul            = 230,
+  nb_simul            = 350,
   alpha               = 0.5,
   tolerance_target    = 0.27,
   M                   = 1,
@@ -163,7 +163,7 @@ observed_summaries <- c(
 # Priors: R0 and prop_funeral inherited from the HCW-risk fits; npi_scaler is the
 # shared NPI-efficacy position parameter, s ~ Uniform(-1, 1).
 priors <- list(
-  c("unif", 1.35, 1.55),   # R0
+  c("unif", 1.25, 1.55),   # R0
   c("unif", 0.10, 0.40),   # prop_funeral
   c("unif", -1.0, 1.0)     # npi_scaler (s); s=0 -> central efficacies
 )

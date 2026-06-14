@@ -1,0 +1,44 @@
+{
+  "approach": "decoupled",
+  "scenario_id": "Middle_DRC_ConflictSmoothed_PlusPlus",
+  "fit_params": ["R0", "prop_funeral", "etu_efficacy", "ppe_efficacy", "hcw_risk_scalar"],
+  "priors": [
+    ["unif", "1.15", "1.65"],
+    ["unif", "0.1", "0.4"],
+    ["unif", "0.6", "0.95"],
+    ["unif", "0.3", "0.9"],
+    ["unif", "1", "3"]
+  ],
+  "fixed_values": {
+    "R0": 1.45,
+    "prop_funeral": 0.3,
+    "etu_efficacy": 0.85,
+    "ppe_efficacy": 0.65,
+    "hcw_risk_scalar": 1.5
+  },
+  "summary_stats": ["takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height", "d_p05_p95"],
+  "observed_summaries": [1, 7.7402, 4.3694, 0.0344, 4.5539, 378],
+  "hcw_base_prob": 0.25,
+  "fixed_efficacies": {
+    "general_hospital_quarantine_efficacy": 0.3,
+    "safe_funeral_efficacy": 0.8
+  },
+  "peak_settings": {
+    "bin_width": 7,
+    "time_origin": "first_death"
+  },
+  "duration_definition": "d_p05_p95 = day span between 5th and 95th percentile of death dates",
+  "created_at": "2026-06-11 21:10:42 -0700",
+  "result_filename": "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260611_211042_check_NP5_NS6_NBREPS_30_NBSIMUL_590.rds",
+  "run_profile": "check",
+  "abc_settings": {
+    "method": "Delmoral",
+    "nb_simul": 590,
+    "alpha": 0.5,
+    "tolerance_target": 0.5,
+    "M": 1,
+    "use_seed": true,
+    "verbose": true
+  },
+  "abc_output_dir": "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_Final/abc_outputs/Middle_DRC_ConflictSmoothed_PlusPlus_20260611_211042_Decoupled_check_NP5_NS6_NBREPS_30_NBSIMUL_590"
+}

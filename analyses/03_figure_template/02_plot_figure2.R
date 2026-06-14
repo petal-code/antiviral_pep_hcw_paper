@@ -32,8 +32,7 @@ make_summ <- function(df, metric, sc) {
 }
 make_bar_plot <- function(summ_df, sc, y_label) {
   light_col  <- if (sc == "WestAfrica") "#fdd8a0" else "#b2e4d8"
-  base_col   <- SCENARIO_COLORS[sc]
-  dark_col   <- rgb(t(col2rgb(base_col) * 0.7), maxColorValue = 255)
+  dark_col   <- unname(SCENARIO_COLORS[sc])
   obv_colors <- setNames(
     colorRampPalette(c(light_col, dark_col))(length(FIG2_EFFICACY_LABELS)),
     FIG2_EFFICACY_LABELS
