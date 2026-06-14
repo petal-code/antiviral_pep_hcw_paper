@@ -161,7 +161,7 @@ assemble <- function(de_fun, fg_fun, file) {
   p_f <- fg_fun(TOP_SC);          p_g <- fg_fun(BOT_SC)
   fig <- p_a + p_b + p_c + p_d + p_e + p_f + p_g +
     plot_layout(design = design, guides = "collect") +
-    plot_annotation(tag_levels = "A") & theme(legend.position = "bottom",
+    plot_annotation(tag_levels = "a") & theme(legend.position = "bottom",
                                               plot.tag = element_text(face = "bold"))
   ggsave(file.path(OUT_DIR, file), fig, width = 11, height = 9); print(fig); invisible(fig)
 }
