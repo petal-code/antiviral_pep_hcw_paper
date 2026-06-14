@@ -36,23 +36,23 @@ efficacy). Set `ARM_EFFICACIES <- c(0.50, 0.60, 0.70, 0.80, 0.90)` for the full
 Figure-2 efficacy sweep, or add ramp-coverage entries to `ARMS` / `COVERAGE_FNS`
 for the Figure-3 scenarios.
 
-**No-PEP baseline — explicit paired runs.** For each (scaling, particle, rep) the
-script runs a no-PEP simulation (`obv_pep_enabled = FALSE`) and the with-PEP arms
-at the **same takeoff seed** (the variance-reduction pairing documented in
-`functions/simulation_helpers.R`), and takes HCW deaths averted = baseline −
-with-PEP as a matched difference. It deliberately does **not** reconstruct the
-baseline from `out$prevented_completed`: that channel comes back empty under some
-`fiber` builds, which silently collapses the baseline onto the with-PEP `tdf`
-(baseline ≈ with-PEP, averted ≈ 0). The script still records the
-`prevented_completed` row count / `obv_pep_num_treated` as a cross-check and
-prints a per-analysis sanity summary at the end of the run.
+**No-PEP baseline — reconstructed from `prevented_completed`.** Every run has
+OBV/PEP enabled; the matched no-PEP counterfactual is reconstructed as
+`cases_base = tdf + prevented_completed` (the cases OBV prevented, added back),
+exactly as the figures do (`helper_functions_figure_1to4.R`). This requires
+`out$prevented_completed` to be populated — `fiber` fills it whenever
+`obv_pep_enabled = TRUE`, coverage > 0, and at least one infection is prevented.
+The run records, per simulation, the `prevented_completed` row count and fiber's
+own `obv_pep_num_treated$prevented`, prints a per-analysis sanity summary, and
+**errors loudly if `prevented_completed` is empty in every run** (which would
+mean OBV prevention was not recorded and the baseline has collapsed onto the
+with-PEP `tdf`, giving averted = 0) rather than reporting a silent zero.
 
 ## Running
 
 ```r
 # 1. Heavy compute (needs the `fiber` package). With the default single arm:
-#    7 scalings × 200 particles × 10 reps × (1 no-PEP baseline + 1 PEP arm)
-#    = 28,000 branching-process simulations.
+#    7 scalings × 1 arm × 200 particles × 10 reps = 14,000 branching-process sims.
 source("analyses/04_SI_sensitivity_DRC/01_run_SI_sensitivity_DRC.R")
 
 # 2. Tables + SI figures (no `fiber` needed).
