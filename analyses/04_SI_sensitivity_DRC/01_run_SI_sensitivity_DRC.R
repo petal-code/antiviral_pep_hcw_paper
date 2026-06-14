@@ -162,7 +162,7 @@ DRC <- list(
                       "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260607_215621_check_NP5_NS4_NBREPS_30_NBSIMUL_590.rds")),
   scenario_csv = here("data-processed", "final_six_scenario_values_original_approach.csv"),
   param_names  = c("R0", "prop_funeral", "etu_efficacy", "ppe_efficacy", "hcw_risk_scalar"),
-  check_final_size = 10000
+  check_final_size = 15000
 )
 
 OUT_DIR_HEAVY <- here("outputs", "04_SI_sensitivity_DRC")
