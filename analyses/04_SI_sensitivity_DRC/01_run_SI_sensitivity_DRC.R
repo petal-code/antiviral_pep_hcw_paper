@@ -115,9 +115,9 @@ SENS_SCENARIOS <- list(
   list(key = "hcw_exposure_110",   analysis = "hcw_exposure",     label = "HCW exposure +10%",
        r0_factor = 1.00, hcw_factor = 1.10),
   list(key = "hcw_exposure_125",   analysis = "hcw_exposure",     label = "HCW exposure +25%",
-       r0_factor = 1.00, hcw_factor = 1.25),
+       r0_factor = 1.00, hcw_factor = 1.50),
   list(key = "hcw_exposure_150",   analysis = "hcw_exposure",     label = "HCW exposure +50%",
-       r0_factor = 1.00, hcw_factor = 1.50)
+       r0_factor = 1.00, hcw_factor = 2.00)
 )
 
 # =============================================================================
