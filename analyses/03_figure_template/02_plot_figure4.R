@@ -145,3 +145,33 @@ particle_df4 %>%
   ) %>%
   mutate(across(where(is.numeric), ~round(., 1))) %>%
   as.data.frame() %>% print()
+
+# Days lost averted by efficacy x coverage grid
+particle_df4 %>%
+  group_by(scenario, particle_id, arm, obv_efficacy, obv_coverage) %>%
+  summarise(
+    hcw_days_lost      = sum(hcw_days_lost,      na.rm = TRUE),
+    baseline_days_lost = sum(baseline_days_lost, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pct_days_lost_averted = ifelse(
+      baseline_days_lost > 0,
+      100 * (baseline_days_lost - hcw_days_lost) / baseline_days_lost,
+      NA_real_
+    )
+  ) %>%
+  # Key comparisons matching figure 4 text structure
+  filter(
+    (obv_efficacy == 0.8 & obv_coverage %in% c(0.1, 0.9)) |
+      (obv_coverage == 0.9 & obv_efficacy %in% c(0.5, 0.9))
+  ) %>%
+  group_by(scenario, obv_efficacy, obv_coverage) %>%
+  summarise(
+    med = median(pct_days_lost_averted, na.rm = TRUE),
+    lo  = quantile(pct_days_lost_averted, 0.025, na.rm = TRUE),
+    hi  = quantile(pct_days_lost_averted, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~round(.x, 1))) %>%
+  as.data.frame() %>% print()
