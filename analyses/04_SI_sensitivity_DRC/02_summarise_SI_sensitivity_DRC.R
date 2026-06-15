@@ -209,10 +209,10 @@ fig_trans <- (
 ) +
   plot_layout(nrow = 1, guides = "collect") +
   plot_annotation(
-    title = "DRC-like vaccine-free stress test: baseline transmissibility +10/+20/+30%",
-    subtitle = "HCW-targeted PEP at 100% coverage. Median +/- 95% CrI across posterior particles.",
+    # title = "DRC-like vaccine-free stress test: baseline transmissibility +10/+20/+30%",
+    # subtitle = "HCW-targeted PEP at 100% coverage. Median +/- 95% CrI across posterior particles.",
     tag_levels = "a"
-  ) & theme(legend.position = "top")
+  ) & theme(legend.position = "bottom")
 ggsave(file.path(FIG_DIR, "figure_S_DRC_transmissibility_stress_test.pdf"),
        fig_trans, width = 12, height = 4.5)
 ggsave(file.path(FIG_DIR, "figure_S_DRC_transmissibility_stress_test.png"),
