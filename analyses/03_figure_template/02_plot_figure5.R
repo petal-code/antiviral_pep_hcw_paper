@@ -285,7 +285,7 @@ make_sweep_panel <- function(df, sc) {
   
   policy_colors    <- setNames(c(base_col, base_col), c("A", "B"))
   policy_linetypes <- setNames(c("dashed", "solid"), c("A", "B"))
-  policy_labels    <- c(A = "Policy A", B = "Policy B")
+  policy_labels    <- c(A = "Policy A - All Exposures", B = "Policy B - High Risk Exposures Only")
   
   ribbon_colors    <- setNames(c(light_col, base_col), c("A", "B"))
   
@@ -308,7 +308,7 @@ make_sweep_panel <- function(df, sc) {
     guides(color = guide_legend(override.aes = list(linewidth = 0.8)),
            linetype = guide_legend(override.aes = list(linewidth = 0.8))) +
     theme_fig() +
-    theme(legend.position = c(0.78, 0.85),
+    theme(legend.position = c(0.68, 0.75),
           legend.background = element_blank(),
           legend.key = element_blank(),
           legend.key.width = unit(1.5, "cm"),
