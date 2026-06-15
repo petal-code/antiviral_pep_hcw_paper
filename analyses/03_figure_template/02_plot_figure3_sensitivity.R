@@ -200,3 +200,45 @@ fig_boxplot_days <- (p_schematic |
 
 save_fig("figure_3_sens_boxplot_days", fig_boxplot_days, 14, 4)
 message("Figure 3 sensitivity boxplot (days lost averted) saved")
+
+# =============================================================================
+# Numbers for SI Section 3.8 sensitivity analysis text
+# =============================================================================
+
+# Immediate scale-up (onset=0) vs delayed (onset=100), across max coverage levels
+sens_text <- particle_df %>%
+  group_by(scenario, onset_day, max_cov) %>%
+  summarise(
+    lo_deaths  = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
+    med_deaths = median(pct_hcw_deaths_averted, na.rm = TRUE),
+    hi_deaths  = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
+    lo_days    = quantile(pct_days_lost_averted, 0.025, na.rm = TRUE),
+    med_days   = median(pct_days_lost_averted, na.rm = TRUE),
+    hi_days    = quantile(pct_days_lost_averted, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~round(.x, 1)))
+
+# Key comparisons:
+# 1. Effect of onset timing at max_cov = 1.0 (100%)
+sens_text %>% filter(max_cov == 1.0) %>%
+  select(scenario, onset_day, med_deaths, lo_deaths, hi_deaths,
+         med_days, lo_days, hi_days) %>%
+  as.data.frame() %>% print()
+
+# 2. Effect of max coverage at onset = 0
+sens_text %>% filter(onset_day == 0) %>%
+  select(scenario, max_cov, med_deaths, lo_deaths, hi_deaths,
+         med_days, lo_days, hi_days) %>%
+  as.data.frame() %>% print()
+
+# 3. Worst case (onset=100, max_cov=0.2) vs best case (onset=0, max_cov=1.0)
+sens_text %>%
+  filter((onset_day == 100 & max_cov == 0.2) |
+           (onset_day == 0   & max_cov == 1.0)) %>%
+  select(scenario, onset_day, max_cov, med_deaths, lo_deaths, hi_deaths) %>%
+  as.data.frame() %>% print()
+# onset timing at max_cov = 1.0
+sens_text %>% filter(max_cov == 1.0) %>%
+  select(scenario, onset_day, med_deaths, lo_deaths, hi_deaths) %>%
+  as.data.frame() %>% print()

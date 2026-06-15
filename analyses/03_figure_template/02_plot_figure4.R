@@ -110,44 +110,7 @@ message("Figure 4 saved")
 ############### aggregating number for the paper
 run_df4 <- read.csv(here("output_figgen", "figure_4_run_summary.csv"))
 
-particle_df4 <- run_df4 %>%
-  group_by(scenario, particle_id, arm, obv_efficacy, obv_coverage) %>%
-  summarise(
-    prevented_hcw      = sum(prevented_hcw),
-    counterfactual_hcw = sum(counterfactual_hcw),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    pct_hcw_deaths_averted = ifelse(
-      counterfactual_hcw > 0, 100 * prevented_hcw / counterfactual_hcw, NA_real_)
-  )
-
-particle_df4 %>%
-  filter(obv_efficacy == 0.8, obv_coverage %in% c(0.1, 0.9)) %>%
-  group_by(scenario, obv_coverage) %>%
-  summarise(
-    median_pct = median(pct_hcw_deaths_averted, na.rm = TRUE),
-    lo_pct     = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
-    hi_pct     = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(across(where(is.numeric), ~round(., 1))) %>%
-  as.data.frame() %>% print()
-
-particle_df4 %>%
-  filter(obv_coverage == 0.9, obv_efficacy %in% c(0.5, 0.9)) %>%
-  group_by(scenario, obv_efficacy) %>%
-  summarise(
-    median_pct = median(pct_hcw_deaths_averted, na.rm = TRUE),
-    lo_pct     = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
-    hi_pct     = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(across(where(is.numeric), ~round(., 1))) %>%
-  as.data.frame() %>% print()
-
-# Days lost averted by efficacy x coverage grid
-particle_df4 %>%
+run_df4 %>%
   group_by(scenario, particle_id, arm, obv_efficacy, obv_coverage) %>%
   summarise(
     hcw_days_lost      = sum(hcw_days_lost,      na.rm = TRUE),
@@ -161,7 +124,6 @@ particle_df4 %>%
       NA_real_
     )
   ) %>%
-  # Key comparisons matching figure 4 text structure
   filter(
     (obv_efficacy == 0.8 & obv_coverage %in% c(0.1, 0.9)) |
       (obv_coverage == 0.9 & obv_efficacy %in% c(0.5, 0.9))
