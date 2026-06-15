@@ -112,7 +112,18 @@ pdf2 %>%
   print()
 
 
-
+# Days lost averted by efficacy, full coverage
+pdf2 %>%
+  filter(arm %in% c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")) %>%
+  group_by(scenario, arm) %>%
+  summarise(
+    med = median(pct_days_lost_averted, na.rm = TRUE),
+    lo  = quantile(pct_days_lost_averted, 0.025, na.rm = TRUE),
+    hi  = quantile(pct_days_lost_averted, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~round(.x, 1))) %>%
+  as.data.frame() %>% print()
 
 
 

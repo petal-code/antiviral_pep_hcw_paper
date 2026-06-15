@@ -431,3 +431,43 @@ save_fig("figure_5_panel-c_efficacy-sweep-split_95CI", fig5_panel_c_split_95, 10
 
 message("Figure 5 efficacy sweep split 95% CI (WestAfrica / DRC) saved")
 
+# Numbers for SI Section 4.3
+# Policy B DDA by efficacy (20-80%), and Policy A at 80%
+
+# Policy B by efficacy
+policy_b_text <- particle_df %>%
+  filter(efficacy >= 0.2, efficacy <= 0.8) %>%
+  group_by(scenario, efficacy) %>%
+  summarise(
+    med  = median(dda_B, na.rm = TRUE),
+    lo   = quantile(dda_B, 0.025, na.rm = TRUE),
+    hi   = quantile(dda_B, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~round(.x, 1)))
+
+print(policy_b_text)
+
+# Policy A at 80% efficacy
+policy_a_80 <- particle_df %>%
+  filter(efficacy == 0.8) %>%
+  group_by(scenario) %>%
+  summarise(
+    med = median(dda_A, na.rm = TRUE),
+    lo  = quantile(dda_A, 0.025, na.rm = TRUE),
+    hi  = quantile(dda_A, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~round(.x, 1)))
+
+print(policy_a_80)
+
+# Crossover point: where Policy B DDA ~ Policy A DDA at 80%
+# (which efficacy does Policy B line cross the Policy A 80% horizontal)
+policy_b_text %>%
+  left_join(policy_a_80 %>% select(scenario, policy_a_med = med),
+            by = "scenario") %>%
+  filter(abs(med - policy_a_med) == min(abs(med - policy_a_med)),
+         .by = scenario) %>%
+  select(scenario, efficacy, med, policy_a_med) %>%
+  print()
