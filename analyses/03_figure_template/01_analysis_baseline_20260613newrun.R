@@ -63,7 +63,7 @@ message(sprintf("REP_BATCH = %d -> running replicates %d to %d",
 # =============================================================================
 # Configuration
 # =============================================================================
-N_WORKERS     <- 50L
+N_WORKERS     <- 100L
 N_PARTICLES   <- 200L
 N_REPS        <- 10L   # Total replicates per particle (used for seed computation only)
 SEEDING_CASES <- 25L
