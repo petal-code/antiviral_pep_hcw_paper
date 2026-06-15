@@ -48,7 +48,7 @@ sys.source(here("functions", "abc_calibration_functions_decoupled.R"), envir = e
 # Set REP_BATCH to 1 (reps 1-5) or 2 (reps 6-10) before running.
 # Each batch produces non-overlapping files that can be merged directly.
 # =============================================================================
-REP_BATCH <- 2L  # <--- CHANGE THIS: 1 for reps 1-5, 2 for reps 6-10
+REP_BATCH <- 3L  # <--- CHANGE THIS: 1 for reps 1-5, 2 for reps 6-10
 
 REP_RANGES <- list(
   `1` = 1:3,
@@ -63,7 +63,7 @@ message(sprintf("REP_BATCH = %d -> running replicates %d to %d",
 # =============================================================================
 # Configuration
 # =============================================================================
-N_WORKERS     <- 50L
+N_WORKERS     <- 100L
 N_PARTICLES   <- 200L
 N_REPS        <- 10L   # Total replicates per particle (used for seed computation only)
 SEEDING_CASES <- 25L
