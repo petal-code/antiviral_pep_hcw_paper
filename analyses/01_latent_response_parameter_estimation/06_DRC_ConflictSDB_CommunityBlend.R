@@ -170,3 +170,9 @@ print(
     coord_cartesian(ylim = c(0, 1)) +
     theme_bw(base_size = 11) + theme(legend.position = "top")
 )
+
+test <- curves %>%
+  filter(series == "blended success")
+saveRDS(test, "data-processed/SDB_communityDeath_blended.rds")
+
+plot(test$day, test$value)
