@@ -701,3 +701,57 @@ if (is.finite(d50_se)) {
   ))
 }
 message("Added d50-only efficacy band (fixed E0, fixed k; only d50 varies) to: ", out_path)
+
+
+# ------------------------------------------------------------
+# 15) Quick on-screen plot of the d50-only band (view only, not saved)
+# ------------------------------------------------------------
+# A small base-R plot of the section 13 band for interactive inspection. It is
+# wrapped in interactive() so that batch runs (e.g. via Rscript) neither open a
+# graphics device nor write a stray Rplots.pdf: nothing is ever written to disk.
+# When the script is sourced in RStudio or the R console the plot is drawn to the
+# active graphics device.
+
+if (interactive()) {
+  # Whether the 95% band was actually computed (lo/hi are finite, not NA).
+  band_ok <- all(is.finite(c(curve_d50_dat$efficacy_lo, curve_d50_dat$efficacy_hi)))
+
+  # Empty plot region: efficacy in [0, 1] against initiation day [0, dpc_zero].
+  plot(
+    curve_d50_dat$dpc, curve_d50_dat$efficacy,
+    type = "n",
+    xlim = c(0, settings$dpc_zero),
+    ylim = c(0, 1),
+    xlab = "ODV initiation day (dpc)",
+    ylab = "Hazard-scale efficacy",
+    main = "ODV delay efficacy: d50-only 95% band (E0 and k fixed)"
+  )
+
+  # Shaded 95% band (only d50 varies), drawn first so it sits behind the curve.
+  if (band_ok) {
+    polygon(
+      x = c(curve_d50_dat$dpc, rev(curve_d50_dat$dpc)),
+      y = c(curve_d50_dat$efficacy_lo, rev(curve_d50_dat$efficacy_hi)),
+      col = adjustcolor("steelblue", alpha.f = 0.25),
+      border = NA
+    )
+  }
+
+  # Central curve (E0 and k fixed at their central values).
+  lines(curve_d50_dat$dpc, curve_d50_dat$efficacy, col = "steelblue", lwd = 2)
+
+  # Empirical hazard-scale efficacy points for context.
+  points(
+    empirical_points$dpc, empirical_points$efficacy_hazard_scale,
+    pch = 19, col = "black"
+  )
+
+  legend(
+    "topright",
+    legend = c("Central curve (E0, k fixed)", "95% band (d50 only)", "Empirical points"),
+    col    = c("steelblue", adjustcolor("steelblue", alpha.f = 0.25), "black"),
+    lwd    = c(2, 8, NA),
+    pch    = c(NA, NA, 19),
+    bty    = "n"
+  )
+}
