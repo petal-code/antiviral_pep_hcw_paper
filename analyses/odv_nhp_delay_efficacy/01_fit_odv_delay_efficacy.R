@@ -599,3 +599,105 @@ saveRDS(output, out_path)
 
 message("Saved ODV NHP delay efficacy fit to: ", out_path)
 print(fit_summary)
+
+
+# ------------------------------------------------------------
+# 13) Alternative band: fix efficacy (E0) and steepness (k), vary only d50
+# ------------------------------------------------------------
+# The band in section 10 lets BOTH E0 and d50 vary, so its width at dpc = 0
+# reflects uncertainty in the efficacy intercept E0. It is often more useful to
+# hold the efficacy intercept fixed at its central estimate and ask how the
+# *shape* of the decline alone is affected by uncertainty in where that decline
+# happens. This section does exactly that, with no re-fitting:
+#
+#   * E0 is fixed at its central estimate E0_hat (the single best-fit efficacy at
+#     dpc = 0, referred to elsewhere as E0_median),
+#   * k is fixed at settings$k_fixed (as in the main fit),
+#   * only d50 is allowed to vary, reusing the uncertainty already estimated for
+#     it in section 10.
+#
+# Because efficacy_curve(0, E0, d50) = E0 for every value of d50, every simulated
+# curve passes through exactly E0_hat at dpc = 0 and then fans out at later
+# initiation days according to the spread in d50.
+#
+# d50 uncertainty is taken from the local normal approximation computed in
+# section 10: d50 ~ Normal(d50_hat, variance = V[2, 2]). The 95% band edges are
+# the 2.5% and 97.5% pointwise quantiles of the simulated curves; because the
+# curve varies monotonically with d50 at any fixed initiation day, in practice
+# these edges coincide with the curves evaluated at the 95% confidence limits of
+# d50, so simulating and "using the 95% CI of d50" give the same band.
+
+# Central curve is identical to section 10 (E0_hat, d50_hat, k fixed).
+curve_d50_dat <- data.frame(
+  dpc         = curve_grid,
+  efficacy    = clamp01(efficacy_curve(curve_grid, E0_hat, d50_hat)),
+  efficacy_lo = NA_real_,
+  efficacy_hi = NA_real_
+)
+
+# Standard error and 95% Wald confidence interval for d50 from the fitted
+# covariance matrix V (NA if the Hessian-based covariance was unavailable).
+d50_se <- if (!is.null(V) && all(is.finite(V))) sqrt(V[2, 2]) else NA_real_
+d50_ci <- c(lo = NA_real_, hi = NA_real_)
+
+if (is.finite(d50_se) && d50_se > 0) {
+  # 95% confidence interval for d50, clamped to the optimisation bounds [0, 30].
+  d50_ci["lo"] <- max(0,  d50_hat - 1.96 * d50_se)
+  d50_ci["hi"] <- min(30, d50_hat + 1.96 * d50_se)
+
+  # Draw d50 from its normal sampling distribution while holding E0 and k fixed,
+  # keeping draws within the same bounds used during optimisation.
+  d50_draws <- rnorm(settings$nsim_param, mean = d50_hat, sd = d50_se)
+  d50_draws <- d50_draws[d50_draws >= 0 & d50_draws <= 30]
+
+  # Summarise pointwise curve uncertainty if enough valid draws remain.
+  if (length(d50_draws) >= 200) {
+    # Each column is one grid point; each row is one simulated curve. E0_hat and
+    # the fixed k enter as constants, so only d50 drives the spread.
+    eff_mat_d50 <- vapply(
+      curve_grid,
+      function(d) efficacy_curve(d, E0_hat, d50_draws),
+      FUN.VALUE = numeric(length(d50_draws))
+    )
+
+    curve_d50_dat$efficacy_lo <- clamp01(apply(eff_mat_d50, 2, quantile, 0.025, na.rm = TRUE))
+    curve_d50_dat$efficacy_hi <- clamp01(apply(eff_mat_d50, 2, quantile, 0.975, na.rm = TRUE))
+  }
+} else {
+  message(
+    "d50 standard error unavailable (Hessian-based covariance missing); ",
+    "the d50-only band was not computed."
+  )
+}
+
+
+# ------------------------------------------------------------
+# 14) Add the d50-only band to the saved output
+# ------------------------------------------------------------
+# Augment the processed .rds written in section 12 with the new band and a small
+# record of the d50 uncertainty used to build it, then re-save to the same path
+# so that downstream scripts can read either band from a single object.
+
+output$fitted_curve_d50_band <- curve_d50_dat
+output$d50_uncertainty <- list(
+  description = paste(
+    "95% band obtained by fixing E0 at E0_hat and k at k_fixed and propagating",
+    "only the d50 uncertainty from section 10 (no re-fitting). All curves start",
+    "at E0_hat at dpc = 0 and fan out with the spread in d50."
+  ),
+  E0_fixed = E0_hat,
+  k_fixed  = settings$k_fixed,
+  d50_hat  = d50_hat,
+  d50_se   = d50_se,
+  d50_ci95 = d50_ci
+)
+
+saveRDS(output, out_path)
+
+if (is.finite(d50_se)) {
+  message(sprintf(
+    "d50-only band: d50 = %.2f (95%% CI %.2f to %.2f); E0 fixed = %.3f, k fixed = %g",
+    d50_hat, d50_ci[["lo"]], d50_ci[["hi"]], E0_hat, settings$k_fixed
+  ))
+}
+message("Added d50-only efficacy band (fixed E0, fixed k; only d50 varies) to: ", out_path)
