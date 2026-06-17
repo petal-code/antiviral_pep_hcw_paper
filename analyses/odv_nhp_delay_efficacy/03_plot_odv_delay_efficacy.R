@@ -71,7 +71,8 @@ fs         <- stan_fit$fit_summary
 max_obs_dpc <- max(emp$dpc)
 dpc_max     <- max(curve_stan$dpc)
 
-col_stan <- "#1f77b4"  # Bayesian (Stan)
+col_stan <- "#1f77b4"  # Bayesian (Stan), posterior median
+col_map  <- "#2ca02c"  # Bayesian MAP (mode)
 col_prof <- "#d62728"  # profiled + Laplace (script 01)
 col_emp  <- "grey20"   # empirical points
 
@@ -130,6 +131,24 @@ spag   <- do.call(rbind, lapply(seq_len(n_spag), function(i) {
              efficacy = efficacy_curve(grid, dr_s$E0[i], dr_s$d50[i], dr_s$k[i], d_zero))
 }))
 
+# MAP (mode) curve, if the optimisation in script 02 succeeded. This is the
+# apples-to-apples comparison to script 01's MLE/point estimate: the posterior
+# MEDIAN sits above the MODE here because, with small counts and E0 bounded at 1,
+# the E0 posterior is right-skewed (and marginalising the flat-prior baseline
+# hazards favours higher efficacy). The mode should land on script 01's curve.
+map_df  <- stan_fit$map_estimate
+get_map <- function(nm, fallback = NA_real_) {
+  if (is.null(map_df) || !(nm %in% map_df$variable)) return(fallback)
+  map_df$estimate[map_df$variable == nm]
+}
+E0_map   <- get_map("E0")
+d50_map  <- get_map("d50")
+k_map    <- get_map("k", fallback = stan_fit$metadata$settings$k_fixed)
+have_map <- is.finite(E0_map) && is.finite(d50_map) && is.finite(k_map)
+map_curve <- if (have_map) {
+  data.frame(dpc = grid, efficacy = efficacy_curve(grid, E0_map, d50_map, k_map, d_zero))
+} else NULL
+
 
 # ------------------------------------------------------------
 # 3) Figure 1: Bayesian posterior curve + empirical points
@@ -186,7 +205,11 @@ if (file.exists(profiled_path)) {
   prof_fit   <- readRDS(profiled_path)
   curve_prof <- prof_fit$fitted_curve
 
-  method_cols <- c("Bayesian (Stan)" = col_stan, "Profiled + Laplace (01)" = col_prof)
+  method_cols <- c(
+    "Bayesian (Stan)"         = col_stan,
+    "Bayesian MAP (mode)"     = col_map,
+    "Profiled + Laplace (01)" = col_prof
+  )
 
   p2 <- ggplot() +
     # 95% bands: Stan pointwise credible, script 01 approximate.
@@ -210,11 +233,20 @@ if (file.exists(profiled_path)) {
     scale_x_continuous(breaks = seq(0, max(curve_stan$dpc), by = 3)) +
     labs(
       title    = "ODV delay-efficacy curve: Bayesian vs profiled fit",
-      subtitle = "Stan line at posterior-median parameters; bands = 95% credible/approximate; points = empirical (KM hazard ratio)",
+      subtitle = "Stan: solid = posterior median, dashed = MAP (mode); bands = 95% credible/approximate; points = empirical",
       x        = "ODV initiation day (days post-challenge)",
       y        = "Efficacy (hazard scale)"
     ) +
     theme_odv
+
+  # The MAP (mode) is the like-for-like comparison to script 01's MLE; it should
+  # sit on the profiled curve, showing the median/mode gap is a posterior-summary
+  # (and nuisance-marginalisation) effect, not an informative-prior effect.
+  if (have_map) {
+    p2 <- p2 + geom_line(data = map_curve,
+                         aes(dpc, efficacy, colour = "Bayesian MAP (mode)"),
+                         linetype = "dashed", linewidth = 0.9)
+  }
 
   save_fig("odv_delay_efficacy_method_comparison", p2)
   message("Saved: ", file.path(out_dir, "odv_delay_efficacy_method_comparison.{png,pdf}"))

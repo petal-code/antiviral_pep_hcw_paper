@@ -419,9 +419,15 @@ print(diag_summ)
 # prior it is the MAP. A quick confirmation that the likelihood/model match and a
 # central estimate that is directly comparable to script 01.
 map_estimate <- tryCatch({
-  opt <- mod$optimize(data = stan_data, jacobian = FALSE, seed = settings$seed)
+  # jacobian = FALSE gives the mode on the constrained scale (classical MLE/MAP);
+  # fall back to the default call on older CmdStan where the arg is unavailable
+  # (which also returns the MLE-style mode).
+  opt <- tryCatch(
+    mod$optimize(data = stan_data, jacobian = FALSE, seed = settings$seed),
+    error = function(e) mod$optimize(data = stan_data, seed = settings$seed)
+  )
   os <- opt$summary(c("E0", "d50", "k"))
-  cat("\nMAP (penalised MLE) estimate:\n"); print(os)
+  cat("\nMAP (mode) estimate:\n"); print(os)
   as.data.frame(os)
 }, error = function(e) {
   message("optimize() failed (", conditionMessage(e), "); skipping MAP check.")
