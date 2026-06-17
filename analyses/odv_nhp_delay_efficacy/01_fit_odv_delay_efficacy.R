@@ -664,6 +664,8 @@ if (is.finite(d50_se) && d50_se > 0) {
     curve_d50_dat$efficacy_hi <- clamp01(apply(eff_mat_d50, 2, quantile, 0.975, na.rm = TRUE))
     curve_d50_dat$IQR_efficacy_lo <- clamp01(apply(eff_mat_d50, 2, quantile, 0.25, na.rm = TRUE))
     curve_d50_dat$IQR_efficacy_hi <- clamp01(apply(eff_mat_d50, 2, quantile, 0.75, na.rm = TRUE))
+    curve_d50_dat$eighty_efficacy_lo <- clamp01(apply(eff_mat_d50, 2, quantile, 0.1, na.rm = TRUE))
+    curve_d50_dat$eighty_efficacy_hi <- clamp01(apply(eff_mat_d50, 2, quantile, 0.9, na.rm = TRUE))
   }
 } else {
   message(
@@ -769,3 +771,6 @@ if (interactive()) {
     bty    = "n"
   )
 }
+
+saveRDS(object = curve_d50_dat,
+        file = "data-processed/DPC_fixed_efficacy_varied_d50.rds")
