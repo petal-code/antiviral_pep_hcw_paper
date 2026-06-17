@@ -662,6 +662,8 @@ if (is.finite(d50_se) && d50_se > 0) {
 
     curve_d50_dat$efficacy_lo <- clamp01(apply(eff_mat_d50, 2, quantile, 0.025, na.rm = TRUE))
     curve_d50_dat$efficacy_hi <- clamp01(apply(eff_mat_d50, 2, quantile, 0.975, na.rm = TRUE))
+    curve_d50_dat$IQR_efficacy_lo <- clamp01(apply(eff_mat_d50, 2, quantile, 0.25, na.rm = TRUE))
+    curve_d50_dat$IQR_efficacy_hi <- clamp01(apply(eff_mat_d50, 2, quantile, 0.75, na.rm = TRUE))
   }
 } else {
   message(
@@ -733,6 +735,18 @@ if (interactive()) {
       x = c(curve_d50_dat$dpc, rev(curve_d50_dat$dpc)),
       y = c(curve_d50_dat$efficacy_lo, rev(curve_d50_dat$efficacy_hi)),
       col = adjustcolor("steelblue", alpha.f = 0.25),
+      border = NA
+    )
+    polygon(
+      x = c(curve_d50_dat$dpc, rev(curve_d50_dat$dpc)),
+      y = c(curve_d50_dat$eighty_efficacy_lo, rev(curve_d50_dat$eighty_efficacy_hi)),
+      col = adjustcolor("steelblue", alpha.f = 0.5),
+      border = NA
+    )
+    polygon(
+      x = c(curve_d50_dat$dpc, rev(curve_d50_dat$dpc)),
+      y = c(curve_d50_dat$IQR_efficacy_lo, rev(curve_d50_dat$IQR_efficacy_hi)),
+      col = adjustcolor("steelblue", alpha.f = 0.75),
       border = NA
     )
   }
