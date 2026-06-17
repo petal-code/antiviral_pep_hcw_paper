@@ -95,6 +95,43 @@ save_fig <- function(base, plot, width = 7, height = 5) {
 
 
 # ------------------------------------------------------------
+# 2b) Representative curve (at posterior-median parameters) and draws
+# ------------------------------------------------------------
+# The saved fitted_curve holds POINTWISE quantiles across draws. A pointwise-
+# median line is an envelope of (potentially very different) draw curves rather
+# than a single fit, so as the central line we instead evaluate the curve at the
+# posterior-median (E0, d50, k), and add a thin sample of posterior-draw curves
+# (spaghetti) to show the shape uncertainty directly.
+d_zero <- stan_fit$metadata$settings$dpc_zero
+
+# Same scaled-logistic curve as the Stan model / script 01.
+efficacy_curve <- function(d, E0, d50, k, d_zero) {
+  g   <- function(x) 1 / (1 + exp(k * (x - d50)))
+  eff <- E0 * (g(d) - g(d_zero)) / (g(0) - g(d_zero))
+  eff[!is.finite(eff)] <- NA_real_
+  eff[d >= d_zero] <- 0
+  pmin(1, pmax(0, eff))
+}
+
+grid <- curve_stan$dpc
+
+rep_curve <- data.frame(
+  dpc      = grid,
+  efficacy = efficacy_curve(grid, fs$E0_median, fs$d50_median, fs$k_median, d_zero)
+)
+
+# Spaghetti from a sample of posterior draws of (E0, d50, k).
+set.seed(1)
+dr     <- stan_fit$draws
+n_spag <- min(120, nrow(dr))
+dr_s   <- dr[sample(nrow(dr), n_spag), c("E0", "d50", "k")]
+spag   <- do.call(rbind, lapply(seq_len(n_spag), function(i) {
+  data.frame(draw = i, dpc = grid,
+             efficacy = efficacy_curve(grid, dr_s$E0[i], dr_s$d50[i], dr_s$k[i], d_zero))
+}))
+
+
+# ------------------------------------------------------------
 # 3) Figure 1: Bayesian posterior curve + empirical points
 # ------------------------------------------------------------
 cap1 <- sprintf(
@@ -112,8 +149,10 @@ p1 <- ggplot() +
   annotate("rect", xmin = max_obs_dpc, xmax = dpc_max, ymin = 0, ymax = 1,
            fill = "grey85", alpha = 0.35) +
   geom_ribbon(data = curve_stan, aes(dpc, ymin = efficacy_lo, ymax = efficacy_hi),
-              fill = col_stan, alpha = 0.20) +
-  geom_line(data = curve_stan, aes(dpc, efficacy), colour = col_stan, linewidth = 1) +
+              fill = col_stan, alpha = 0.18) +
+  geom_line(data = spag, aes(dpc, efficacy, group = draw),
+            colour = col_stan, alpha = 0.06, linewidth = 0.3, na.rm = TRUE) +
+  geom_line(data = rep_curve, aes(dpc, efficacy), colour = col_stan, linewidth = 1.1) +
   geom_errorbar(data = emp, aes(x = dpc, ymin = efficacy_lo, ymax = efficacy_hi),
                 width = 0.15, colour = col_emp, alpha = 0.8, na.rm = TRUE) +
   geom_point(data = emp, aes(x = dpc, y = efficacy_hazard_scale),
@@ -124,7 +163,7 @@ p1 <- ggplot() +
   scale_x_continuous(breaks = seq(0, dpc_max, by = 3)) +
   labs(
     title    = "ODV delay-to-initiation efficacy (full Bayesian fit)",
-    subtitle = "Hazard-scale efficacy vs treatment initiation day; grey band = extrapolation beyond observed arms",
+    subtitle = "Line = curve at posterior-median parameters; thin = posterior draws; grey band = extrapolation beyond observed arms",
     x        = "ODV initiation day (days post-challenge)",
     y        = "Efficacy (hazard scale)",
     caption  = cap1
@@ -147,22 +186,19 @@ if (file.exists(profiled_path)) {
   prof_fit   <- readRDS(profiled_path)
   curve_prof <- prof_fit$fitted_curve
 
-  keep <- c("dpc", "efficacy", "efficacy_lo", "efficacy_hi")
-  curve_both <- rbind(
-    transform(curve_stan[keep], method = "Bayesian (Stan)"),
-    transform(curve_prof[keep], method = "Profiled + Laplace (01)")
-  )
-  curve_both$method <- factor(
-    curve_both$method,
-    levels = c("Bayesian (Stan)", "Profiled + Laplace (01)")
-  )
   method_cols <- c("Bayesian (Stan)" = col_stan, "Profiled + Laplace (01)" = col_prof)
 
   p2 <- ggplot() +
-    geom_ribbon(data = curve_both,
-                aes(dpc, ymin = efficacy_lo, ymax = efficacy_hi, fill = method),
-                alpha = 0.18, colour = NA, na.rm = TRUE) +
-    geom_line(data = curve_both, aes(dpc, efficacy, colour = method), linewidth = 1) +
+    # 95% bands: Stan pointwise credible, script 01 approximate.
+    geom_ribbon(data = curve_stan,
+                aes(dpc, ymin = efficacy_lo, ymax = efficacy_hi, fill = "Bayesian (Stan)"),
+                alpha = 0.16, colour = NA, na.rm = TRUE) +
+    geom_ribbon(data = curve_prof,
+                aes(dpc, ymin = efficacy_lo, ymax = efficacy_hi, fill = "Profiled + Laplace (01)"),
+                alpha = 0.16, colour = NA, na.rm = TRUE) +
+    # Central curves: Stan at posterior-median parameters; 01 point estimate.
+    geom_line(data = rep_curve,  aes(dpc, efficacy, colour = "Bayesian (Stan)"), linewidth = 1) +
+    geom_line(data = curve_prof, aes(dpc, efficacy, colour = "Profiled + Laplace (01)"), linewidth = 1) +
     geom_errorbar(data = emp, aes(x = dpc, ymin = efficacy_lo, ymax = efficacy_hi),
                   width = 0.15, colour = col_emp, alpha = 0.8, na.rm = TRUE) +
     geom_point(data = emp, aes(x = dpc, y = efficacy_hazard_scale),
@@ -171,10 +207,10 @@ if (file.exists(profiled_path)) {
     scale_fill_manual(values = method_cols, name = NULL) +
     scale_y_continuous(limits = c(0, 1), labels = pct_lab,
                        expand = expansion(mult = c(0, 0.02))) +
-    scale_x_continuous(breaks = seq(0, max(curve_both$dpc), by = 3)) +
+    scale_x_continuous(breaks = seq(0, max(curve_stan$dpc), by = 3)) +
     labs(
       title    = "ODV delay-efficacy curve: Bayesian vs profiled fit",
-      subtitle = "Median/point estimate with 95% credible/approximate intervals; points = empirical (KM hazard ratio)",
+      subtitle = "Stan line at posterior-median parameters; bands = 95% credible/approximate; points = empirical (KM hazard ratio)",
       x        = "ODV initiation day (days post-challenge)",
       y        = "Efficacy (hazard scale)"
     ) +

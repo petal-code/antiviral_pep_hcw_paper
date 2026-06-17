@@ -32,9 +32,14 @@
 //   The scaling forces efficacy(0) = E0 and efficacy(d_zero) = 0.
 //
 // PRIORS
-//   - E0, d50      : flat over their declared bounds (no sampling statement =>
-//                    uniform on the constrained support), mirroring the bounds-
-//                    only optimisation in script 01.
+//   - E0           : flat over [0,1] (no sampling statement => uniform), as in
+//                    the bounds-only optimisation of script 01.
+//   - d50          : the decline LOCATION is not identified by initiation days
+//                    1-4 alone (the likelihood only sees efficacy at the
+//                    observed days, and for d50 beyond ~5-6 the curve is flat
+//                    across them). It is therefore given a weakly-informative
+//                    normal prior centred in the observed window and capped at
+//                    d_zero. Set d50_prior_sd very large to recover a flat prior.
 //   - lambda[k]    : by default a flat (improper) prior on [0, inf). Stan adds
 //                    the constraint's Jacobian automatically, so omitting a
 //                    sampling statement gives a uniform prior on the constrained
@@ -63,6 +68,10 @@ data {
   real<lower=0>      d_zero;                       // day by which efficacy is forced to 0
   real<lower=0>      eps_hr;                        // numerical floor on the hazard ratio
 
+  // ---- d50 prior (identifies the otherwise non-identified decline location) --
+  real<lower=0> d50_prior_mean;                    // centre of the weakly-informative d50 prior
+  real<lower=0> d50_prior_sd;                      // sd (set very large to recover a flat prior)
+
   // ---- k: fixed or fitted ------------------------------------------------
   int<lower=0, upper=1> fit_k;                     // 0 = fix k at k_fixed, 1 = estimate k
   real<lower=0>         k_fixed;                   // value used when fit_k == 0
@@ -79,8 +88,8 @@ data {
 }
 
 parameters {
-  real<lower=0, upper=1>  E0;                      // efficacy at day 0 (hazard scale)
-  real<lower=0, upper=30> d50;                     // location of the logistic decline
+  real<lower=0, upper=1>      E0;                  // efficacy at day 0 (hazard scale)
+  real<lower=0, upper=d_zero> d50;                 // location of the logistic decline (capped at d_zero)
   vector<lower=0>[K]      lambda;                  // baseline interval hazards (jointly estimated)
   array[fit_k] real<lower=0> k_param;              // length 1 if estimating k, else length 0
 }
@@ -109,8 +118,11 @@ transformed parameters {
 
 model {
   // ---- Priors ------------------------------------------------------------
-  // E0 and d50: flat over their bounds (no statement => uniform on support).
+  // E0: flat over [0,1] (no statement => uniform on support).
+  // d50: weakly-informative normal (truncated to [0, d_zero] by the bounds),
+  //      because the decline location is not identified by initiation days 1-4.
   // lambda: flat improper by default; optional diffuse proper alternative.
+  d50 ~ normal(d50_prior_mean, d50_prior_sd);
   if (use_hazard_prior == 1) {
     lambda ~ exponential(hazard_prior_rate);
   }

@@ -90,6 +90,16 @@ k_prior_logsd   <- 0.5           # ~95% of prior mass within roughly [0.37, 2.7]
 use_hazard_prior  <- 0L
 hazard_prior_rate <- 1e-3
 
+# ---- d50 (decline location): weakly-informative prior ----------------------
+# The likelihood only sees efficacy at the observed initiation days (1-4 dpc),
+# and for d50 beyond ~5-6 the curve is flat across them -- so the decline
+# LOCATION is not identified by these data (a flat prior lets the posterior
+# wander out toward d_zero, giving a flat-then-late-drop median curve unlike the
+# profiled fit). We therefore centre d50 in the observed window and cap it at
+# d_zero (in the Stan model). Set d50_prior_sd very large to recover a flat prior.
+d50_prior_mean <- 4
+d50_prior_sd   <- 2
+
 
 # ------------------------------------------------------------
 # 2) Define paths and analysis settings
@@ -135,6 +145,10 @@ settings <- list(
   # baseline-hazard prior
   use_hazard_prior  = use_hazard_prior,
   hazard_prior_rate = hazard_prior_rate,
+
+  # d50 prior
+  d50_prior_mean = d50_prior_mean,
+  d50_prior_sd   = d50_prior_sd,
 
   # Stan sampler settings
   chains        = 4,
@@ -366,6 +380,8 @@ stan_data <- list(
   k_prior_logsd     = settings$k_prior_logsd,
   use_hazard_prior  = as.integer(settings$use_hazard_prior),
   hazard_prior_rate = settings$hazard_prior_rate,
+  d50_prior_mean    = settings$d50_prior_mean,
+  d50_prior_sd      = settings$d50_prior_sd,
   n_grid   = length(curve_grid),
   grid_dpc = as.numeric(curve_grid)
 )
@@ -392,6 +408,25 @@ fit <- mod$sample(
 cat("\nSampler diagnostics:\n")
 diag_summ <- fit$diagnostic_summary()
 print(diag_summ)
+
+
+# ------------------------------------------------------------
+# 8b) MAP check: does the mode reproduce the profiled fit (script 01)?
+# ------------------------------------------------------------
+# Penalised MLE (jacobian = FALSE => mode on the constrained scale, matching a
+# classical optimum rather than the unconstrained-scale mode). With flat priors
+# this should land on script 01's optim result; with the weakly-informative d50
+# prior it is the MAP. A quick confirmation that the likelihood/model match and a
+# central estimate that is directly comparable to script 01.
+map_estimate <- tryCatch({
+  opt <- mod$optimize(data = stan_data, jacobian = FALSE, seed = settings$seed)
+  os <- opt$summary(c("E0", "d50", "k"))
+  cat("\nMAP (penalised MLE) estimate:\n"); print(os)
+  as.data.frame(os)
+}, error = function(e) {
+  message("optimize() failed (", conditionMessage(e), "); skipping MAP check.")
+  NULL
+})
 
 
 # ------------------------------------------------------------
@@ -481,6 +516,7 @@ output <- list(
   param_summary = as.data.frame(param_summ),
   fit_summary = fit_summary,
   diagnostics = diag_summ,
+  map_estimate = map_estimate,
   draws = draws_df
 )
 
