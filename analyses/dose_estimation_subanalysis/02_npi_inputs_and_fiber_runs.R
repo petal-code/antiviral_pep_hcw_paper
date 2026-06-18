@@ -93,17 +93,17 @@ UNSAFE_FUNERAL_ETU <- 0.0
 
 # --- Fixed efficacy scalars (NOT time-varying; override DEFAULT_SCALAR_INPUTS).
 SCALAR_OVERRIDES <- list(
-  etu_efficacy                         = 0.70,
-  general_hospital_quarantine_efficacy = 0.30,
+  etu_efficacy                         = 0.60,
+  general_hospital_quarantine_efficacy = 0.20,
   ppe_efficacy                         = 0.60,
-  safe_funeral_efficacy                = 0.80
+  safe_funeral_efficacy                = 0.70
 )
 
 # --- Simulation grid + controls.
-R0_GRID          <- seq(1.35, 1.55, by = 0.05)   # baseline (t=0) R0 grid
+R0_GRID          <- seq(1.45, 1.75, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
-SEEDING_CASES    <- 5L                            # initial seeding infections
-N_STOCH          <- 30L                          # stochastic replicates per R0
+SEEDING_CASES    <- 3L                            # initial seeding infections
+N_STOCH          <- 20L                          # stochastic replicates per R0
 # Takeoff condition: an outbreak counts as "taken off" only if it has reached at
 # least TAKEOFF_N cumulative infections BY the deadline date (relative to
 # EPIDEMIC_START_DATE); otherwise it is re-run (seed advanced).
@@ -562,7 +562,7 @@ confirmed_csv     <- here("data-processed", "insp_sitrep__national_cumulative_co
 confirmed_overlay <- NULL
 if (file.exists(confirmed_csv)) {
   confirmed_obs      <- read.csv(confirmed_csv, stringsAsFactors = FALSE)
-  confirmed_obs$date <- as.Date(confirmed_obs$date)
+  confirmed_obs$date <- as.Date(confirmed_obs$date, format = "%d/%m/%Y")
   confirmed_overlay <- geom_line(
     data = confirmed_obs, aes(date, national_cumulative_confirmed_cases),
     inherit.aes = FALSE, colour = "#1a9850", linewidth = 1.1)
@@ -722,9 +722,8 @@ print(p_traj_inc)
 # we always report r and set doubling time to NA when r <= 0.
 
 D_14MAY <- as.Date("2026-05-14")
-D_15MAY <- as.Date("2026-06-05") # as.Date("2026-05-15")
-D_01JUN <- as.Date("2026-06-05")
-D_14JUN <- as.Date("2026-06-14")
+D_15MAY <- as.Date("2026-06-10") # as.Date("2026-05-15")
+D_14JUN <- as.Date("2026-06-16")
 D_14JUL <- as.Date("2026-07-14")
 
 # Fit r (per day) + doubling time from (date, value > 0) over the window [lo, hi].
@@ -842,6 +841,7 @@ snap_long <- do.call(rbind, lapply(took, function(r)
              cum = r$cum_at[snap_idx])))
 snap_long$snapshot <- factor(snap_long$snapshot, levels = snap_labs)
 snap_med <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = stats::median)
+snap_mean <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = mean)
 
 # Observed cumulative value at a date (interpolated; held flat past the data end).
 obs_at <- function(d, dates, values) {
@@ -865,7 +865,7 @@ ref_layer <- if (nrow(ref) > 0)
 
 p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
-  geom_point(data = snap_med, aes(factor(r0), cum), colour = "black", size = 4) +
+  geom_point(data = snap_mean, aes(factor(r0), cum), colour = "black", size = 4) +
   ref_layer +
   facet_wrap(~ snapshot, scales = "free_y") +
   scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
