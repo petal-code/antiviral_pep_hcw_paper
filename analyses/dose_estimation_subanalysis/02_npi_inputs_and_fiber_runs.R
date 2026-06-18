@@ -229,13 +229,13 @@ message(sprintf("Takeoff: >= %d infections by %s (relative day %d).",
 # at these dates (rather than interpolated off the 10-day grid).
 # Snapshot dates for the per-R0 cumulative-infection plot, paired with which
 # observed reference line(s) to draw at each: 14 May (confirmed-series start ->
-# both onsets and confirmed), 7 Jun (onsets finish -> red/onsets only), 16 Jun
-# (confirmed finish -> green/confirmed only). SNAPSHOT_REFS is matched to
-# SNAPSHOT_DATES element-by-element; edit them together.
+# both onsets and confirmed), 7 Jun (onsets finish, but confirmed is also still
+# available -> both), 16 Jun (confirmed finish; onsets ended -> confirmed only).
+# SNAPSHOT_REFS is matched to SNAPSHOT_DATES element-by-element; edit together.
 SNAPSHOT_DATES <- as.Date(c("2026-05-14", "2026-06-07", "2026-06-16"))
 SNAPSHOT_REFS  <- list(c("onsets", "confirmed cases"),  # 14 May: both available
-                       "onsets",                         # 07 Jun: onsets finish
-                       "confirmed cases")                # 16 Jun: confirmed finish
+                       c("onsets", "confirmed cases"),  # 07 Jun: onsets finish + confirmed
+                       "confirmed cases")                # 16 Jun: confirmed finish (onsets ended)
 snapshot_days  <- as.integer(SNAPSHOT_DATES - epi_start)
 TIMEPOINTS     <- sort(unique(c(TIMEPOINTS, snapshot_days[snapshot_days > 0])))
 
@@ -585,6 +585,28 @@ if (file.exists(confirmed_csv)) {
   message("Note: ", basename(confirmed_csv), " not found -- skipping confirmed-cases overlay.")
 }
 
+# McCabe external estimate: total cumulative cases by a given date, given as a
+# low/high pair. Drawn on the cumulative-total comparison plots as a vertical
+# range (a line) at that date, capped with a marker at each value, so it can be
+# read off against where the model / data curves sit on that date. Edit freely.
+MCCABE_DATE   <- as.Date("2026-05-27")
+MCCABE_VALUES <- c(600, 1000)
+mccabe_df   <- data.frame(date = MCCABE_DATE,
+                          lo = min(MCCABE_VALUES), hi = max(MCCABE_VALUES))
+mccabe_pts  <- data.frame(date = MCCABE_DATE, value = MCCABE_VALUES)
+mccabe_layer <- list(
+  geom_linerange(data = mccabe_df, aes(x = date, ymin = lo, ymax = hi),
+                 inherit.aes = FALSE, colour = "#984ea3", linewidth = 1.0),
+  geom_point(data = mccabe_pts, aes(x = date, y = value),
+             inherit.aes = FALSE, colour = "#984ea3", size = 2.4, shape = 18)
+)
+mccabe_desc <- sprintf("purple = McCabe est. total (%s by %s)",
+                       paste(MCCABE_VALUES, collapse = " & "), format(MCCABE_DATE, "%d %b"))
+# Same estimate as horizontal reference lines, for the R0-vs-cumulative snapshot
+# plot (x-axis is R0, not date): one dashed purple line at each value.
+mccabe_hlines <- geom_hline(yintercept = MCCABE_VALUES, colour = "#984ea3",
+                            linetype = "dashed", linewidth = 0.7)
+
 # (i) The time-varying NPI inputs.
 tv_long$date <- day_to_date(tv_long$relative_day)
 p_inputs <- ggplot(tv_long, aes(date, value)) +
@@ -611,9 +633,10 @@ p_cum <- ggplot(cumulative_cases,
   geom_line(linewidth = 0.8) +
   onset_overlay +
   confirmed_overlay +
+  mccabe_layer +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Mean cumulative cases by baseline R0",
-       subtitle = "Mean (lines) + 25-75% (bands); red = observed cumulative onsets; green = confirmed cases",
+       subtitle = paste0("Mean (lines) + 25-75% (bands); red = observed cumulative onsets; green = confirmed cases; ", mccabe_desc),
        x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
   theme_bw(base_size = 11) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  +
@@ -639,11 +662,12 @@ p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
   confirmed_overlay +
+  mccabe_layer +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; scenario '%s', %d reps",
-                          EXTRAP_SCENARIO, N_STOCH),
+       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; %s; scenario '%s', %d reps",
+                          mccabe_desc, EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases") +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))  +
@@ -660,12 +684,13 @@ p_traj_log10 <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id)
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
   confirmed_overlay +
+  mccabe_layer +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   scale_y_log10(labels = scales::label_number()) +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; scenario '%s', %d reps",
-                          EXTRAP_SCENARIO, N_STOCH),
+       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; %s; scenario '%s', %d reps",
+                          mccabe_desc, EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases (log10)") +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))  +
@@ -915,12 +940,13 @@ p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
   geom_point(data = snap_median, aes(factor(r0), cum), colour = "black", size = 4) +
   ref_layer +
+  mccabe_hlines +
   facet_wrap(~ snapshot, scales = "free_y") +
   scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
                       name = "Observed") +
   labs(title = "Cumulative infections by R0 at snapshot dates",
-       subtitle = sprintf("Blue = replicates; large black dot = mean; reference lines: %s; scenario '%s'",
-                          ref_desc, EXTRAP_SCENARIO),
+       subtitle = sprintf("Blue = replicates; large black dot = mean; reference lines: %s; %s (dashed); scenario '%s'",
+                          ref_desc, mccabe_desc, EXTRAP_SCENARIO),
        x = "Baseline R0", y = "Cumulative infections") +
   theme_bw(base_size = 11)
 ggsave(file.path(DIR_OUT, "dose_r0_grid_snapshot_cumulative.png"), p_snap,
