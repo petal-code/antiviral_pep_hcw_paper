@@ -117,6 +117,10 @@ TIMEPOINTS <- c(seq(10L, 360L, by = 10L), 365L)   # days at which to read cumula
 AMOUNTS    <- c(10L, 25L, 50L, 100L, 250L, 500L,  # cumulative case amounts to time
                 1000L, 2000L, 2500L, 4000L, 5000L)
 
+# Adjustable start date for the extra "X to 14 Jun" growth-rate window (section 10),
+# shown alongside the fixed 15 May-14 Jun window.
+GROWTH_X_DATE <- as.Date("2026-05-01")
+
 # --- Scenario identity + horizon over which the NPI matrix is defined.
 SCENARIO_ID     <- "dose_npi"
 SCENARIO_LABEL  <- "Dose-driven NPIs"
@@ -707,11 +711,13 @@ print(p_traj_inc)
 # ----------------------------------------------------------------------------
 # For each curve we fit log(cumulative) ~ day over a date window; the slope is
 # the exponential growth rate r (per day) and the doubling time is log(2)/r.
-#   * Fiber: the per-R0 MEDIAN cumulative trajectory, over three periods
-#     (pre-15 May; 15 May-14 Jun; 14 Jun-14 Jul). NOTE these use the TIMEPOINTS
-#     grid, so the month-long windows have few points -- coarse but comparable.
+#   * Fiber: the per-R0 MEDIAN cumulative trajectory. NOTE these use the
+#     TIMEPOINTS grid, so the month-long windows have few points -- coarse but
+#     comparable.
 #   * Confirmed cases: full observed range, and 15 May-14 Jun.
 #   * Onsets: pre-15 May, and 15 May-14 Jun (truncated to where the data end).
+# EVERY curve additionally gets an adjustable "GROWTH_X_DATE to 14 Jun" window,
+# shown next to the fixed 15 May-14 Jun window.
 # Doubling time is only defined for r > 0 (a flat/declining curve has r <= 0);
 # we always report r and set doubling time to NA when r <= 0.
 
@@ -732,10 +738,13 @@ fit_growth <- function(dates, values, lo, hi) {
              date_from     = min(dates[keep]), date_to = max(dates[keep]))
 }
 
-# --- Fiber: per-R0 median cumulative trajectory over three periods. ----------
+# --- Periods. An adjustable "X to 14 Jun" window (GROWTH_X_DATE) is added to
+#     every curve alongside the fixed 15 May-14 Jun window. -------------------
+growth_x_label <- sprintf("%s-14 Jun", format(GROWTH_X_DATE, "%d %b"))
 fiber_periods <- list("pre-15 May"    = c(epi_start, D_14MAY),
                       "15 May-14 Jun" = c(D_15MAY,  D_14JUN),
                       "14 Jun-14 Jul" = c(D_14JUN,  D_14JUL))
+fiber_periods[[growth_x_label]] <- c(GROWTH_X_DATE, D_14JUN)
 growth_fiber <- do.call(rbind, lapply(R0_GRID, function(r0v) {
   cc <- cumulative_cases[cumulative_cases$r0 == r0v, ]
   do.call(rbind, lapply(names(fiber_periods), function(pn) {
@@ -757,21 +766,23 @@ add_data_growth <- function(acc, label, dates, values, periods) {
 }
 growth_data <- NULL
 if (exists("confirmed_obs")) {
+  conf_periods <- list("full"          = c(min(confirmed_obs$date), max(confirmed_obs$date)),
+                       "15 May-14 Jun" = c(D_15MAY, D_14JUN))
+  conf_periods[[growth_x_label]] <- c(GROWTH_X_DATE, D_14JUN)
   growth_data <- add_data_growth(growth_data, "confirmed cases",
-    confirmed_obs$date, confirmed_obs$national_cumulative_confirmed_cases,
-    list("full"          = c(min(confirmed_obs$date), max(confirmed_obs$date)),
-         "15 May-14 Jun" = c(D_15MAY, D_14JUN)))
+    confirmed_obs$date, confirmed_obs$national_cumulative_confirmed_cases, conf_periods)
 }
 if (exists("onsets_obs")) {
+  onset_periods <- list("pre-15 May"    = c(min(onsets_obs$date), D_14MAY),
+                        "15 May-14 Jun" = c(D_15MAY, D_14JUN))
+  onset_periods[[growth_x_label]] <- c(GROWTH_X_DATE, D_14JUN)
   growth_data <- add_data_growth(growth_data, "onsets",
-    onsets_obs$date, onsets_obs$cumulative_onsets,
-    list("pre-15 May"    = c(min(onsets_obs$date), D_14MAY),
-         "15 May-14 Jun" = c(D_15MAY, D_14JUN)))
+    onsets_obs$date, onsets_obs$cumulative_onsets, onset_periods)
 }
 
 growth_tbl <- rbind(growth_fiber, growth_data)
 growth_tbl$period <- factor(growth_tbl$period,
-  levels = c("pre-15 May", "15 May-14 Jun", "14 Jun-14 Jul", "full"))
+  levels = unique(c("pre-15 May", growth_x_label, "15 May-14 Jun", "14 Jun-14 Jul", "full")))
 
 write.csv(growth_tbl, file.path(DIR_OUT, "dose_growth_rates_doubling_times.csv"), row.names = FALSE)
 disp <- growth_tbl
@@ -809,7 +820,7 @@ p_growth <- ggplot(growth_long, aes(series, value, fill = series)) +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7))
 ggsave(file.path(DIR_OUT, "dose_growth_rates_doubling_times.png"), p_growth,
-       width = 11, height = 6.5, dpi = 150)
+       width = 13, height = 6.5, dpi = 150)
 print(p_growth)
 
 # ----------------------------------------------------------------------------
