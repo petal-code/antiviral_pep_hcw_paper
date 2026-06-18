@@ -621,3 +621,19 @@ p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_trajectories.png"), p_traj,
        width = 10, height = 7, dpi = 150)
 print(p_traj)
+
+p_traj_log10 <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
+  data_window_vlines +
+  geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
+  geom_line(data = cumulative_cases, aes(date, mean),
+            inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
+  onset_overlay +
+  confirmed_overlay +
+  facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  labs(title = "Cumulative-incidence trajectories by replicate, per R0",
+       subtitle = sprintf("Thin = replicates; black = median; red = onsets; green = confirmed cases; scenario '%s', %d reps",
+                          EXTRAP_SCENARIO, N_STOCH),
+       x = "Date", y = "Cumulative cases") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
