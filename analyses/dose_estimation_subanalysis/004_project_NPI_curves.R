@@ -77,7 +77,7 @@ SCALAR_OVERRIDES <- list(
 # Simulation controls.
 FUNERAL_FRAC     <- 0.25    # share of t=0 transmission via funerals
 SEEDING_CASES    <- 3L
-N_STOCH          <- 100L    # replicates per scenario (4 scenarios -> 400 total)
+N_STOCH          <- 1L      # replicates per scenario (set to 100 for full run)
 
 TAKEOFF_N             <- 250L
 TAKEOFF_DEADLINE_DATE <- as.Date("2026-06-15")
@@ -95,6 +95,10 @@ TIMEPOINTS <- sort(unique(c(seq(10L, 730L, by = 10L), 730L)))
 
 # PHEIC-related dates for vertical lines on every calendar plot.
 PHEIC_DATES <- as.Date(c("2026-05-14", "2026-05-18"))
+
+# R0 grid for the analytic Rt profiles (section 6). Independent of R0_TARGET
+# (which drives the actual FIBER runs). Change the range/step freely here.
+R0_RT_GRID <- seq(1.45, 1.65, by = 0.05)
 
 # Scenario matrix horizon (days since epidemic start).
 MATRIX_HORIZON <- 730L
@@ -291,7 +295,81 @@ args_by_scenario <- setNames(
 )
 
 # ----------------------------------------------------------------------------
-# 6. Per-replicate helpers (identical pattern to 02)
+# 6. Analytic Rt profiles: R0_RT_GRID x all 4 NPI scenarios
+# ----------------------------------------------------------------------------
+# For every combination of R0 (1.45 -> 1.65) and NPI scenario, compute the
+# single-type instantaneous and case Rt over time. D and F_fun are reused from
+# section 5 (they depend only on the fixed scalar overrides, not on R0 or the
+# time-varying trajectory), so we only need to re-solve the offspring means per R0.
+# Adapted from 02_npi_inputs_and_fiber_runs.R section 5.
+RT_TIMES <- 0:730L
+RT_MC_N  <- 50000L
+RT_SEED  <- 1L
+
+message(sprintf("Computing analytic Rt profiles: %d R0 values x %d scenarios...",
+                length(R0_RT_GRID), length(scen_names)))
+
+# Build a named list of args for every (R0, scenario) pair.
+rt_args_grid <- do.call(c, lapply(R0_RT_GRID, function(r0) {
+  m <- solve_offspring_means(r0, FUNERAL_FRAC, D, F_fun)
+  setNames(lapply(scen_names, function(sn) {
+    a <- args_by_scenario[[sn]]
+    a$mn_offspring_genPop  <- m$mn_genPop
+    a$mn_offspring_funeral <- m$mn_funeral
+    a
+  }), paste(sprintf("R0_%.2f", r0), scen_names, sep = "__"))
+}))
+
+rt_profiles <- do.call(rbind, lapply(R0_RT_GRID, function(r0) {
+  do.call(rbind, lapply(scen_names, function(sn) {
+    key <- paste(sprintf("R0_%.2f", r0), sn, sep = "__")
+    rt  <- Rt_curve_single_type(rt_args_grid[[key]], times = RT_TIMES,
+                                n = RT_MC_N, seed = RT_SEED)
+    rt$r0       <- r0
+    rt$scenario <- sn
+    rt
+  }))
+}))
+write.csv(rt_profiles, file.path(DIR_OUT, "004_npi_scenario_rt_profiles.csv"),
+          row.names = FALSE)
+
+rt_long <- rbind(
+  data.frame(r0 = rt_profiles$r0, scenario = rt_profiles$scenario,
+             day = rt_profiles$time, mode = "instantaneous", Rt = rt_profiles$R_inst),
+  data.frame(r0 = rt_profiles$r0, scenario = rt_profiles$scenario,
+             day = rt_profiles$time, mode = "case",          Rt = rt_profiles$R_case)
+)
+rt_long$mode     <- factor(rt_long$mode, levels = c("instantaneous", "case"))
+rt_long$scenario <- factor(rt_long$scenario, levels = scen_names)
+rt_long$date     <- day_to_date(rt_long$day)
+
+p_rt <- ggplot(rt_long, aes(date, Rt, colour = scenario, linetype = mode,
+                            group = interaction(r0, scenario, mode))) +
+  geom_hline(yintercept = 1, colour = "grey40", linewidth = 0.5) +
+  pheic_vlines +
+  geom_line(linewidth = 0.75) +
+  facet_wrap(~ r0, ncol = 3,
+             labeller = label_bquote(R[0] == .(r0))) +
+  scale_colour_manual(values = scenario_colours, labels = scenario_labels,
+                      name = "Scenario") +
+  scale_linetype_manual(values = c(instantaneous = "solid", case = "22"),
+                        name = "Rt type") +
+  scale_x_date(date_breaks = "2 months", date_labels = "%b %Y") +
+  labs(
+    title    = "Analytic Rt by R0 and NPI scenario",
+    subtitle = sprintf("Solid = instantaneous Rt; dashed = case Rt; Rt < 1 = controlled\nDashed verticals = PHEIC dates (%s, %s)",
+                       format(PHEIC_DATES[1], "%d %b"), format(PHEIC_DATES[2], "%d %b")),
+    x = "Date", y = expression(R[t])
+  ) +
+  theme_bw(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+        legend.position = "bottom")
+ggsave(file.path(DIR_OUT, "004_npi_scenario_rt_profiles.png"), p_rt,
+       width = 11, height = 8, dpi = 150)
+print(p_rt)
+
+# ----------------------------------------------------------------------------
+# 7. Per-replicate runner + summariser (identical pattern to 02)
 # ----------------------------------------------------------------------------
 run_one_takeoff <- function(args, base_seed, takeoff_n, max_retries, takeoff_day) {
   seed <- base_seed; retry <- 0L; inf_times <- numeric(0)
@@ -322,53 +400,56 @@ summarise_run <- function(inf_times, timepoints, amounts) {
 }
 
 # ----------------------------------------------------------------------------
-# 7. Run FIBER: 4 scenarios x 100 replicates = 400 total runs
+# 8. Run FIBER: all 400 runs in one parallel batch
 # ----------------------------------------------------------------------------
+# All (scenario, replicate) combinations are submitted at once so the scheduler
+# can pack every available core without the sequential scenario-loop bottleneck.
+# On Linux/macOS multicore (fork-based, lower overhead) is used automatically;
+# on Windows we fall back to multisession (socket-based).
 n_scen <- length(scen_names)
 total  <- n_scen * N_STOCH
-message(sprintf(
-  "Running %d scenarios x %d reps = %d replicates, R0 = %.2f, on %d workers...",
-  n_scen, N_STOCH, total, R0_TARGET, N_WORKERS))
 
-plan(multisession, workers = N_WORKERS)
-t_start    <- proc.time()
-all_results <- vector("list", n_scen)
+run_grid <- do.call(rbind, lapply(seq_along(scen_names), function(si)
+  data.frame(si = si, sn = scen_names[si], rep_id = seq_len(N_STOCH),
+             stringsAsFactors = FALSE)))
 
-for (si in seq_along(scen_names)) {
-  sn     <- scen_names[si]
-  args_s <- args_by_scenario[[sn]]
-  message(sprintf("  [%d/%d] Scenario '%s': running %d reps...", si, n_scen, sn, N_STOCH))
-
-  all_results[[si]] <- future_lapply(seq_len(N_STOCH), function(rep_id) {
-    base_seed <- SEED_BASE +
-      (si      - 1L) * N_STOCH * (MAX_RETRIES + 1L) +
-      (rep_id  - 1L) *           (MAX_RETRIES + 1L)
-    run <- run_one_takeoff(args_s, base_seed, TAKEOFF_N, MAX_RETRIES, takeoff_day)
-    s   <- summarise_run(run$inf_times, TIMEPOINTS, AMOUNTS)
-    list(scenario = sn, scen_idx = si, rep_id = rep_id,
-         n_cases = run$n_cases, n_by_deadline = run$n_by_deadline,
-         took_off = run$took_off, retries = run$retries,
-         cum_at = s$cum_at, time_to = s$time_to)
-  },
-  future.globals = list(
-    args_s = args_s, si = si, sn = sn, N_STOCH = N_STOCH,
-    MAX_RETRIES = MAX_RETRIES, SEED_BASE = SEED_BASE,
-    TAKEOFF_N = TAKEOFF_N, takeoff_day = takeoff_day,
-    TIMEPOINTS = TIMEPOINTS, AMOUNTS = AMOUNTS,
-    run_one_takeoff = run_one_takeoff, summarise_run = summarise_run
-  ),
-  future.packages = "fiber", future.seed = TRUE)
-
-  n_takeoff <- sum(vapply(all_results[[si]], function(r) isTRUE(r$took_off), logical(1)))
-  elapsed_s <- (proc.time() - t_start)[["elapsed"]]
-  eta_s     <- elapsed_s / si * (n_scen - si)
-  message(sprintf(
-    "  [%d/%d] '%s' done | %d/%d reps took off | elapsed %.1f min | ETA %.1f min",
-    si, n_scen, sn, n_takeoff, N_STOCH, elapsed_s / 60, eta_s / 60))
+if (future::supportsMulticore()) {
+  plan(multicore, workers = N_WORKERS)
+  message(sprintf("Using multicore (fork) on %d workers.", N_WORKERS))
+} else {
+  plan(multisession, workers = N_WORKERS)
+  message(sprintf("Using multisession on %d workers.", N_WORKERS))
 }
 
+message(sprintf("Running %d scenarios x %d reps = %d total, R0 = %.2f...",
+                n_scen, N_STOCH, total, R0_TARGET))
+t_start <- proc.time()
+
+results_flat <- future_lapply(seq_len(nrow(run_grid)), function(idx) {
+  si     <- run_grid$si[idx]
+  sn     <- run_grid$sn[idx]
+  rep_id <- run_grid$rep_id[idx]
+  base_seed <- SEED_BASE +
+    (si     - 1L) * N_STOCH * (MAX_RETRIES + 1L) +
+    (rep_id - 1L) *           (MAX_RETRIES + 1L)
+  run <- run_one_takeoff(args_by_scenario[[si]], base_seed, TAKEOFF_N, MAX_RETRIES, takeoff_day)
+  s   <- summarise_run(run$inf_times, TIMEPOINTS, AMOUNTS)
+  list(scenario = sn, scen_idx = si, rep_id = rep_id,
+       n_cases = run$n_cases, n_by_deadline = run$n_by_deadline,
+       took_off = run$took_off, retries = run$retries,
+       cum_at = s$cum_at, time_to = s$time_to)
+},
+future.globals = list(
+  run_grid = run_grid, scen_names = scen_names,
+  args_by_scenario = args_by_scenario,
+  N_STOCH = N_STOCH, MAX_RETRIES = MAX_RETRIES, SEED_BASE = SEED_BASE,
+  TAKEOFF_N = TAKEOFF_N, takeoff_day = takeoff_day,
+  TIMEPOINTS = TIMEPOINTS, AMOUNTS = AMOUNTS,
+  run_one_takeoff = run_one_takeoff, summarise_run = summarise_run
+),
+future.packages = "fiber", future.seed = TRUE)
+
 plan(sequential)
-results_flat <- do.call(c, all_results)
 elapsed <- proc.time() - t_start
 message(sprintf("Done: %d replicates in %.1f min.", length(results_flat), elapsed["elapsed"] / 60))
 saveRDS(results_flat, file.path(DIR_OUT, "004_npi_scenario_projections.rds"))
