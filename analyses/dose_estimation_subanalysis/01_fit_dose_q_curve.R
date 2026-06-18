@@ -27,6 +27,8 @@
 #          outputs/dose_q_curve_fit.rds   <- full fit (params, draws summary, data)
 #          outputs/dose_q_curve.csv       <- the Q curve as plain CSV
 #          outputs/dose_q_curve_fit.png   <- diagnostic fit + extrapolation plot
+#          outputs/dose_q_curve_extrapolation_scenarios.{rds,csv,png}
+#                                          <- 4 forward-extrapolation scenarios + plot
 # ============================================================================
 
 suppressPackageStartupMessages({
@@ -63,6 +65,16 @@ SIGMA_PRIOR_SD <- 0.15
 
 # Sampler settings.
 N_CHAINS <- 4L; ITER_WARMUP <- 1500L; ITER_SAMPLING <- 1500L
+
+# Forward-extrapolation scenario knobs (section 5). Each scenario continues the
+# curve AFTER the last data point, starting from the fitted value there (q_end).
+LINEAR_TARGET_Q      <- 0.90   # scenario 1: straight line up to this Q ...
+LINEAR_TARGET_DAY    <- 100L   #             ... reached by this day, flat after
+CONFLICT_START_DAY   <- 200L   # scenario 4: conflict begins here
+CONFLICT_DROP_DAYS   <- 25L    #   drop from q_end to CONFLICT_LOW_Q over this many days
+CONFLICT_LOW_DAYS    <- 50L    #   then hold at CONFLICT_LOW_Q this many days
+CONFLICT_REVERT_DAYS <- 25L    #   then revert to q_end over this many days
+CONFLICT_LOW_Q       <- 0.20   #   the depressed Q during conflict
 
 # ----------------------------------------------------------------------------
 # 2. Fit + extrapolate the logistic Q curve  (fit_dose_q_curve() in helpers.R)
@@ -138,3 +150,106 @@ p <- ggplot(q_curve, aes(relative_day, q_mean)) +
 
 ggsave(file.path(DIR_OUT, "dose_q_curve_fit.png"), p, width = 9, height = 5, dpi = 150)
 print(p)   # also display
+
+# ----------------------------------------------------------------------------
+# 5. Forward-extrapolation scenarios (applied AFTER the last data point)
+# ----------------------------------------------------------------------------
+# All four scenarios share the fitted curve up to last_obs_day and start their
+# continuation from the fitted value there (q_end). They differ only afterwards:
+#   1. linear_to_90  -- straight line from (last_obs_day, q_end) to
+#                        (LINEAR_TARGET_DAY, LINEAR_TARGET_Q); flat thereafter.
+#   2. logistic      -- the fitted logistic projected forward (current behaviour).
+#   3. flat          -- held flat at q_end (no further improvement).
+#   4. conflict      -- flat at q_end until CONFLICT_START_DAY, then a conflict
+#                        drops Q to CONFLICT_LOW_Q over CONFLICT_DROP_DAYS, holds
+#                        it for CONFLICT_LOW_DAYS, reverts to q_end over
+#                        CONFLICT_REVERT_DAYS; flat at q_end afterwards.
+# dose_q_curve.rds (read by 02) stays the logistic projection; these scenarios
+# are saved separately so they can be selected downstream if desired.
+
+# Fitted value at the last data point -- the common start of every extrapolation.
+q_end <- q_curve$q_mean[match(last_obs_day, q_curve$relative_day)]
+
+# Common daily grid, long enough to show the whole conflict episode.
+conflict_end <- CONFLICT_START_DAY + CONFLICT_DROP_DAYS + CONFLICT_LOW_DAYS +
+  CONFLICT_REVERT_DAYS
+scen_horizon <- max(horizon_day, conflict_end + 60L)
+scen_days    <- 0:scen_horizon
+post         <- scen_days > last_obs_day                 # the extrapolation region
+
+# The fitted logistic on the grid (flat-held beyond its own horizon, where it has
+# saturated). This IS scenario 2 and the shared [0, last_obs_day] segment.
+fit_on <- clip01(approx(q_curve$relative_day, q_curve$q_mean,
+                        xout = scen_days, rule = 2)$y)
+
+# 1. Linear ramp to LINEAR_TARGET_Q by LINEAR_TARGET_DAY, flat thereafter.
+s_linear <- fit_on
+if (LINEAR_TARGET_DAY > last_obs_day) {
+  lin_fun <- approxfun(c(last_obs_day, LINEAR_TARGET_DAY),
+                       c(q_end, LINEAR_TARGET_Q), rule = 2)
+  s_linear[post] <- lin_fun(scen_days[post])
+} else {
+  s_linear[post] <- LINEAR_TARGET_Q
+}
+
+# 2. Logistic forward projection (the fit itself).
+s_logistic <- fit_on
+
+# 3. Flat at q_end.
+s_flat <- fit_on
+s_flat[post] <- q_end
+
+# 4. Flat, then a conflict episode, then revert to q_end. A single piecewise-
+#    linear function over the four knots does it: rule = 2 holds q_end before the
+#    drop and after the reversion.
+conflict_fun <- approxfun(
+  x = c(CONFLICT_START_DAY,
+        CONFLICT_START_DAY + CONFLICT_DROP_DAYS,
+        CONFLICT_START_DAY + CONFLICT_DROP_DAYS + CONFLICT_LOW_DAYS,
+        conflict_end),
+  y = c(q_end, CONFLICT_LOW_Q, CONFLICT_LOW_Q, q_end),
+  rule = 2
+)
+s_conflict <- fit_on
+s_conflict[post] <- conflict_fun(scen_days[post])
+
+scenarios <- rbind(
+  data.frame(relative_day = scen_days, q = clip01(s_linear),   scenario = "linear_to_90"),
+  data.frame(relative_day = scen_days, q = clip01(s_logistic), scenario = "logistic"),
+  data.frame(relative_day = scen_days, q = clip01(s_flat),     scenario = "flat"),
+  data.frame(relative_day = scen_days, q = clip01(s_conflict), scenario = "conflict")
+)
+scenarios$date <- START_DATE + scenarios$relative_day
+
+scen_levels <- c("linear_to_90", "logistic", "flat", "conflict")
+scen_labels <- c(linear_to_90 = sprintf("1. Linear to %d%% by day %d",
+                                        round(100 * LINEAR_TARGET_Q), LINEAR_TARGET_DAY),
+                 logistic     = "2. Logistic projection (current)",
+                 flat         = "3. Flat at last value",
+                 conflict     = sprintf("4. Conflict at day %d", CONFLICT_START_DAY))
+scenarios$scenario <- factor(scenarios$scenario, levels = scen_levels)
+
+saveRDS(scenarios, file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.rds"))
+write.csv(scenarios, file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.csv"),
+          row.names = FALSE)
+
+# Plot: the fit (90% band + data) plus the four extrapolations on one graph.
+p_scen <- ggplot(scenarios, aes(relative_day, q, colour = scenario)) +
+  geom_ribbon(data = q_curve[q_curve$relative_day <= last_obs_day, ],
+              aes(x = relative_day, ymin = q_lower, ymax = q_upper),
+              inherit.aes = FALSE, fill = "grey70", alpha = 0.35) +
+  geom_vline(xintercept = last_obs_day, linetype = "dotted", colour = "grey50") +
+  geom_line(linewidth = 0.9) +
+  geom_point(data = obs, aes(relative_day, proportion),
+             inherit.aes = FALSE, colour = "black", size = 2.2) +
+  scale_colour_brewer(palette = "Dark2", labels = scen_labels, name = "Extrapolation") +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+  labs(title = "Dose Q curve: fit + forward-extrapolation scenarios",
+       subtitle = sprintf("Shared fit to day %d (grey = 90%% CI, points = data); scenarios diverge after the last data point",
+                          last_obs_day),
+       x = "Relative day", y = "Dose coverage (Q)") +
+  theme_bw(base_size = 11)
+
+ggsave(file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.png"), p_scen,
+       width = 9.5, height = 5.5, dpi = 150)
+print(p_scen)   # also display
