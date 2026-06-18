@@ -885,3 +885,91 @@ p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
 ggsave(file.path(DIR_OUT, "dose_r0_grid_snapshot_cumulative.png"), p_snap,
        width = 9, height = 5, dpi = 150)
 print(p_snap)
+
+# ----------------------------------------------------------------------------
+# 12. Cumulative cases RE-ZEROED to the confirmed-series start date
+# ----------------------------------------------------------------------------
+# Put the fiber trajectories, the observed onsets and the observed confirmed
+# cases ON THE SAME BASELINE so their accumulation rates can be compared head to
+# head. We take t0 = the first date of the confirmed-case series (mid-May), call
+# that "day 0", and for every series plot the cumulative cases ACCRUED SINCE t0,
+# i.e. value(t) - value(t0), against the number of days since t0. Every curve
+# therefore departs from the origin (0, 0): the figure answers "starting from
+# mid-May, how fast does each series pile up cases?" regardless of how many had
+# already accumulated before t0.
+#
+# t0 defaults to the confirmed-series start; if that file is absent we fall back
+# to the onset-series start, then to the epidemic start.
+REBASE_END_DATE <- as.Date("2026-06-20")   # right-hand x limit (set NA for auto)
+
+rebase_t0 <- if (exists("confirmed_obs")) min(confirmed_obs$date) else
+             if (exists("onsets_obs"))    min(onsets_obs$date)    else epi_start
+message(sprintf("Re-zeroing cumulative curves at t0 = %s (day 0).",
+                as.character(rebase_t0)))
+
+# Re-zero one cumulative series at t0: keep dates >= t0, subtract the (linearly
+# interpolated) value at t0, and guarantee an explicit (0, 0) anchor so every
+# curve starts at the origin. rule = 2 holds the series flat outside its range,
+# so t0 need not be one of the series' own observation dates.
+rebase_cum <- function(dates, values, t0) {
+  o <- order(dates); dates <- dates[o]; values <- values[o]
+  ok <- is.finite(values); dates <- dates[ok]; values <- values[ok]
+  if (length(dates) < 1L) return(NULL)
+  v0  <- stats::approx(as.numeric(dates), values, xout = as.numeric(t0), rule = 2)$y
+  sel <- dates >= t0
+  out <- data.frame(days_since = as.numeric(dates[sel] - t0),
+                    cum_since  = values[sel] - v0)
+  if (!any(out$days_since == 0))
+    out <- rbind(data.frame(days_since = 0, cum_since = 0), out)
+  out[order(out$days_since), , drop = FALSE]
+}
+
+# Fiber: one re-zeroed median trajectory per R0.
+rebased_fiber <- do.call(rbind, lapply(R0_GRID, function(r0v) {
+  cc <- cumulative_cases[cumulative_cases$r0 == r0v, ]
+  rb <- rebase_cum(cc$date, cc$median_cum_cases, rebase_t0)
+  if (is.null(rb)) return(NULL)
+  data.frame(series = sprintf("R0=%.2f", r0v), source_type = "fiber", rb, row.names = NULL)
+}))
+
+# Data sources: onsets and confirmed cases, re-zeroed the same way.
+rebased_data <- data.frame()
+if (exists("onsets_obs")) {
+  rb <- rebase_cum(onsets_obs$date, onsets_obs$cumulative_onsets, rebase_t0)
+  if (!is.null(rb)) rebased_data <- rbind(rebased_data,
+    data.frame(series = "onsets", source_type = "data", rb, row.names = NULL))
+}
+if (exists("confirmed_obs")) {
+  rb <- rebase_cum(confirmed_obs$date, confirmed_obs$national_cumulative_confirmed_cases, rebase_t0)
+  if (!is.null(rb)) rebased_data <- rbind(rebased_data,
+    data.frame(series = "confirmed cases", source_type = "data", rb, row.names = NULL))
+}
+
+rebased_all <- rbind(rebased_fiber, rebased_data)
+rebased_all$series <- factor(rebased_all$series,
+  levels = c(sprintf("R0=%.2f", R0_GRID), "onsets", "confirmed cases"))
+rebased_cols <- c(setNames(viridisLite::viridis(length(R0_GRID), option = "C", end = 0.9),
+                           sprintf("R0=%.2f", R0_GRID)),
+                  "onsets" = "#d62728", "confirmed cases" = "#1a9850")
+
+write.csv(rebased_all, file.path(DIR_OUT, "dose_r0_grid_cumulative_rebased.csv"),
+          row.names = FALSE)
+
+x_hi <- if (length(REBASE_END_DATE) && is.na(REBASE_END_DATE)) max(rebased_all$days_since)
+        else as.numeric(REBASE_END_DATE - rebase_t0)
+
+p_rebased <- ggplot(rebased_all, aes(days_since, cum_since, colour = series)) +
+  geom_line(aes(linewidth = source_type)) +
+  scale_colour_manual(values = rebased_cols, name = NULL) +
+  scale_linewidth_manual(values = c(fiber = 0.7, data = 1.3), guide = "none") +
+  scale_x_continuous(breaks = seq(0, ceiling(x_hi / 7) * 7, by = 7)) +
+  coord_cartesian(xlim = c(0, x_hi), ylim = c(0, NA)) +
+  labs(title = "Cumulative cases accrued since the confirmed-series start date",
+       subtitle = sprintf("Day 0 = %s (confirmed-series start); fiber = per-R0 median; data = thick lines; scenario '%s'",
+                          format(rebase_t0, "%d %b %Y"), EXTRAP_SCENARIO),
+       x = sprintf("Days since %s", format(rebase_t0, "%d %b %Y")),
+       y = "Cumulative cases since day 0") +
+  theme_bw(base_size = 11)
+ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_rebased.png"), p_rebased,
+       width = 9, height = 5.5, dpi = 150)
+print(p_rebased)
