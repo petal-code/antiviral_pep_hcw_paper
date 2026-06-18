@@ -58,7 +58,7 @@ FORWARD_DAYS <- 365L
 # Tighten/loosen these SDs to harden/soften how strictly the curve is held to
 # the 0% floor and 100% ceiling.
 LOWER_PRIOR_MEAN <- 0.0; LOWER_PRIOR_SD <- 0.01   # min level: 0%
-UPPER_PRIOR_MEAN <- 1.0; UPPER_PRIOR_SD <- 0.02   # max level: 100%
+UPPER_PRIOR_MEAN <- 1.0; UPPER_PRIOR_SD <- 0.3   # max level: 100%
 
 # Observation-noise prior scale (half-normal); proportions live in [0, 1].
 SIGMA_PRIOR_SD <- 0.15
