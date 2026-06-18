@@ -83,25 +83,25 @@ UNSAFE_FUNERAL_ETU <- 0.0
 
 # --- Fixed efficacy scalars (NOT time-varying; override DEFAULT_SCALAR_INPUTS).
 SCALAR_OVERRIDES <- list(
-  etu_efficacy                         = 0.90,
+  etu_efficacy                         = 0.70,
   general_hospital_quarantine_efficacy = 0.30,
-  ppe_efficacy                         = 0.70,
+  ppe_efficacy                         = 0.60,
   safe_funeral_efficacy                = 0.80
 )
 
 # --- Simulation grid + controls.
-R0_GRID          <- seq(1.30, 1.60, by = 0.05)   # baseline (t=0) R0 grid
+R0_GRID          <- seq(1.35, 1.55, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
 SEEDING_CASES    <- 5L                            # initial seeding infections
-N_STOCH          <- 100L                          # stochastic replicates per R0
+N_STOCH          <- 10L                          # stochastic replicates per R0
 TAKEOFF_N        <- 100L                          # re-run any outbreak < this many infections
 MAX_RETRIES      <- 50L                           # cap on re-runs per replicate
-CHECK_FINAL_SIZE <- 50000L                        # stop a run once this many cases exist
+CHECK_FINAL_SIZE <- 10000L                        # stop a run once this many cases exist
 
 # --- Summary grids (computed per run, then median across runs).
 TIMEPOINTS <- c(seq(10L, 360L, by = 10L), 365L)   # days at which to read cumulative cases
 AMOUNTS    <- c(10L, 25L, 50L, 100L, 250L, 500L,  # cumulative case amounts to time
-                1000L, 2500L, 5000L, 10000L)
+                1000L, 2000L, 2500L, 4000L, 5000L)
 
 # --- Scenario identity + horizon over which the NPI matrix is defined.
 SCENARIO_ID     <- "dose_npi"
@@ -114,10 +114,10 @@ MATRIX_HORIZON  <- max(730L, max(TIMEPOINTS))     # days; Q held flat past its g
 #     Q = 0, so the NPIs sit at their worst-response (q0) values and the epidemic
 #     runs unmitigated until the dose curve begins. Set to NA to start exactly at
 #     the Q curve's first date (no prepended zeros).
-EPIDEMIC_START_DATE <- as.Date("2026-05-01")
+EPIDEMIC_START_DATE <- as.Date("2026-03-01")
 
 # --- Parallel + RNG.
-N_WORKERS <- min(future::availableCores(), 50L)
+N_WORKERS <- min(future::availableCores() - 4, 50L)
 SEED_BASE <- 20260617L
 
 # Fail fast if the installed fiber predates the time-varying NPI interface.
