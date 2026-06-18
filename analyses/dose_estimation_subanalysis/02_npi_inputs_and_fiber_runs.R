@@ -45,6 +45,8 @@
 #          outputs/dose_r0_grid_per_run.rds              (per-replicate metrics)
 #          outputs/dose_r0_grid_cumulative_cases.csv     (median cum cases)
 #          outputs/dose_r0_grid_cumulative_trajectories.png (per-replicate curves by R0)
+#          outputs/dose_r0_grid_daily_incidence.png      (implied daily incidence by R0)
+#          outputs/dose_r0_grid_snapshot_cumulative.png  (cum infections at 14 May / 14 Jun)
 #          outputs/dose_r0_grid_time_to_amounts.csv      (median time-to-amount)
 #          outputs/dose_growth_rates_doubling_times.csv / .png (growth rate + doubling
 #                                          time per period: fiber R0s vs data sources)
@@ -216,6 +218,13 @@ if (takeoff_day <= 0L) {
 }
 message(sprintf("Takeoff: >= %d infections by %s (relative day %d).",
                 TAKEOFF_N, as.character(TAKEOFF_DEADLINE_DATE), takeoff_day))
+
+# Snapshot dates for the end-of-script cumulative-infection comparison. Add their
+# relative days to TIMEPOINTS so each replicate's cumulative is read off EXACTLY
+# at these dates (rather than interpolated off the 10-day grid).
+SNAPSHOT_DATES <- as.Date(c("2026-05-14", "2026-06-14"))
+snapshot_days  <- as.integer(SNAPSHOT_DATES - epi_start)
+TIMEPOINTS     <- sort(unique(c(TIMEPOINTS, snapshot_days[snapshot_days > 0])))
 
 # Map the Q curve onto the simulation's relative-day axis (day 0 = epi_start):
 # each Q point's sim day = its calendar date - epi_start. rule = 2 holds Q flat
@@ -648,6 +657,51 @@ p_traj_log10 <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id)
                   ylim = c(1, NA))
 print(p_traj_log10)
 
+# (iv) Daily incidence implied by each replicate's cumulative curve, per R0.
+# Incidence over each interval = diff(cumulative) / diff(day), plotted at the
+# interval midpoint. Thin = replicates; black = median across replicates; the
+# observed daily incidence is overlaid (red = onsets, green = confirmed).
+inc_mids <- (TIMEPOINTS[-1] + TIMEPOINTS[-length(TIMEPOINTS)]) / 2
+inc_long <- do.call(rbind, lapply(took, function(r)
+  data.frame(r0 = r$r0, rep_id = r$rep_id, day = inc_mids,
+             incidence = diff(r$cum_at) / diff(TIMEPOINTS))))
+inc_long$date <- day_to_date(inc_long$day)
+inc_med <- aggregate(incidence ~ r0 + day, data = inc_long, FUN = stats::median)
+inc_med$date <- day_to_date(inc_med$day)
+
+onset_inc_overlay <- if (exists("onsets_obs"))
+  geom_line(data = onsets_obs, aes(date, daily_incidence), inherit.aes = FALSE,
+            colour = "#d62728", linewidth = 1.0) else NULL
+confirmed_inc_overlay <- NULL
+if (exists("confirmed_obs")) {
+  co <- confirmed_obs[order(confirmed_obs$date), ]
+  ci <- data.frame(date = co$date[-1],
+                   incidence = diff(co$national_cumulative_confirmed_cases) /
+                               as.numeric(diff(co$date)))
+  confirmed_inc_overlay <- geom_line(data = ci, aes(date, incidence),
+                                     inherit.aes = FALSE, colour = "#1a9850", linewidth = 1.0)
+}
+
+p_traj_inc <- ggplot(inc_long, aes(date, incidence, group = interaction(r0, rep_id))) +
+  data_window_vlines +
+  geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
+  geom_line(data = inc_med, aes(date, incidence), inherit.aes = FALSE,
+            colour = "black", linewidth = 0.9) +
+  onset_inc_overlay +
+  confirmed_inc_overlay +
+  facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  labs(title = "Daily incidence implied by the cumulative curves, per R0",
+       subtitle = sprintf("diff(cumulative)/diff(day); thin = replicates, black = median; red = onset, green = confirmed daily incidence; scenario '%s'",
+                          EXTRAP_SCENARIO),
+       x = "Date", y = "Incidence (per day)") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) +
+  coord_cartesian(xlim = c(epi_start, as.Date("2026-06-20")))
+ggsave(file.path(DIR_OUT, "dose_r0_grid_daily_incidence.png"), p_traj_inc,
+       width = 10, height = 7, dpi = 150)
+print(p_traj_inc)
+
 # ----------------------------------------------------------------------------
 # 10. Growth rate + doubling time by period (fiber curves vs data sources)
 # ----------------------------------------------------------------------------
@@ -757,3 +811,57 @@ p_growth <- ggplot(growth_long, aes(series, value, fill = series)) +
 ggsave(file.path(DIR_OUT, "dose_growth_rates_doubling_times.png"), p_growth,
        width = 11, height = 6.5, dpi = 150)
 print(p_growth)
+
+# ----------------------------------------------------------------------------
+# 11. Cumulative infections at two snapshot dates (per R0) vs data sources
+# ----------------------------------------------------------------------------
+# For each replicate, its cumulative infections at 14 May and 14 Jun 2026 (read
+# EXACTLY off TIMEPOINTS, which were augmented with these days): one dot per
+# replicate at its R0, with the median drawn as a large dot. Observed references
+# are overlaid as horizontal lines: onsets on both dates and confirmed cases on
+# 14 Jun. (Onsets end before 14 Jun, so the 14 Jun onset line is the last
+# observed onset value.)
+snap_idx  <- match(snapshot_days, TIMEPOINTS)
+snap_labs <- format(SNAPSHOT_DATES, "%d %b %Y")
+snap_long <- do.call(rbind, lapply(took, function(r)
+  data.frame(r0 = r$r0, rep_id = r$rep_id, snapshot = snap_labs,
+             cum = r$cum_at[snap_idx])))
+snap_long$snapshot <- factor(snap_long$snapshot, levels = snap_labs)
+snap_med <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = stats::median)
+
+# Observed cumulative value at a date (interpolated; held flat past the data end).
+obs_at <- function(d, dates, values) {
+  if (d <= max(dates)) approx(as.numeric(dates), values, as.numeric(d))$y
+  else values[which.max(dates)]
+}
+ref <- data.frame()
+if (exists("onsets_obs"))
+  ref <- rbind(ref, data.frame(
+    snapshot = factor(snap_labs, levels = snap_labs), source = "onsets",
+    value = vapply(SNAPSHOT_DATES, function(d)
+      obs_at(d, onsets_obs$date, onsets_obs$cumulative_onsets), numeric(1))))
+if (exists("confirmed_obs"))
+  ref <- rbind(ref, data.frame(
+    snapshot = factor(snap_labs[2], levels = snap_labs), source = "confirmed cases",
+    value = obs_at(SNAPSHOT_DATES[2], confirmed_obs$date,
+                   confirmed_obs$national_cumulative_confirmed_cases)))
+
+ref_layer <- if (nrow(ref) > 0)
+  geom_hline(data = ref, aes(yintercept = value, colour = source), linewidth = 0.9) else NULL
+
+p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
+  geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
+  geom_point(data = snap_med, aes(factor(r0), cum), colour = "black", size = 4) +
+  ref_layer +
+  facet_wrap(~ snapshot, scales = "free_y") +
+  scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
+                      name = "Observed") +
+  labs(title = "Cumulative infections by R0 at snapshot dates",
+       subtitle = sprintf("Blue = replicates; large black dot = median; lines = observed (14 Jun onset = last obs, %s); scenario '%s'",
+                          if (exists("onsets_obs")) format(max(onsets_obs$date), "%d %b") else "n/a",
+                          EXTRAP_SCENARIO),
+       x = "Baseline R0", y = "Cumulative infections") +
+  theme_bw(base_size = 11)
+ggsave(file.path(DIR_OUT, "dose_r0_grid_snapshot_cumulative.png"), p_snap,
+       width = 9, height = 5, dpi = 150)
+print(p_snap)
