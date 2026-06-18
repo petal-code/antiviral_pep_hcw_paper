@@ -33,21 +33,19 @@ DOSE_OBS <- data.frame(
 # ---- Tiny numeric helper ----------------------------------------------------
 clip01 <- function(x) pmin(1, pmax(0, x))
 
-# ---- Build the relative-day observation table (with optional front padding) -
+# ---- Build the relative-day observation table (with an optional start anchor) -
 # Converts the calendar-date observations to a RELATIVE-DAY axis measured from
 # `start_date` (day 0), and turns percentages into proportions.
 #
-# Front padding ("set a start date and make all days between the start date and
-# 18 May set to 0"): if `start_date` is earlier than the first observation, one
-# zero-valued point is added for every day from day 0 up to (but not including)
-# the first real observation. These extra zeros anchor the early curve at the 0%
-# floor. With start_date == the first observation date (the default) there is no
-# padding and the relative days are simply {0, 6, 13, 20, 27}.
+# Start anchor: if `start_date` is earlier than the first observation, a SINGLE
+# zero-valued point is added at the start date (relative day 0) to anchor the
+# curve at the 0% floor from that day. (Earlier days are NOT each padded with a
+# zero.) With start_date == the first observation date (the default) nothing is
+# added and the relative days are simply {0, 6, 13, 20, 27}.
 #
 # Returns a data.frame with columns: date, relative_day, proportion, padded.
 build_dose_obs <- function(dose_obs = DOSE_OBS,
-                           start_date = min(dose_obs$date),
-                           pad_step = 1L) {
+                           start_date = min(dose_obs$date)) {
   start_date <- as.Date(start_date)
   first_obs  <- min(dose_obs$date)
   if (start_date > first_obs) {
@@ -63,12 +61,12 @@ build_dose_obs <- function(dose_obs = DOSE_OBS,
     stringsAsFactors = FALSE
   )
 
-  offset <- as.integer(first_obs - start_date)   # days of padding requested
-  if (offset >= 1L) {
-    pad_days <- seq.int(0L, offset - 1L, by = pad_step)
+  # If the start date is earlier than the first observation, add a SINGLE zero
+  # at the start date (relative day 0) to anchor the curve at the 0% floor.
+  if (start_date < first_obs) {
     pad <- data.frame(
-      date         = start_date + pad_days,
-      relative_day = pad_days,
+      date         = start_date,
+      relative_day = 0L,
       proportion   = 0,
       padded       = TRUE,
       stringsAsFactors = FALSE

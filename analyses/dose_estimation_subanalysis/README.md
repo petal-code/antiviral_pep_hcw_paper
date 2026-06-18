@@ -16,8 +16,8 @@ runs the `fiber` branching-process model across a grid of baseline R0 values.
 
    * Percentages → proportions; calendar dates → **relative days** from a
      configurable `START_DATE` (day 0).
-   * **Front padding:** set `START_DATE` earlier than 18 May 2026 to pad the
-     front with daily zeros up to 18 May (encodes a longer 0% period).
+   * **Start anchor:** set `START_DATE` earlier than 18 May 2026 to add a single
+     zero at the start date (relative day 0), so the curve starts from 0% there.
    * **Very informative endpoint priors** pin the minimum at 0% (`L ≈ 0`) and
      the maximum at 100% (`U ≈ 1`); the data inform only the shape (`t50`, `k`).
    * The logistic is in raw day units (not renormalised to the window), so it
@@ -50,7 +50,7 @@ runs the `fiber` branching-process model across a grid of baseline R0 values.
      Per-replicate metrics and a bundled results object are also saved.
 
 3. **`03_compare_start_dates.R`** — sensitivity of the Q curve to the start date
-   (i.e. to how much the front is zero-padded). Refits the curve for
+   (i.e. to where the single anchoring zero sits). Refits the curve for
    `START_DATES` (1, 7, 13, 18 May 2026) using the **same** `fit_dose_q_curve()`
    helper as script 1, and overlays all curves on one calendar-date axis (full
    horizon + a zoomed view) so the effect is visible. Saves the combined curves,

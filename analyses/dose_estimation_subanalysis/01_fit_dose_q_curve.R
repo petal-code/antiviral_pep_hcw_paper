@@ -43,8 +43,9 @@ set.seed(123)
 # 1. Configuration  <-- the knobs to change
 # ----------------------------------------------------------------------------
 # START_DATE: day 0 of the relative-day axis. Set EARLIER than 18 May 2026 to
-#   pad the front with zeros (one zero per day from the start date up to 18 May).
-#   Default = 18 May 2026 (no padding; relative days {0, 6, 13, 20, 27}).
+#   add a single anchoring zero at the start date (relative day 0), so the curve
+#   starts from 0% there. Default = 18 May 2026 (no added zero; relative days
+#   {0, 6, 13, 20, 27}).
 START_DATE   <- as.Date("2026-05-18")
 
 # How far PAST the last observation to project the curve forward (days). The

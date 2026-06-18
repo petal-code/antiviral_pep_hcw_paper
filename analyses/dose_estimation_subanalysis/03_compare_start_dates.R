@@ -36,8 +36,9 @@ set.seed(123)
 # ----------------------------------------------------------------------------
 # 1. Configuration
 # ----------------------------------------------------------------------------
-# Candidate start dates: 1, 7, 13 and 18 May 2026. Earlier start -> more leading
-# zeros padded between the start date and the first observation (18 May).
+# Candidate start dates: 1, 7, 13 and 18 May 2026. An earlier start date adds a
+# single anchoring zero at that date (relative day 0), shifting where the curve
+# leaves the 0% floor.
 START_DATES  <- as.Date(c("2026-05-01", "2026-05-07", "2026-05-13", "2026-05-18"))
 FORWARD_DAYS <- 365L   # forward projection past the last observation (matches 01)
 
@@ -124,7 +125,7 @@ base_plot <- function(dat) {
 
 # (i) Full horizon.
 p_full <- base_plot(curves) +
-  labs(title = "Dose-coverage Q curve: sensitivity to start date (front padding)",
+  labs(title = "Dose-coverage Q curve: sensitivity to start date (single anchoring zero)",
        subtitle = "Solid = fit over the observed window; dashed = forward projection; black points = observations; dotted = last observation")
 ggsave(file.path(DIR_OUT, "dose_q_curve_startdate_comparison.png"),
        p_full, width = 10, height = 5.5, dpi = 150)
@@ -136,7 +137,7 @@ print(p_full)
 zoom_to <- last_obs_date + 45L
 p_zoom <- base_plot(curves[curves$date <= zoom_to, , drop = FALSE]) +
   labs(title = "Dose-coverage Q curve by start date (zoom on the data window)",
-       subtitle = "Same fits, zoomed: more front padding holds the early curve nearer 0% for longer")
+       subtitle = "Same fits, zoomed: an earlier start date adds one anchoring zero, shifting where the curve leaves 0%")
 ggsave(file.path(DIR_OUT, "dose_q_curve_startdate_comparison_zoom.png"),
        p_zoom, width = 10, height = 5.5, dpi = 150)
 print(p_zoom)
