@@ -334,12 +334,13 @@ p_rt <- ggplot(rt_long, aes(date, Rt, colour = factor(r0), linetype = mode,
   scale_linetype_manual(values = c(instantaneous = "solid", case = "22"),
                         name = "Rt type") +
   scale_colour_viridis_d(option = "C", end = 0.9, name = expression(R[0] ~ "(t=0)")) +
-  scale_x_date(date_labels = "%b %Y") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Analytic Rt profile by starting R0 (before the fiber runs)",
        subtitle = sprintf("Single-type approximation; solid = instantaneous, dashed = case; vertical dashes = dose-data window (%s, %s)",
                           format(DATA_FIRST_DATE, "%d %b"), format(DATA_LAST_DATE, "%d %b")),
        x = "Date", y = expression(R[t])) +
-  theme_bw(base_size = 11)
+  theme_bw(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(file.path(DIR_OUT, "dose_r0_grid_rt_profiles.png"), p_rt, width = 9, height = 5.5, dpi = 150)
 print(p_rt)
 
@@ -543,13 +544,13 @@ p_inputs <- ggplot(tv_long, aes(date, value)) +
   data_window_vlines +
   geom_line(colour = "#1f77b4", linewidth = 0.8) +
   facet_wrap(~ input, scales = "free_y") +
-  scale_x_date(date_labels = "%b %Y") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Time-varying NPI inputs driven by the dose Q curve",
        subtitle = sprintf("Vertical dashes = dose-data window (%s, %s)",
                           format(DATA_FIRST_DATE, "%d %b"), format(DATA_LAST_DATE, "%d %b")),
        x = "Date", y = "Input value") +
   theme_bw(base_size = 10) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
 ggsave(file.path(DIR_OUT, "dose_npi_timevarying.png"), p_inputs, width = 9, height = 6, dpi = 150)
 print(p_inputs)
 
@@ -562,11 +563,12 @@ p_cum <- ggplot(cumulative_cases,
               colour = NA, alpha = 0.12) +
   geom_line(linewidth = 0.8) +
   onset_overlay +
-  scale_x_date(date_labels = "%b %Y") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Median cumulative cases by baseline R0",
        subtitle = "Lines = median across replicates; bands = 25-75%; dashes = dose-data window; red = observed cumulative onsets",
        x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
-  theme_bw(base_size = 11)
+  theme_bw(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_cases.png"), p_cum, width = 9, height = 5.5, dpi = 150)
 print(p_cum)
 
@@ -587,13 +589,13 @@ p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
-  scale_x_date(date_labels = "%b %Y") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
        subtitle = sprintf("Thin = replicates; black = median; red = observed cumulative onsets; scenario '%s', %d reps",
                           EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases") +
   theme_bw(base_size = 10) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_trajectories.png"), p_traj,
        width = 10, height = 7, dpi = 150)
 print(p_traj)
