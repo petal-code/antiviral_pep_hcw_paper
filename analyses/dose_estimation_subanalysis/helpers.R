@@ -192,3 +192,33 @@ fit_dose_q_curve <- function(start_date,
     start_date   = start_date
   )
 }
+
+# ---- Smooth a daily-incidence series + its instantaneous growth rate -------
+# Used to estimate a robust growth rate from noisy daily incidence (in 02 for the
+# fiber + confirmed r(t) comparison; 04 carries its own equivalent copy). Prefer
+# a quasi-Poisson GAM (log link) spline of time -- it handles count noise, zeros
+# and overdispersion -- and fall back to a loess on log(incidence) if mgcv is
+# unavailable. `day` is numeric time; `value` the (possibly fractional) incidence.
+fit_incidence_smoother <- function(day, value) {
+  ok <- is.finite(day) & is.finite(value)
+  df <- data.frame(day = day[ok], value = pmax(value[ok], 0))
+  if (requireNamespace("mgcv", quietly = TRUE) && length(unique(df$day)) >= 6) {
+    k <- max(4L, min(10L, length(unique(df$day)) %/% 3L))
+    list(type = "gam",
+         model = mgcv::gam(value ~ s(day, k = k), family = quasipoisson(), data = df))
+  } else {
+    list(type = "loess", model = stats::loess(log(value + 0.5) ~ day, data = df, span = 0.6))
+  }
+}
+# Fitted incidence (response scale) at arbitrary days.
+smooth_incidence_at <- function(fit, days) {
+  if (fit$type == "gam")
+    as.numeric(predict(fit$model, data.frame(day = days), type = "response"))
+  else exp(as.numeric(predict(fit$model, data.frame(day = days))))
+}
+# Instantaneous growth rate r(t) = d/dt log(fitted incidence), by central
+# difference (for the log-link GAM this is the derivative of the fitted smooth).
+smooth_r_at <- function(fit, days, h = 0.5) {
+  (log(smooth_incidence_at(fit, days + h)) -
+   log(smooth_incidence_at(fit, days - h))) / (2 * h)
+}
