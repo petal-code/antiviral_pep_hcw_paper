@@ -78,3 +78,107 @@ build_dose_obs <- function(dose_obs = DOSE_OBS,
 
   obs[order(obs$relative_day), , drop = FALSE]
 }
+
+# ---- Fit + extrapolate the logistic dose Q curve ---------------------------
+# Shared fitting routine used by BOTH 01_fit_dose_q_curve.R (a single fit) and
+# 03_compare_start_dates.R (one fit per candidate start date), so they use an
+# IDENTICAL model + priors and cannot silently drift apart. It fits
+# stan-models/logistic_qcurve_single.stan to the relative-day observations for a
+# given `start_date` (front padding handled by build_dose_obs()), then returns
+# the fitted/extrapolated Q curve on a daily grid out to `forward_days` past the
+# last observation. The shape priors (t50, log k) are derived from the data
+# window exactly as before; the endpoint pins (min 0, max 1) and the noise scale
+# are the tunable knobs.
+#
+# Requires cmdstanr to be loaded by the caller. Pass a pre-compiled model in
+# `mod` to avoid recompiling when fitting many start dates.
+#
+# Returns a list:
+#   q_curve       data.frame(relative_day, date, q_mean, q_median, q_lower,
+#                            q_upper, segment)
+#   observations  the relative-day obs table that was fit
+#   param_summary posterior summary of L, U, t50, k, sigma
+#   priors_used   the prior settings actually used (incl. the data-derived t50)
+#   fit           the CmdStanMCMC object
+#   last_obs_day, horizon_day, start_date
+fit_dose_q_curve <- function(start_date,
+                             dose_obs       = DOSE_OBS,
+                             forward_days   = 365L,
+                             mod            = NULL,
+                             lower_prior    = c(mean = 0.0, sd = 0.01),
+                             upper_prior    = c(mean = 1.0, sd = 0.02),
+                             logk_prior     = c(mean = log(0.2), sd = 0.7),
+                             sigma_prior_sd = 0.15,
+                             chains         = 4L,
+                             iter_warmup    = 1500L,
+                             iter_sampling  = 1500L,
+                             adapt_delta    = 0.95,
+                             max_treedepth  = 12L,
+                             seed           = 123L,
+                             refresh        = 200L) {
+  start_date <- as.Date(start_date)
+  obs <- build_dose_obs(dose_obs, start_date = start_date)
+
+  last_obs_day <- max(obs$relative_day)
+  horizon_day  <- last_obs_day + forward_days
+  day_pred     <- 0:horizon_day
+
+  # Weakly-informative shape priors derived from the observation window so the
+  # data dominate (the data window shifts with the start date / padding).
+  data_span      <- diff(range(obs$relative_day))
+  t50_prior_mean <- mean(range(obs$relative_day))
+  t50_prior_sd   <- max(data_span, 10)
+
+  stan_data <- list(
+    N = nrow(obs), day = as.numeric(obs$relative_day), y = as.numeric(obs$proportion),
+    lower_prior_mean = lower_prior[["mean"]], lower_prior_sd = lower_prior[["sd"]],
+    upper_prior_mean = upper_prior[["mean"]], upper_prior_sd = upper_prior[["sd"]],
+    t50_prior_mean = t50_prior_mean, t50_prior_sd = t50_prior_sd,
+    logk_prior_mean = logk_prior[["mean"]], logk_prior_sd = logk_prior[["sd"]],
+    sigma_prior_sd = sigma_prior_sd,
+    N_pred = length(day_pred), day_pred = as.numeric(day_pred)
+  )
+
+  if (is.null(mod)) {
+    mod <- cmdstanr::cmdstan_model(file.path(DIR_STAN, "logistic_qcurve_single.stan"))
+  }
+
+  fit <- mod$sample(
+    data = stan_data, seed = seed,
+    chains = chains, parallel_chains = chains,
+    iter_warmup = iter_warmup, iter_sampling = iter_sampling,
+    adapt_delta = adapt_delta, max_treedepth = max_treedepth, refresh = refresh
+  )
+
+  # Parse q_pred[m] -> m (base R; no stringr dependency in helpers).
+  qp <- fit$summary(variables = "q_pred")
+  qp$grid_id <- as.integer(sub("^q_pred\\[([0-9]+)\\]$", "\\1", qp$variable))
+  qp <- qp[order(qp$grid_id), , drop = FALSE]
+
+  q_curve <- data.frame(
+    relative_day = day_pred[qp$grid_id],
+    date         = start_date + day_pred[qp$grid_id],
+    q_mean       = qp$mean,
+    q_median     = qp$median,
+    q_lower      = qp$q5,
+    q_upper      = qp$q95,
+    segment      = ifelse(day_pred[qp$grid_id] <= last_obs_day,
+                          "observed_window", "extrapolated"),
+    stringsAsFactors = FALSE
+  )
+
+  list(
+    q_curve       = q_curve,
+    observations  = obs,
+    param_summary = fit$summary(variables = c("L", "U", "t50", "k", "sigma")),
+    priors_used   = list(
+      lower = lower_prior, upper = upper_prior, logk = logk_prior,
+      t50   = c(mean = t50_prior_mean, sd = t50_prior_sd),
+      sigma = c(sd = sigma_prior_sd)
+    ),
+    fit          = fit,
+    last_obs_day = last_obs_day,
+    horizon_day  = horizon_day,
+    start_date   = start_date
+  )
+}

@@ -64,75 +64,34 @@ SIGMA_PRIOR_SD <- 0.15
 N_CHAINS <- 4L; ITER_WARMUP <- 1500L; ITER_SAMPLING <- 1500L
 
 # ----------------------------------------------------------------------------
-# 2. Assemble the relative-day observations
+# 2. Fit + extrapolate the logistic Q curve  (fit_dose_q_curve() in helpers.R)
 # ----------------------------------------------------------------------------
-obs <- build_dose_obs(DOSE_OBS, start_date = START_DATE)
+# The fitting itself -- padding, data-derived shape priors, the Stan model and
+# the extraction of the daily Q curve out to FORWARD_DAYS past the last
+# observation -- lives in helpers.R, so 03_compare_start_dates.R fits in exactly
+# the same way (no drift).
+res <- fit_dose_q_curve(
+  start_date     = START_DATE,
+  forward_days   = FORWARD_DAYS,
+  lower_prior    = c(mean = LOWER_PRIOR_MEAN, sd = LOWER_PRIOR_SD),
+  upper_prior    = c(mean = UPPER_PRIOR_MEAN, sd = UPPER_PRIOR_SD),
+  sigma_prior_sd = SIGMA_PRIOR_SD,
+  chains = N_CHAINS, iter_warmup = ITER_WARMUP, iter_sampling = ITER_SAMPLING
+)
+
+obs           <- res$observations
+q_curve       <- res$q_curve
+param_summary <- res$param_summary
+last_obs_day  <- res$last_obs_day
+horizon_day   <- res$horizon_day
 
 message("Dose observations (relative-day axis, day 0 = ", START_DATE, "):")
 print(obs, row.names = FALSE)
-
-last_obs_day <- max(obs$relative_day)
-horizon_day  <- last_obs_day + FORWARD_DAYS         # last day of the reported curve
-day_pred     <- 0:horizon_day                       # daily prediction grid
-
-# Weakly-informative shape priors, derived from the observation window so the
-# data dominate: midpoint centred on the middle of the window with an SD as wide
-# as the window; growth rate around ~0.2 / day (rises over a few weeks).
-data_span    <- diff(range(obs$relative_day))
-T50_PRIOR_MEAN <- mean(range(obs$relative_day))
-T50_PRIOR_SD   <- max(data_span, 10)
-LOGK_PRIOR_MEAN <- log(0.2)
-LOGK_PRIOR_SD   <- 0.7
-
-# ----------------------------------------------------------------------------
-# 3. Fit the logistic Q curve in Stan
-# ----------------------------------------------------------------------------
-stan_data <- list(
-  N = nrow(obs), day = as.numeric(obs$relative_day), y = as.numeric(obs$proportion),
-  lower_prior_mean = LOWER_PRIOR_MEAN, lower_prior_sd = LOWER_PRIOR_SD,
-  upper_prior_mean = UPPER_PRIOR_MEAN, upper_prior_sd = UPPER_PRIOR_SD,
-  t50_prior_mean = T50_PRIOR_MEAN, t50_prior_sd = T50_PRIOR_SD,
-  logk_prior_mean = LOGK_PRIOR_MEAN, logk_prior_sd = LOGK_PRIOR_SD,
-  sigma_prior_sd = SIGMA_PRIOR_SD,
-  N_pred = length(day_pred), day_pred = as.numeric(day_pred)
-)
-
-mod <- cmdstan_model(file.path(DIR_STAN, "logistic_qcurve_single.stan"))
-
-fit <- mod$sample(
-  data = stan_data, seed = 123,
-  chains = N_CHAINS, parallel_chains = N_CHAINS,
-  iter_warmup = ITER_WARMUP, iter_sampling = ITER_SAMPLING,
-  adapt_delta = 0.95, max_treedepth = 12, refresh = 200
-)
-
-cat("\nSampler diagnostics:\n"); print(fit$diagnostic_summary())
-
-# ----------------------------------------------------------------------------
-# 4. Extract the fitted / extrapolated Q curve
-# ----------------------------------------------------------------------------
-# q_pred[m] is the posterior Q at day_pred[m]. Attach the calendar date and a
-# flag separating the observed-window segment from the forward extrapolation.
-q_curve <- fit$summary(variables = "q_pred") %>%
-  mutate(grid_id = as.integer(stringr::str_match(variable, "\\[([0-9]+)\\]")[, 2])) %>%
-  arrange(grid_id) %>%
-  transmute(
-    relative_day = day_pred[grid_id],
-    date         = START_DATE + day_pred[grid_id],
-    q_mean       = mean,
-    q_median     = median,
-    q_lower      = q5,
-    q_upper      = q95,
-    segment      = ifelse(day_pred[grid_id] <= last_obs_day,
-                          "observed_window", "extrapolated")
-  )
-
-# Posterior summaries of the logistic parameters.
-param_summary <- fit$summary(variables = c("L", "U", "t50", "k", "sigma"))
+cat("\nSampler diagnostics:\n");        print(res$fit$diagnostic_summary())
 cat("\nFitted logistic parameters:\n"); print(param_summary)
 
 # ----------------------------------------------------------------------------
-# 5. Save  (the Q curve is the headline output)
+# 3. Save  (the Q curve is the headline output)
 # ----------------------------------------------------------------------------
 # dose_q_curve.rds is LITERALLY the Q curve (one row per day, mean + 90% band,
 # observed-vs-extrapolated flag). dose_q_curve_fit.rds carries the full fit for
@@ -147,13 +106,7 @@ q_curve_fit <- list(
   config = list(
     start_date = START_DATE, forward_days = FORWARD_DAYS,
     last_obs_day = last_obs_day, horizon_day = horizon_day,
-    priors = list(
-      lower = c(mean = LOWER_PRIOR_MEAN, sd = LOWER_PRIOR_SD),
-      upper = c(mean = UPPER_PRIOR_MEAN, sd = UPPER_PRIOR_SD),
-      t50   = c(mean = T50_PRIOR_MEAN,   sd = T50_PRIOR_SD),
-      logk  = c(mean = LOGK_PRIOR_MEAN,  sd = LOGK_PRIOR_SD),
-      sigma = c(sd = SIGMA_PRIOR_SD)
-    )
+    priors = res$priors_used
   )
 )
 saveRDS(q_curve_fit, file.path(DIR_OUT, "dose_q_curve_fit.rds"))
@@ -163,7 +116,7 @@ message("\n01_fit_dose_q_curve.R complete. Wrote dose_q_curve.rds (",
         FORWARD_DAYS, " projected days) to outputs/.")
 
 # ----------------------------------------------------------------------------
-# 6. Diagnostic plot: fit + extrapolation vs data
+# 4. Diagnostic plot: fit + extrapolation vs data
 # ----------------------------------------------------------------------------
 p <- ggplot(q_curve, aes(relative_day, q_mean)) +
   geom_ribbon(aes(ymin = q_lower, ymax = q_upper), fill = "#1f77b4", alpha = 0.18) +

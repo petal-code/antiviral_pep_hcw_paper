@@ -49,6 +49,16 @@ runs the `fiber` branching-process model across a grid of baseline R0 values.
          → `outputs/dose_r0_grid_time_to_amounts.csv`.
      Per-replicate metrics and a bundled results object are also saved.
 
+3. **`03_compare_start_dates.R`** — sensitivity of the Q curve to the start date
+   (i.e. to how much the front is zero-padded). Refits the curve for
+   `START_DATES` (1, 7, 13, 18 May 2026) using the **same** `fit_dose_q_curve()`
+   helper as script 1, and overlays all curves on one calendar-date axis (full
+   horizon + a zoomed view) so the effect is visible. Saves the combined curves,
+   the fitted parameters per start date, and the overlay plots to `outputs/`.
+
+The shared fitting routine `fit_dose_q_curve()` lives in `helpers.R`, so scripts
+1 and 3 use an identical model and priors.
+
 ## Configuration
 
 Both scripts expose a clearly-marked configuration block near the top
