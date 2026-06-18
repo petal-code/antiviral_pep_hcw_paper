@@ -226,43 +226,61 @@ summarise_run <- function(inf_times, timepoints, amounts) {
 }
 
 # ----------------------------------------------------------------------------
-# 6. Run the grid in parallel (R0 x replicate)
+# 6. Run the grid in parallel, one R0 at a time, with progress + ETA
 # ----------------------------------------------------------------------------
-job_list <- unlist(
-  lapply(seq_along(R0_GRID), function(i)
-    lapply(seq_len(N_STOCH), function(r) list(r0_idx = i, rep_id = r))),
-  recursive = FALSE
-)
-
+# Reps for a given R0 run in parallel across the workers; we loop over the R0
+# grid in the MAIN process so we can report how far through we are (and a rough
+# ETA) after each R0 finishes. A "running ..." line is printed before each batch
+# so progress is visible even while the first (cold) batch is in flight.
+n_r0  <- length(R0_GRID)
+total <- n_r0 * N_STOCH
 message(sprintf("Running %d R0 x %d reps = %d replicates on %d workers...",
-                length(R0_GRID), N_STOCH, length(job_list), N_WORKERS))
+                n_r0, N_STOCH, total, N_WORKERS))
 
 plan(multisession, workers = N_WORKERS)
 t_start <- proc.time()
+results <- vector("list", n_r0)
 
-results <- future_lapply(job_list, function(job) {
-  args      <- args_by_r0[[job$r0_idx]]
-  base_seed <- SEED_BASE +
-    (job$r0_idx - 1L) * N_STOCH  * (MAX_RETRIES + 1L) +
-    (job$rep_id - 1L) *            (MAX_RETRIES + 1L)
-  run <- run_one_takeoff(args, base_seed, TAKEOFF_N, MAX_RETRIES)
-  s   <- summarise_run(run$inf_times, TIMEPOINTS, AMOUNTS)
-  list(r0 = R0_GRID[job$r0_idx], r0_idx = job$r0_idx, rep_id = job$rep_id,
-       n_cases = run$n_cases, took_off = run$took_off, retries = run$retries,
-       cum_at = s$cum_at, time_to = s$time_to)
-},
-future.globals = list(
-  args_by_r0 = args_by_r0, R0_GRID = R0_GRID, N_STOCH = N_STOCH,
-  MAX_RETRIES = MAX_RETRIES, SEED_BASE = SEED_BASE, TAKEOFF_N = TAKEOFF_N,
-  TIMEPOINTS = TIMEPOINTS, AMOUNTS = AMOUNTS,
-  run_one_takeoff = run_one_takeoff, summarise_run = summarise_run
-),
-future.packages = "fiber",
-future.seed = TRUE)
+for (i in seq_along(R0_GRID)) {
+  args_i <- args_by_r0[[i]]
+  r0_i   <- R0_GRID[i]
+  message(sprintf("  [%d/%d] R0 = %.2f: running %d reps ...", i, n_r0, r0_i, N_STOCH))
+
+  results[[i]] <- future_lapply(seq_len(N_STOCH), function(rep_id) {
+    base_seed <- SEED_BASE +
+      (i      - 1L) * N_STOCH * (MAX_RETRIES + 1L) +
+      (rep_id - 1L) *           (MAX_RETRIES + 1L)
+    run <- run_one_takeoff(args_i, base_seed, TAKEOFF_N, MAX_RETRIES)
+    s   <- summarise_run(run$inf_times, TIMEPOINTS, AMOUNTS)
+    list(r0 = r0_i, r0_idx = i, rep_id = rep_id,
+         n_cases = run$n_cases, took_off = run$took_off, retries = run$retries,
+         cum_at = s$cum_at, time_to = s$time_to)
+  },
+  future.globals = list(
+    args_i = args_i, i = i, r0_i = r0_i, N_STOCH = N_STOCH,
+    MAX_RETRIES = MAX_RETRIES, SEED_BASE = SEED_BASE, TAKEOFF_N = TAKEOFF_N,
+    TIMEPOINTS = TIMEPOINTS, AMOUNTS = AMOUNTS,
+    run_one_takeoff = run_one_takeoff, summarise_run = summarise_run
+  ),
+  future.packages = "fiber", future.seed = TRUE)
+
+  # Progress + rough ETA. Later R0s tend to cost a little more (bigger
+  # outbreaks), so the early ETA is somewhat optimistic.
+  n_takeoff <- sum(vapply(results[[i]], function(r) isTRUE(r$took_off), logical(1)))
+  elapsed_s <- (proc.time() - t_start)[["elapsed"]]
+  eta_s     <- elapsed_s / i * (n_r0 - i)
+  message(sprintf(
+    "  [%d/%d] R0 = %.2f done | %d/%d reps reached takeoff | elapsed %.1f min | rough ETA %.1f min",
+    i, n_r0, r0_i, n_takeoff, N_STOCH, elapsed_s / 60, eta_s / 60))
+}
 
 plan(sequential)
+
+# Flatten the per-R0 lists into one flat list of per-replicate results.
+results <- do.call(c, results)
+
 elapsed <- proc.time() - t_start
-message(sprintf("Done in %.1f min.", elapsed["elapsed"] / 60))
+message(sprintf("Done: %d replicates in %.1f min.", length(results), elapsed["elapsed"] / 60))
 
 saveRDS(results, file.path(DIR_OUT, "dose_r0_grid_per_run.rds"))
 
