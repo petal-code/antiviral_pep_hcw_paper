@@ -602,6 +602,10 @@ mccabe_layer <- list(
 )
 mccabe_desc <- sprintf("purple = McCabe est. total (%s by %s)",
                        paste(MCCABE_VALUES, collapse = " & "), format(MCCABE_DATE, "%d %b"))
+# Same estimate as horizontal reference lines, for the R0-vs-cumulative snapshot
+# plot (x-axis is R0, not date): one dashed purple line at each value.
+mccabe_hlines <- geom_hline(yintercept = MCCABE_VALUES, colour = "#984ea3",
+                            linetype = "dashed", linewidth = 0.7)
 
 # (i) The time-varying NPI inputs.
 tv_long$date <- day_to_date(tv_long$relative_day)
@@ -935,12 +939,13 @@ p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
   geom_point(data = snap_mean, aes(factor(r0), cum), colour = "black", size = 4) +
   ref_layer +
+  mccabe_hlines +
   facet_wrap(~ snapshot, scales = "free_y") +
   scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
                       name = "Observed") +
   labs(title = "Cumulative infections by R0 at snapshot dates",
-       subtitle = sprintf("Blue = replicates; large black dot = mean; reference lines: %s; scenario '%s'",
-                          ref_desc, EXTRAP_SCENARIO),
+       subtitle = sprintf("Blue = replicates; large black dot = mean; reference lines: %s; %s (dashed); scenario '%s'",
+                          ref_desc, mccabe_desc, EXTRAP_SCENARIO),
        x = "Baseline R0", y = "Cumulative infections") +
   theme_bw(base_size = 11)
 ggsave(file.path(DIR_OUT, "dose_r0_grid_snapshot_cumulative.png"), p_snap,
