@@ -8,11 +8,14 @@
 #      hosp, ETU proportion, safe-funeral proportion, PPE coverage, ...), and
 #      each parameter is linearly mapped along the Q curve between those two
 #      values. The resulting scenario matrix is saved to outputs/.
-#   3. Uses those NPI curves as FIXED inputs to fiber, run in parallel for
+#   3. BEFORE the long runs, computes + overlays an analytic single-type Rt
+#      profile per R0 (Rt_curve_single_type), as a quick sanity check that Rt
+#      starts near each target R0 and falls below 1 as the response ramps up.
+#   4. Uses those NPI curves as FIXED inputs to fiber, run in parallel for
 #      N_STOCH stochastic replicates across a grid of baseline R0 values
 #      (1.3 -> 1.6), seeded with 5 infections, re-running any replicate that
 #      fails to reach TAKEOFF_N (= 100) infections.
-#   4. For each R0, summarises FROM THE INDIVIDUAL RAW RUNS:
+#   5. For each R0, summarises FROM THE INDIVIDUAL RAW RUNS:
 #        * the median cumulative number of cases at a set of timepoints
 #          (day 10, 20, 30, ...), and
 #        * the median time to reach a set of cumulative case amounts.
@@ -28,6 +31,7 @@
 # Inputs : outputs/dose_q_curve.rds          (from 01)
 # Output : outputs/dose_npi_scenario_matrix.csv / .rds   (the NPI inputs)
 #          outputs/dose_npi_timevarying_long.csv         (tidy, for plotting)
+#          outputs/dose_r0_grid_rt_profiles.csv / .png   (analytic Rt per R0, pre-run)
 #          outputs/dose_r0_grid_per_run.rds              (per-replicate metrics)
 #          outputs/dose_r0_grid_cumulative_cases.csv     (median cum cases)
 #          outputs/dose_r0_grid_time_to_amounts.csv      (median time-to-amount)
@@ -46,6 +50,7 @@ suppressPackageStartupMessages({
 source(here("analyses", "dose_estimation_subanalysis", "helpers.R"))
 source(here("functions", "setup_model_parameters.R"))
 source(here("functions", "calculate_model_approx_r0.R"))
+source(here("functions", "calculate_model_approx_rt.R"))
 
 set.seed(123)
 
@@ -224,7 +229,54 @@ args_by_r0 <- lapply(R0_GRID, function(R0) {
 names(args_by_r0) <- sprintf("R0_%.2f", R0_GRID)
 
 # ----------------------------------------------------------------------------
-# 5. Per-replicate runner + summariser (used on the parallel workers)
+# 5. Rt profile per R0 -- computed and plotted BEFORE the long fiber runs
+# ----------------------------------------------------------------------------
+# Quick analytic sanity check (NO simulation, so it's fast): for each starting
+# R0, compute the single-type reproduction-number profile over time from that
+# R0's own args -- the same NPI curves the simulations use -- with
+# Rt_curve_single_type() (functions/calculate_model_approx_rt.R), and overlay all
+# R0s on one graph. We expect Rt to start near each target R0 and fall below 1 as
+# the dose-driven response ramps up. The function returns both the instantaneous
+# (frozen-conditions) and case (cohort) reproduction numbers; both are plotted.
+RT_TIMES <- 0:max(TIMEPOINTS)   # day grid (since epidemic start) for the profiles
+RT_MC_N  <- 50000L              # Monte-Carlo parents (so R_inst(0) ~ target R0)
+RT_SEED  <- 1L
+
+message("Computing analytic Rt profiles for each R0 (before the runs)...")
+rt_profiles <- do.call(rbind, lapply(seq_along(R0_GRID), function(i) {
+  rt <- Rt_curve_single_type(args_by_r0[[i]], times = RT_TIMES,
+                             n = RT_MC_N, seed = RT_SEED)
+  rt$r0 <- R0_GRID[i]
+  rt
+}))
+write.csv(rt_profiles, file.path(DIR_OUT, "dose_r0_grid_rt_profiles.csv"), row.names = FALSE)
+
+# Long form: one row per (R0, day, mode) for the two reproduction-number curves.
+rt_long <- rbind(
+  data.frame(r0 = rt_profiles$r0, day = rt_profiles$time,
+             mode = "instantaneous", Rt = rt_profiles$R_inst),
+  data.frame(r0 = rt_profiles$r0, day = rt_profiles$time,
+             mode = "case",          Rt = rt_profiles$R_case)
+)
+rt_long$mode <- factor(rt_long$mode, levels = c("instantaneous", "case"))
+
+p_rt <- ggplot(rt_long, aes(day, Rt, colour = factor(r0), linetype = mode,
+                            group = interaction(r0, mode))) +
+  geom_hline(yintercept = 1, colour = "grey55", linewidth = 0.4) +
+  geom_line(linewidth = 0.8) +
+  scale_linetype_manual(values = c(instantaneous = "solid", case = "22"),
+                        name = "Rt type") +
+  scale_colour_viridis_d(option = "C", end = 0.9, name = expression(R[0] ~ "(t=0)")) +
+  labs(title = "Analytic Rt profile by starting R0 (before the fiber runs)",
+       subtitle = sprintf("Single-type approximation; solid = instantaneous, dashed = case; day 0 = %s",
+                          as.character(epi_start)),
+       x = "Day since epidemic start", y = expression(R[t])) +
+  theme_bw(base_size = 11)
+ggsave(file.path(DIR_OUT, "dose_r0_grid_rt_profiles.png"), p_rt, width = 9, height = 5.5, dpi = 150)
+print(p_rt)
+
+# ----------------------------------------------------------------------------
+# 6. Per-replicate runner + summariser (used on the parallel workers)
 # ----------------------------------------------------------------------------
 # Run ONE replicate, re-running (advancing the seed) until the outbreak reaches
 # `takeoff_n` infections or `max_retries` is hit. Returns the realised infection
@@ -258,7 +310,7 @@ summarise_run <- function(inf_times, timepoints, amounts) {
 }
 
 # ----------------------------------------------------------------------------
-# 6. Run the grid in parallel, one R0 at a time, with progress + ETA
+# 7. Run the grid in parallel, one R0 at a time, with progress + ETA
 # ----------------------------------------------------------------------------
 # Reps for a given R0 run in parallel across the workers; we loop over the R0
 # grid in the MAIN process so we can report how far through we are (and a rough
@@ -317,7 +369,7 @@ message(sprintf("Done: %d replicates in %.1f min.", length(results), elapsed["el
 saveRDS(results, file.path(DIR_OUT, "dose_r0_grid_per_run.rds"))
 
 # ----------------------------------------------------------------------------
-# 7. Summarise across replicates (medians from the individual raw runs)
+# 8. Summarise across replicates (medians from the individual raw runs)
 # ----------------------------------------------------------------------------
 safe_median <- function(x) if (all(is.na(x))) NA_real_ else stats::median(x, na.rm = TRUE)
 safe_q <- function(x, p) if (all(is.na(x))) NA_real_ else
@@ -387,7 +439,7 @@ saveRDS(list(
 message("\n02_npi_inputs_and_fiber_runs.R complete. Results in outputs/.")
 
 # ----------------------------------------------------------------------------
-# 8. Quick diagnostic plots (display + saved)
+# 9. Quick diagnostic plots (display + saved)
 # ----------------------------------------------------------------------------
 # (i) The time-varying NPI inputs.
 p_inputs <- ggplot(tv_long, aes(relative_day, value)) +
