@@ -470,6 +470,7 @@ cumulative_cases <- do.call(rbind, lapply(seq_along(R0_GRID), function(i) {
     r0               = R0_GRID[i],
     timepoint_day    = TIMEPOINTS,
     n_runs           = nrow(M),
+    mean             = apply(M, 2, mean),
     median_cum_cases = apply(M, 2, stats::median),
     q25_cum_cases    = apply(M, 2, safe_q, 0.25),
     q75_cum_cases    = apply(M, 2, safe_q, 0.75),
@@ -557,7 +558,7 @@ print(p_inputs)
 # (ii) Median cumulative cases over time, by R0.
 cumulative_cases$date <- day_to_date(cumulative_cases$timepoint_day)
 p_cum <- ggplot(cumulative_cases,
-                aes(date, median_cum_cases, colour = factor(r0))) +
+                aes(date, mean , colour = factor(r0))) +
   data_window_vlines +
   geom_ribbon(aes(ymin = q25_cum_cases, ymax = q75_cum_cases, fill = factor(r0)),
               colour = NA, alpha = 0.12) +
@@ -585,7 +586,7 @@ traj_alpha <- max(0.06, min(0.6, 25 / N_STOCH))
 p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
   data_window_vlines +
   geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
-  geom_line(data = cumulative_cases, aes(date, median_cum_cases),
+  geom_line(data = cumulative_cases, aes(date, mean),
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
