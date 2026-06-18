@@ -97,11 +97,11 @@ SCALAR_OVERRIDES <- list(
 R0_GRID          <- seq(1.35, 1.55, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
 SEEDING_CASES    <- 5L                            # initial seeding infections
-N_STOCH          <- 10L                          # stochastic replicates per R0
+N_STOCH          <- 30L                          # stochastic replicates per R0
 # Takeoff condition: an outbreak counts as "taken off" only if it has reached at
 # least TAKEOFF_N cumulative infections BY the deadline date (relative to
 # EPIDEMIC_START_DATE); otherwise it is re-run (seed advanced).
-TAKEOFF_N             <- 1000L                     # cumulative infections required ...
+TAKEOFF_N             <- 200L                     # cumulative infections required ...
 TAKEOFF_DEADLINE_DATE <- as.Date("2026-06-15")     # ... by this calendar date
 MAX_RETRIES      <- 50L                           # cap on re-runs per replicate
 CHECK_FINAL_SIZE <- 10000L                        # stop a run once this many cases exist
@@ -122,7 +122,7 @@ MATRIX_HORIZON  <- max(730L, max(TIMEPOINTS))     # days; Q held flat past its g
 #     Q = 0, so the NPIs sit at their worst-response (q0) values and the epidemic
 #     runs unmitigated until the dose curve begins. Set to NA to start exactly at
 #     the Q curve's first date (no prepended zeros).
-EPIDEMIC_START_DATE <- as.Date("2026-03-01")
+EPIDEMIC_START_DATE <- as.Date("2026-02-17")
 
 # --- Parallel + RNG.
 N_WORKERS <- min(future::availableCores() - 4, 50L)
@@ -568,7 +568,7 @@ p_cum <- ggplot(cumulative_cases,
        subtitle = "Lines = median across replicates; bands = 25-75%; dashes = dose-data window; red = observed cumulative onsets",
        x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
   theme_bw(base_size = 11) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_cases.png"), p_cum, width = 9, height = 5.5, dpi = 150)
 print(p_cum)
 
