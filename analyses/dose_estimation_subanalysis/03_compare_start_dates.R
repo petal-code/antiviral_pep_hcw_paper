@@ -41,6 +41,13 @@ set.seed(123)
 START_DATES  <- as.Date(c("2026-05-01", "2026-05-07", "2026-05-13", "2026-05-18"))
 FORWARD_DAYS <- 365L   # forward projection past the last observation (matches 01)
 
+# Priors -- the SAME knobs as 01_fit_dose_q_curve.R, applied to every start-date
+# fit. Edit here to tune the comparison (keep in sync with 01 if you want the
+# 18 May curve to match the headline fit exactly).
+LOWER_PRIOR_MEAN <- 0.0; LOWER_PRIOR_SD <- 0.01   # min level: 0%
+UPPER_PRIOR_MEAN <- 1.0; UPPER_PRIOR_SD <- 0.02   # max level: 100%
+SIGMA_PRIOR_SD   <- 0.15
+
 # ----------------------------------------------------------------------------
 # 2. Fit one Q curve per start date (compile the model once, reuse it)
 # ----------------------------------------------------------------------------
@@ -48,8 +55,14 @@ mod <- cmdstan_model(file.path(DIR_STAN, "logistic_qcurve_single.stan"))
 
 fits <- lapply(START_DATES, function(sd) {
   message("Fitting start date ", sd, " ...")
-  fit_dose_q_curve(start_date = sd, forward_days = FORWARD_DAYS, mod = mod,
-                   refresh = 0)
+  fit_dose_q_curve(
+    start_date     = sd,
+    forward_days   = FORWARD_DAYS,
+    lower_prior    = c(mean = LOWER_PRIOR_MEAN, sd = LOWER_PRIOR_SD),
+    upper_prior    = c(mean = UPPER_PRIOR_MEAN, sd = UPPER_PRIOR_SD),
+    sigma_prior_sd = SIGMA_PRIOR_SD,
+    mod = mod, refresh = 0
+  )
 })
 names(fits) <- as.character(START_DATES)
 
