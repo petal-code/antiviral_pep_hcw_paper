@@ -38,6 +38,7 @@
 #          outputs/dose_r0_grid_rt_profiles.csv / .png   (analytic Rt per R0, pre-run)
 #          outputs/dose_r0_grid_per_run.rds              (per-replicate metrics)
 #          outputs/dose_r0_grid_cumulative_cases.csv     (median cum cases)
+#          outputs/dose_r0_grid_cumulative_trajectories.png (per-replicate curves by R0)
 #          outputs/dose_r0_grid_time_to_amounts.csv      (median time-to-amount)
 #          outputs/dose_r0_grid_results.rds              (everything bundled)
 # ============================================================================
@@ -499,3 +500,26 @@ p_cum <- ggplot(cumulative_cases,
   theme_bw(base_size = 11)
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_cases.png"), p_cum, width = 9, height = 5.5, dpi = 150)
 print(p_cum)
+
+# (iii) Per-replicate cumulative-incidence trajectories, one panel per R0.
+# Each thin line is ONE stochastic replicate's cumulative cases over time (read
+# at TIMEPOINTS); the bold line is the median. One facet per starting R0.
+traj_long <- do.call(rbind, lapply(took, function(r)
+  data.frame(r0 = r$r0, rep_id = r$rep_id, day = TIMEPOINTS, cum = r$cum_at)))
+
+# Fade individual lines more when there are many replicates, less when few.
+traj_alpha <- max(0.06, min(0.6, 25 / N_STOCH))
+
+p_traj <- ggplot(traj_long, aes(day, cum, group = interaction(r0, rep_id))) +
+  geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
+  geom_line(data = cumulative_cases, aes(timepoint_day, median_cum_cases),
+            inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
+  facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
+  labs(title = "Cumulative-incidence trajectories by replicate, per R0",
+       subtitle = sprintf("Thin = individual replicates; black = median; scenario '%s', %d reps",
+                          EXTRAP_SCENARIO, N_STOCH),
+       x = "Day since epidemic start", y = "Cumulative cases") +
+  theme_bw(base_size = 10)
+ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_trajectories.png"), p_traj,
+       width = 10, height = 7, dpi = 150)
+print(p_traj)
