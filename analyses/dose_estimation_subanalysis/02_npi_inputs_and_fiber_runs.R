@@ -2,7 +2,8 @@
 # 02_npi_inputs_and_fiber_runs.R
 # ----------------------------------------------------------------------------
 # WHAT THIS SCRIPT DOES
-#   1. Reads the dose Q curve fitted in 01_fit_dose_q_curve.R.
+#   1. Reads ONE forward-extrapolation scenario of the dose Q curve (chosen via
+#      EXTRAP_SCENARIO) from 01_fit_dose_q_curve.R.
 #   2. Turns it into TIME-VARYING NPI inputs: the user defines a min and a max
 #      value for each NPI parameter the Q curve drives (prob_hosp, delay to
 #      hosp, ETU proportion, safe-funeral proportion, PPE coverage, ...), and
@@ -28,7 +29,10 @@
 #   "Safe-funeral proportion" is mapped this way and then converted to the
 #   model's unsafe-funeral probability as (1 - safe-funeral proportion).
 #
-# Inputs : outputs/dose_q_curve.rds          (from 01)
+# Inputs : outputs/dose_q_curve_extrapolation_scenarios.rds  (from 01; pick one
+#          via EXTRAP_SCENARIO). Falls back to dose_q_curve.rds (the logistic
+#          projection) only if the scenarios file is absent and EXTRAP_SCENARIO
+#          is "logistic".
 # Output : outputs/dose_npi_scenario_matrix.csv / .rds   (the NPI inputs)
 #          outputs/dose_npi_timevarying_long.csv         (tidy, for plotting)
 #          outputs/dose_r0_grid_rt_profiles.csv / .png   (analytic Rt per R0, pre-run)
@@ -57,6 +61,11 @@ set.seed(123)
 # ----------------------------------------------------------------------------
 # 1. Configuration  <-- the knobs to change
 # ----------------------------------------------------------------------------
+
+# --- Which forward-extrapolation scenario of the dose Q curve to run. One of the
+#     names produced by 01_fit_dose_q_curve.R:
+#       "linear_to_90" | "logistic" | "flat" | "conflict".
+EXTRAP_SCENARIO <- "logistic"
 
 # --- NPI parameters the Q curve drives. q0 = value at Q = 0 (worst response),
 #     q1 = value at Q = 1 (best response). Edit these min/max values freely.
@@ -126,9 +135,35 @@ if (CHECK_FINAL_SIZE < max(AMOUNTS)) {
 # is seeded at EPIDEMIC_START_DATE, which may be EARLIER than the Q curve's first
 # date: the days in between (before the dose roll-out) get Q = 0 prepended, so
 # the NPIs sit at their worst-response values until the curve begins.
-q_curve <- readRDS(file.path(DIR_OUT, "dose_q_curve.rds"))
-if (is.list(q_curve) && !is.data.frame(q_curve) && !is.null(q_curve$q_curve)) {
-  q_curve <- q_curve$q_curve   # tolerate being handed the full fit list
+# Pick the chosen forward-extrapolation scenario (saved by 01). Each scenario
+# shares the fitted curve up to the last data point and differs only afterwards;
+# we use its point Q series `q` as the Q curve here.
+scen_path <- file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.rds")
+if (file.exists(scen_path)) {
+  all_scen <- readRDS(scen_path)
+  avail    <- unique(as.character(all_scen$scenario))
+  if (!EXTRAP_SCENARIO %in% avail) {
+    stop("EXTRAP_SCENARIO '", EXTRAP_SCENARIO, "' not found in ",
+         basename(scen_path), ". Available: ", paste(avail, collapse = ", "),
+         ".", call. = FALSE)
+  }
+  sel     <- all_scen[as.character(all_scen$scenario) == EXTRAP_SCENARIO, , drop = FALSE]
+  q_curve <- data.frame(relative_day = sel$relative_day,
+                        date = as.Date(sel$date), q_mean = sel$q)
+  message("Using dose Q-curve extrapolation scenario: '", EXTRAP_SCENARIO, "'.")
+} else {
+  # Fallback: scenarios file absent (older 01 run). Only the logistic projection
+  # is available, as dose_q_curve.rds.
+  if (EXTRAP_SCENARIO != "logistic") {
+    stop("Extrapolation-scenarios file not found (", scen_path, "). Re-run ",
+         "01_fit_dose_q_curve.R to use EXTRAP_SCENARIO = '", EXTRAP_SCENARIO,
+         "'.", call. = FALSE)
+  }
+  q_curve <- readRDS(file.path(DIR_OUT, "dose_q_curve.rds"))
+  if (is.list(q_curve) && !is.data.frame(q_curve) && !is.null(q_curve$q_curve)) {
+    q_curve <- q_curve$q_curve   # tolerate being handed the full fit list
+  }
+  message("Scenarios file not found; using dose_q_curve.rds (logistic projection).")
 }
 if (is.null(q_curve$date)) {
   stop("The Q curve has no `date` column; re-run 01_fit_dose_q_curve.R so it ",
@@ -431,6 +466,7 @@ saveRDS(list(
     funeral_frac = FUNERAL_FRAC, seeding_cases = SEEDING_CASES,
     n_stoch = N_STOCH, takeoff_n = TAKEOFF_N, max_retries = MAX_RETRIES,
     check_final_size = CHECK_FINAL_SIZE, timepoints = TIMEPOINTS, amounts = AMOUNTS,
+    extrap_scenario = EXTRAP_SCENARIO,
     epidemic_start_date = epi_start, q_first_date = q_first_date,
     offset_days = offset_days
   )
