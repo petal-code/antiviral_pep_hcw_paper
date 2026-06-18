@@ -15,7 +15,8 @@
 #   4. Uses those NPI curves as FIXED inputs to fiber, run in parallel for
 #      N_STOCH stochastic replicates across a grid of baseline R0 values
 #      (1.3 -> 1.6), seeded with 5 infections, re-running any replicate that
-#      fails to reach TAKEOFF_N (= 100) infections.
+#      fails to reach TAKEOFF_N cumulative infections BY the takeoff-deadline
+#      date (TAKEOFF_DEADLINE_DATE, relative to EPIDEMIC_START_DATE).
 #   5. For each R0, summarises FROM THE INDIVIDUAL RAW RUNS:
 #        * the median cumulative number of cases at a set of timepoints
 #          (day 10, 20, 30, ...), and
@@ -94,7 +95,11 @@ R0_GRID          <- seq(1.35, 1.55, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
 SEEDING_CASES    <- 5L                            # initial seeding infections
 N_STOCH          <- 10L                          # stochastic replicates per R0
-TAKEOFF_N        <- 100L                          # re-run any outbreak < this many infections
+# Takeoff condition: an outbreak counts as "taken off" only if it has reached at
+# least TAKEOFF_N cumulative infections BY the deadline date (relative to
+# EPIDEMIC_START_DATE); otherwise it is re-run (seed advanced).
+TAKEOFF_N             <- 1000L                     # cumulative infections required ...
+TAKEOFF_DEADLINE_DATE <- as.Date("2026-06-15")     # ... by this calendar date
 MAX_RETRIES      <- 50L                           # cap on re-runs per replicate
 CHECK_FINAL_SIZE <- 10000L                        # stop a run once this many cases exist
 
@@ -194,6 +199,16 @@ data_window_vlines <- list(
   geom_vline(xintercept = DATA_FIRST_DATE, linetype = "dashed", colour = "grey40"),
   geom_vline(xintercept = DATA_LAST_DATE,  linetype = "dashed", colour = "grey40")
 )
+
+# Takeoff deadline as a relative day (since epi_start): an outbreak must reach
+# TAKEOFF_N cumulative infections on or before this day to count as taken off.
+takeoff_day <- as.integer(TAKEOFF_DEADLINE_DATE - epi_start)
+if (takeoff_day <= 0L) {
+  stop("TAKEOFF_DEADLINE_DATE (", TAKEOFF_DEADLINE_DATE, ") must be after the ",
+       "epidemic start (", epi_start, ").", call. = FALSE)
+}
+message(sprintf("Takeoff: >= %d infections by %s (relative day %d).",
+                TAKEOFF_N, as.character(TAKEOFF_DEADLINE_DATE), takeoff_day))
 
 # Map the Q curve onto the simulation's relative-day axis (day 0 = epi_start):
 # each Q point's sim day = its calendar date - epi_start. rule = 2 holds Q flat
@@ -328,22 +343,24 @@ print(p_rt)
 # ----------------------------------------------------------------------------
 # 6. Per-replicate runner + summariser (used on the parallel workers)
 # ----------------------------------------------------------------------------
-# Run ONE replicate, re-running (advancing the seed) until the outbreak reaches
-# `takeoff_n` infections or `max_retries` is hit. Returns the realised infection
-# times plus bookkeeping.
-run_one_takeoff <- function(args, base_seed, takeoff_n, max_retries) {
-  seed <- base_seed; retry <- 0L; inf_times <- numeric(0); n_cases <- 0L
+# Run ONE replicate, re-running (advancing the seed) until the outbreak has at
+# least `takeoff_n` cumulative infections BY day `takeoff_day` (or `max_retries`
+# is hit). Returns the realised infection times plus bookkeeping.
+run_one_takeoff <- function(args, base_seed, takeoff_n, max_retries, takeoff_day) {
+  seed <- base_seed; retry <- 0L; inf_times <- numeric(0)
+  n_cases <- 0L; n_by_deadline <- 0L
   repeat {
     args$seed <- seed
     out <- do.call(fiber::branching_process_main, args)
     it  <- out$tdf$time_infection_absolute
     it  <- it[!is.na(it)]
-    n_cases <- length(it)
-    if (n_cases >= takeoff_n || retry >= max_retries) { inf_times <- it; break }
+    n_cases       <- length(it)
+    n_by_deadline <- sum(it <= takeoff_day)        # infections on/before the deadline
+    if (n_by_deadline >= takeoff_n || retry >= max_retries) { inf_times <- it; break }
     retry <- retry + 1L; seed <- seed + 1L
   }
-  list(inf_times = inf_times, n_cases = n_cases,
-       took_off = n_cases >= takeoff_n, final_seed = seed, retries = retry)
+  list(inf_times = inf_times, n_cases = n_cases, n_by_deadline = n_by_deadline,
+       took_off = n_by_deadline >= takeoff_n, final_seed = seed, retries = retry)
 }
 
 # Per-run summaries computed from the raw infection times:
@@ -384,15 +401,17 @@ for (i in seq_along(R0_GRID)) {
     base_seed <- SEED_BASE +
       (i      - 1L) * N_STOCH * (MAX_RETRIES + 1L) +
       (rep_id - 1L) *           (MAX_RETRIES + 1L)
-    run <- run_one_takeoff(args_i, base_seed, TAKEOFF_N, MAX_RETRIES)
+    run <- run_one_takeoff(args_i, base_seed, TAKEOFF_N, MAX_RETRIES, takeoff_day)
     s   <- summarise_run(run$inf_times, TIMEPOINTS, AMOUNTS)
     list(r0 = r0_i, r0_idx = i, rep_id = rep_id,
-         n_cases = run$n_cases, took_off = run$took_off, retries = run$retries,
+         n_cases = run$n_cases, n_by_deadline = run$n_by_deadline,
+         took_off = run$took_off, retries = run$retries,
          cum_at = s$cum_at, time_to = s$time_to)
   },
   future.globals = list(
     args_i = args_i, i = i, r0_i = r0_i, N_STOCH = N_STOCH,
     MAX_RETRIES = MAX_RETRIES, SEED_BASE = SEED_BASE, TAKEOFF_N = TAKEOFF_N,
+    takeoff_day = takeoff_day,
     TIMEPOINTS = TIMEPOINTS, AMOUNTS = AMOUNTS,
     run_one_takeoff = run_one_takeoff, summarise_run = summarise_run
   ),
@@ -428,12 +447,14 @@ safe_q <- function(x, p) if (all(is.na(x))) NA_real_ else
 took   <- Filter(function(r) isTRUE(r$took_off), results)
 n_fail <- length(results) - length(took)
 if (n_fail > 0L)
-  message(sprintf("Note: %d/%d replicates failed to reach %d infections after %d retries (excluded from summaries).",
-                  n_fail, length(results), TAKEOFF_N, MAX_RETRIES))
+  message(sprintf("Note: %d/%d replicates failed to reach %d infections by %s after %d retries (excluded from summaries).",
+                  n_fail, length(results), TAKEOFF_N,
+                  as.character(TAKEOFF_DEADLINE_DATE), MAX_RETRIES))
 if (length(took) == 0L)
-  stop("No replicate reached takeoff (", TAKEOFF_N, " infections). ",
-       "Check R0_GRID, the NPI settings, MAX_RETRIES or CHECK_FINAL_SIZE.",
-       call. = FALSE)
+  stop("No replicate reached takeoff (", TAKEOFF_N, " infections by ",
+       as.character(TAKEOFF_DEADLINE_DATE), "). This is a demanding bar for low ",
+       "R0 / few seeds -- consider a higher R0_GRID/SEEDING_CASES, a later ",
+       "TAKEOFF_DEADLINE_DATE, or a lower TAKEOFF_N.", call. = FALSE)
 by_r0 <- split(took, vapply(took, function(r) r$r0_idx, integer(1)))
 
 # (a) Median cumulative cases at each timepoint.
@@ -480,6 +501,7 @@ saveRDS(list(
     scalar_overrides = SCALAR_OVERRIDES, r0_grid = R0_GRID,
     funeral_frac = FUNERAL_FRAC, seeding_cases = SEEDING_CASES,
     n_stoch = N_STOCH, takeoff_n = TAKEOFF_N, max_retries = MAX_RETRIES,
+    takeoff_deadline_date = TAKEOFF_DEADLINE_DATE, takeoff_day = takeoff_day,
     check_final_size = CHECK_FINAL_SIZE, timepoints = TIMEPOINTS, amounts = AMOUNTS,
     extrap_scenario = EXTRAP_SCENARIO,
     epidemic_start_date = epi_start, q_first_date = q_first_date,
