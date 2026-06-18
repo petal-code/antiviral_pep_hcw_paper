@@ -585,6 +585,24 @@ if (file.exists(confirmed_csv)) {
   message("Note: ", basename(confirmed_csv), " not found -- skipping confirmed-cases overlay.")
 }
 
+# McCabe external estimate: total cumulative cases by a given date, given as a
+# low/high pair. Drawn on the cumulative-total comparison plots as a vertical
+# range (a line) at that date, capped with a marker at each value, so it can be
+# read off against where the model / data curves sit on that date. Edit freely.
+MCCABE_DATE   <- as.Date("2026-05-27")
+MCCABE_VALUES <- c(600, 1000)
+mccabe_df   <- data.frame(date = MCCABE_DATE,
+                          lo = min(MCCABE_VALUES), hi = max(MCCABE_VALUES))
+mccabe_pts  <- data.frame(date = MCCABE_DATE, value = MCCABE_VALUES)
+mccabe_layer <- list(
+  geom_linerange(data = mccabe_df, aes(x = date, ymin = lo, ymax = hi),
+                 inherit.aes = FALSE, colour = "#984ea3", linewidth = 1.0),
+  geom_point(data = mccabe_pts, aes(x = date, y = value),
+             inherit.aes = FALSE, colour = "#984ea3", size = 2.4, shape = 18)
+)
+mccabe_desc <- sprintf("purple = McCabe est. total (%s by %s)",
+                       paste(MCCABE_VALUES, collapse = " & "), format(MCCABE_DATE, "%d %b"))
+
 # (i) The time-varying NPI inputs.
 tv_long$date <- day_to_date(tv_long$relative_day)
 p_inputs <- ggplot(tv_long, aes(date, value)) +
@@ -611,9 +629,10 @@ p_cum <- ggplot(cumulative_cases,
   geom_line(linewidth = 0.8) +
   onset_overlay +
   confirmed_overlay +
+  mccabe_layer +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Mean cumulative cases by baseline R0",
-       subtitle = "Mean (lines) + 25-75% (bands); red = observed cumulative onsets; green = confirmed cases",
+       subtitle = paste0("Mean (lines) + 25-75% (bands); red = observed cumulative onsets; green = confirmed cases; ", mccabe_desc),
        x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
   theme_bw(base_size = 11) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  +
@@ -639,11 +658,12 @@ p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
   confirmed_overlay +
+  mccabe_layer +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; scenario '%s', %d reps",
-                          EXTRAP_SCENARIO, N_STOCH),
+       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; %s; scenario '%s', %d reps",
+                          mccabe_desc, EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases") +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))  +
@@ -660,12 +680,13 @@ p_traj_log10 <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id)
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
   confirmed_overlay +
+  mccabe_layer +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   scale_y_log10(labels = scales::label_number()) +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; scenario '%s', %d reps",
-                          EXTRAP_SCENARIO, N_STOCH),
+       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; %s; scenario '%s', %d reps",
+                          mccabe_desc, EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases (log10)") +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))  +
