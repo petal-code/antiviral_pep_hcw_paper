@@ -34,6 +34,9 @@
 #          via EXTRAP_SCENARIO). Falls back to dose_q_curve.rds (the logistic
 #          projection) only if the scenarios file is absent and EXTRAP_SCENARIO
 #          is "logistic".
+#          data-processed/onsets_daily_incidence.csv  (optional; from
+#          analyses/onset_incidence/compute_daily_incidence_from_onsets.R --
+#          its observed cumulative-onset curve is overlaid on the trajectory plots).
 # Output : outputs/dose_npi_scenario_matrix.csv / .rds   (the NPI inputs)
 #          outputs/dose_npi_timevarying_long.csv         (tidy, for plotting)
 #          outputs/dose_r0_grid_rt_profiles.csv / .png   (analytic Rt per R0, pre-run)
@@ -514,6 +517,26 @@ message("\n02_npi_inputs_and_fiber_runs.R complete. Results in outputs/.")
 # ----------------------------------------------------------------------------
 # 9. Quick diagnostic plots (display + saved)
 # ----------------------------------------------------------------------------
+# Observed cumulative-onset curve (from analyses/onset_incidence/
+# compute_daily_incidence_from_onsets.R) to overlay on the fiber TRAJECTORY
+# plots for comparison. Those plots are CUMULATIVE, so we compare against the
+# observed CUMULATIVE onsets on the same calendar-date axis. `onset_overlay` is
+# NULL (a no-op when added to a ggplot) if the file has not been generated yet.
+onset_csv     <- here("data-processed", "onsets_daily_incidence.csv")
+onset_overlay <- NULL
+if (file.exists(onset_csv)) {
+  onsets_obs       <- read.csv(onset_csv, stringsAsFactors = FALSE)
+  onsets_obs$date  <- as.Date(onsets_obs$date)
+  onset_overlay <- geom_line(data = onsets_obs, aes(date, cumulative_onsets),
+                             inherit.aes = FALSE, colour = "#d62728", linewidth = 1.1)
+  message(sprintf("Overlaying observed cumulative onsets (%s to %s, max %.0f).",
+                  as.character(min(onsets_obs$date)), as.character(max(onsets_obs$date)),
+                  max(onsets_obs$cumulative_onsets, na.rm = TRUE)))
+} else {
+  message("Note: ", basename(onset_csv), " not found -- skipping observed-onset ",
+          "overlay. Run analyses/onset_incidence/compute_daily_incidence_from_onsets.R.")
+}
+
 # (i) The time-varying NPI inputs.
 tv_long$date <- day_to_date(tv_long$relative_day)
 p_inputs <- ggplot(tv_long, aes(date, value)) +
@@ -538,9 +561,10 @@ p_cum <- ggplot(cumulative_cases,
   geom_ribbon(aes(ymin = q25_cum_cases, ymax = q75_cum_cases, fill = factor(r0)),
               colour = NA, alpha = 0.12) +
   geom_line(linewidth = 0.8) +
+  onset_overlay +
   scale_x_date(date_labels = "%b %Y") +
   labs(title = "Median cumulative cases by baseline R0",
-       subtitle = "Lines = median across replicates; bands = 25-75%; vertical dashes = dose-data window",
+       subtitle = "Lines = median across replicates; bands = 25-75%; dashes = dose-data window; red = observed cumulative onsets",
        x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
   theme_bw(base_size = 11)
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_cases.png"), p_cum, width = 9, height = 5.5, dpi = 150)
@@ -561,10 +585,11 @@ p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
   geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
   geom_line(data = cumulative_cases, aes(date, median_cum_cases),
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
+  onset_overlay +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_labels = "%b %Y") +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = individual replicates; black = median; scenario '%s', %d reps; dashes = dose-data window",
+       subtitle = sprintf("Thin = replicates; black = median; red = observed cumulative onsets; scenario '%s', %d reps",
                           EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases") +
   theme_bw(base_size = 10) +
