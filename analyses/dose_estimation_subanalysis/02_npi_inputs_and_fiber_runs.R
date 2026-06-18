@@ -773,6 +773,23 @@ ggsave(file.path(DIR_OUT, "dose_r0_grid_daily_incidence.png"), p_traj_inc,
        width = 10, height = 7, dpi = 150)
 print(p_traj_inc)
 
+p_traj_inc_subset <- ggplot(inc_long, aes(date, incidence, group = interaction(r0, rep_id))) +
+  data_window_vlines +
+  geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
+  geom_line(data = inc_central, aes(date, incidence), inherit.aes = FALSE,
+            colour = "black", linewidth = 0.9) +
+  confirmed_inc_overlay +
+  facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  labs(title = "Daily incidence implied by the cumulative curves, per R0",
+       subtitle = sprintf("diff(cumulative)/diff(day); thin = replicates, black = %s; red = onset, green = confirmed daily incidence; scenario '%s'",
+                          stat_label("incidence"), EXTRAP_SCENARIO),
+       x = "Date", y = "Incidence (per day)") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) +
+  coord_cartesian(xlim = c(as.Date("2026-05-14"), as.Date("2026-06-17")))
+print(p_traj_inc_subset)
+
 # ----------------------------------------------------------------------------
 # 10. Growth rate + doubling time by period (fiber curves vs data sources)
 # ----------------------------------------------------------------------------
@@ -799,7 +816,7 @@ print(p_traj_inc)
 GROWTH_MID_START <- as.Date("2026-05-15")  # start of the main window / "pre" cutoff
 GROWTH_MID_END   <- as.Date("2026-06-14")  # shared END date of the windows
 GROWTH_LATE_END  <- as.Date("2026-07-14")  # end of the "after MID_END" window
-GROWTH_X_DATE    <- as.Date("2026-05-26")  # adjustable alternative window start (to MID_END)
+GROWTH_X_DATE    <- as.Date("2026-06-01")  # adjustable alternative window start (to MID_END)
 
 # Window boundaries + auto-generated labels from the configured GROWTH_* dates.
 pre_end  <- GROWTH_MID_START - 1L
@@ -933,6 +950,7 @@ snap_long <- do.call(rbind, lapply(took, function(r)
              cum = r$cum_at[snap_idx])))
 snap_long$snapshot <- factor(snap_long$snapshot, levels = snap_labs)
 snap_central <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = central_fun("snapshot"))
+# snap_central <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = mean)
 
 # Observed cumulative value at a date (interpolated; held flat past the data end).
 obs_at <- function(d, dates, values) {
