@@ -548,6 +548,26 @@ message("\n02_npi_inputs_and_fiber_runs.R complete. Results in outputs/.")
 # ----------------------------------------------------------------------------
 # 9. Quick diagnostic plots (display + saved)
 # ----------------------------------------------------------------------------
+# Central estimate plotted on each figure: set each to "mean" or "median". Both
+# are available -- cumulative_cases carries `mean` and `median_cum_cases`, and
+# per-replicate summaries are aggregated with the matching function -- so figures
+# can independently use either.
+CENTRAL_STAT <- list(
+  cumulative   = "mean",   # p_cum (cumulative by R0)
+  trajectories = "mean",   # p_traj + p_traj_log10 bold central line
+  incidence    = "mean",   # p_traj_inc central daily-incidence line
+  snapshot     = "median", # p_snap large central dot
+  rebased      = "mean",   # p_rebased (section 12) fiber central trajectory
+  growth       = "mean"    # section 10 fiber incidence (diff of central cumulative)
+)
+# Column of cumulative_cases / aggregation function / label for a given figure.
+cum_central_col <- function(key)
+  if (identical(CENTRAL_STAT[[key]], "median")) "median_cum_cases" else "mean"
+central_fun <- function(key)
+  if (identical(CENTRAL_STAT[[key]], "median")) stats::median else mean
+stat_label  <- function(key) if (identical(CENTRAL_STAT[[key]], "median")) "median" else "mean"
+cap1        <- function(s) paste0(toupper(substring(s, 1, 1)), substring(s, 2))
+
 # Observed cumulative-onset curve (from analyses/onset_incidence/
 # compute_daily_incidence_from_onsets.R) to overlay on the fiber TRAJECTORY
 # plots for comparison. Those plots are CUMULATIVE, so we compare against the
@@ -623,10 +643,11 @@ p_inputs <- ggplot(tv_long, aes(date, value)) +
 ggsave(file.path(DIR_OUT, "dose_npi_timevarying.png"), p_inputs, width = 9, height = 6, dpi = 150)
 print(p_inputs)
 
-# (ii) Mean cumulative cases over time, by R0.
+# (ii) Central (mean/median) cumulative cases over time, by R0.
 cumulative_cases$date <- day_to_date(cumulative_cases$timepoint_day)
+col_cum <- cum_central_col("cumulative")
 p_cum <- ggplot(cumulative_cases,
-                aes(date, mean , colour = factor(r0))) +
+                aes(date, .data[[col_cum]], colour = factor(r0))) +
   data_window_vlines +
   geom_ribbon(aes(ymin = q25_cum_cases, ymax = q75_cum_cases, fill = factor(r0)),
               colour = NA, alpha = 0.12) +
@@ -635,8 +656,8 @@ p_cum <- ggplot(cumulative_cases,
   confirmed_overlay +
   mccabe_layer +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
-  labs(title = "Mean cumulative cases by baseline R0",
-       subtitle = paste0("Mean (lines) + 25-75% (bands); red = observed cumulative onsets; green = confirmed cases; ", mccabe_desc),
+  labs(title = sprintf("%s cumulative cases by baseline R0", cap1(stat_label("cumulative"))),
+       subtitle = paste0(cap1(stat_label("cumulative")), " (lines) + 25-75% (bands); red = observed cumulative onsets; green = confirmed cases; ", mccabe_desc),
        x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
   theme_bw(base_size = 11) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  +
@@ -647,18 +668,19 @@ print(p_cum)
 
 # (iii) Per-replicate cumulative-incidence trajectories, one panel per R0.
 # Each thin line is ONE stochastic replicate's cumulative cases over time (read
-# at TIMEPOINTS); the bold line is the mean. One facet per starting R0.
+# at TIMEPOINTS); the bold line is the chosen central estimate (mean/median).
 traj_long <- do.call(rbind, lapply(took, function(r)
   data.frame(r0 = r$r0, rep_id = r$rep_id, day = TIMEPOINTS, cum = r$cum_at)))
 traj_long$date <- day_to_date(traj_long$day)
 
 # Fade individual lines more when there are many replicates, less when few.
 traj_alpha <- max(0.06, min(0.6, 25 / N_STOCH))
+col_traj   <- cum_central_col("trajectories")
 
 p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
   data_window_vlines +
   geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
-  geom_line(data = cumulative_cases, aes(date, mean),
+  geom_line(data = cumulative_cases, aes(date, .data[[col_traj]]),
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
   confirmed_overlay +
@@ -666,8 +688,8 @@ p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; %s; scenario '%s', %d reps",
-                          mccabe_desc, EXTRAP_SCENARIO, N_STOCH),
+       subtitle = sprintf("Thin = replicates; black = %s; red = onsets; green = confirmed cases; %s; scenario '%s', %d reps",
+                          stat_label("trajectories"), mccabe_desc, EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases") +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))  +
@@ -680,7 +702,7 @@ print(p_traj)
 p_traj_log10 <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
   data_window_vlines +
   geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
-  geom_line(data = cumulative_cases, aes(date, mean),
+  geom_line(data = cumulative_cases, aes(date, .data[[col_traj]]),
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
   confirmed_overlay +
@@ -689,8 +711,8 @@ p_traj_log10 <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id)
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   scale_y_log10(labels = scales::label_number()) +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = replicates; black = mean; red = onsets; green = confirmed cases; %s; scenario '%s', %d reps",
-                          mccabe_desc, EXTRAP_SCENARIO, N_STOCH),
+       subtitle = sprintf("Thin = replicates; black = %s; red = onsets; green = confirmed cases; %s; scenario '%s', %d reps",
+                          stat_label("trajectories"), mccabe_desc, EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases (log10)") +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))  +
@@ -700,15 +722,15 @@ print(p_traj_log10)
 
 # (iv) Daily incidence implied by each replicate's cumulative curve, per R0.
 # Incidence over each interval = diff(cumulative) / diff(day), plotted at the
-# interval midpoint. Thin = replicates; black = mean across replicates; the
+# interval midpoint. Thin = replicates; black = chosen central estimate; the
 # observed daily incidence is overlaid (red = onsets, green = confirmed).
 inc_mids <- (TIMEPOINTS[-1] + TIMEPOINTS[-length(TIMEPOINTS)]) / 2
 inc_long <- do.call(rbind, lapply(took, function(r)
   data.frame(r0 = r$r0, rep_id = r$rep_id, day = inc_mids,
              incidence = diff(r$cum_at) / diff(TIMEPOINTS))))
 inc_long$date <- day_to_date(inc_long$day)
-inc_mean <- aggregate(incidence ~ r0 + day, data = inc_long, FUN = mean)
-inc_mean$date <- day_to_date(inc_mean$day)
+inc_central <- aggregate(incidence ~ r0 + day, data = inc_long, FUN = central_fun("incidence"))
+inc_central$date <- day_to_date(inc_central$day)
 
 onset_inc_overlay <- if (exists("onsets_obs"))
   geom_line(data = onsets_obs, aes(date, daily_incidence), inherit.aes = FALSE,
@@ -726,15 +748,15 @@ if (exists("confirmed_obs")) {
 p_traj_inc <- ggplot(inc_long, aes(date, incidence, group = interaction(r0, rep_id))) +
   data_window_vlines +
   geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
-  geom_line(data = inc_mean, aes(date, incidence), inherit.aes = FALSE,
+  geom_line(data = inc_central, aes(date, incidence), inherit.aes = FALSE,
             colour = "black", linewidth = 0.9) +
   onset_inc_overlay +
   confirmed_inc_overlay +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Daily incidence implied by the cumulative curves, per R0",
-       subtitle = sprintf("diff(cumulative)/diff(day); thin = replicates, black = mean; red = onset, green = confirmed daily incidence; scenario '%s'",
-                          EXTRAP_SCENARIO),
+       subtitle = sprintf("diff(cumulative)/diff(day); thin = replicates, black = %s; red = onset, green = confirmed daily incidence; scenario '%s'",
+                          stat_label("incidence"), EXTRAP_SCENARIO),
        x = "Date", y = "Incidence (per day)") +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6)) +
@@ -795,18 +817,19 @@ fit_growth <- function(dates, values, lo, hi) {
              date_from     = min(dates[keep]), date_to = max(dates[keep]))
 }
 
-# --- Fiber: per-R0 daily incidence = diff(mean cumulative)/diff(day) at the
+# --- Fiber: per-R0 daily incidence = diff(central cumulative)/diff(day) at the
 #     timepoint interval midpoints, fit over each window. ------------------------
 fiber_periods <- list()
 fiber_periods[[lab_pre]]  <- c(epi_start,        pre_end)
 fiber_periods[[lab_x]]    <- c(GROWTH_X_DATE,    GROWTH_MID_END)
 fiber_periods[[lab_mid]]  <- c(GROWTH_MID_START, GROWTH_MID_END)
 fiber_periods[[lab_late]] <- c(GROWTH_MID_END,   GROWTH_LATE_END)
+col_g <- cum_central_col("growth")
 growth_fiber <- do.call(rbind, lapply(R0_GRID, function(r0v) {
   cc <- cumulative_cases[cumulative_cases$r0 == r0v, ]
   cc <- cc[order(cc$timepoint_day), ]
   inc_day  <- (cc$timepoint_day[-1] + cc$timepoint_day[-nrow(cc)]) / 2  # interval midpoints
-  inc_val  <- diff(cc$mean) / diff(cc$timepoint_day)                    # cases per day
+  inc_val  <- diff(cc[[col_g]]) / diff(cc$timepoint_day)                # cases per day
   inc_date <- day_to_date(inc_day)
   do.call(rbind, lapply(names(fiber_periods), function(pn) {
     rng <- fiber_periods[[pn]]
@@ -878,8 +901,8 @@ p_growth <- ggplot(growth_long, aes(series, value, fill = series)) +
   facet_grid(metric ~ period, scales = "free_y") +
   scale_fill_manual(values = series_cols, guide = "none") +
   labs(title = "Growth rate and doubling time by period (from daily incidence)",
-       subtitle = sprintf("log-linear fit to incidence; fiber = per-R0 mean trajectory vs data sources; scenario '%s' (doubling times > 120 d hidden)",
-                          EXTRAP_SCENARIO),
+       subtitle = sprintf("log-linear fit to incidence; fiber = per-R0 %s trajectory vs data sources; scenario '%s' (doubling times > 120 d hidden)",
+                          stat_label("growth"), EXTRAP_SCENARIO),
        x = NULL, y = NULL) +
   theme_bw(base_size = 10) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7))
@@ -892,7 +915,7 @@ print(p_growth)
 # ----------------------------------------------------------------------------
 # For each replicate, its cumulative infections at each SNAPSHOT_DATES entry
 # (read EXACTLY off the daily TIMEPOINTS): one dot per replicate at its R0, with
-# the mean drawn as a large dot. Observed reference lines are overlaid, but only
+# the chosen central estimate as a large dot. Observed reference lines are drawn, but only
 # the source(s) listed in SNAPSHOT_REFS for that date (so 7 Jun shows onsets only
 # and 16 Jun shows confirmed only).
 snap_idx  <- match(snapshot_days, TIMEPOINTS)
@@ -901,8 +924,7 @@ snap_long <- do.call(rbind, lapply(took, function(r)
   data.frame(r0 = r$r0, rep_id = r$rep_id, snapshot = snap_labs,
              cum = r$cum_at[snap_idx])))
 snap_long$snapshot <- factor(snap_long$snapshot, levels = snap_labs)
-snap_mean <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = mean)
-snap_median <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = stats::median)
+snap_central <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = central_fun("snapshot"))
 
 # Observed cumulative value at a date (interpolated; held flat past the data end).
 obs_at <- function(d, dates, values) {
@@ -938,15 +960,15 @@ ref_desc <- paste(mapply(function(lab, srcs) sprintf("%s = %s", lab, paste(srcs,
 
 p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
-  geom_point(data = snap_median, aes(factor(r0), cum), colour = "black", size = 4) +
+  geom_point(data = snap_central, aes(factor(r0), cum), colour = "black", size = 4) +
   ref_layer +
   mccabe_hlines +
   facet_wrap(~ snapshot, scales = "free_y") +
   scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
                       name = "Observed") +
   labs(title = "Cumulative infections by R0 at snapshot dates",
-       subtitle = sprintf("Blue = replicates; large black dot = mean; reference lines: %s; %s (dashed); scenario '%s'",
-                          ref_desc, mccabe_desc, EXTRAP_SCENARIO),
+       subtitle = sprintf("Blue = replicates; large black dot = %s; reference lines: %s; %s (dashed); scenario '%s'",
+                          stat_label("snapshot"), ref_desc, mccabe_desc, EXTRAP_SCENARIO),
        x = "Baseline R0", y = "Cumulative infections") +
   theme_bw(base_size = 11)
 ggsave(file.path(DIR_OUT, "dose_r0_grid_snapshot_cumulative.png"), p_snap,
@@ -1000,10 +1022,11 @@ rebase_cum <- function(dates, values, t0) {
   out[order(out$days_since), , drop = FALSE]
 }
 
-# Fiber: one re-zeroed mean trajectory per R0.
+# Fiber: one re-zeroed central trajectory per R0.
+col_reb <- cum_central_col("rebased")
 rebased_fiber <- do.call(rbind, lapply(R0_GRID, function(r0v) {
   cc <- cumulative_cases[cumulative_cases$r0 == r0v, ]
-  rb <- rebase_cum(cc$date, cc$mean, rebase_t0)
+  rb <- rebase_cum(cc$date, cc[[col_reb]], rebase_t0)
   if (is.null(rb)) return(NULL)
   data.frame(series = sprintf("R0=%.2f", r0v), source_type = "fiber", rb, row.names = NULL)
 }))
@@ -1040,8 +1063,8 @@ p_rebased <- ggplot(rebased_all, aes(days_since, cum_since, colour = series)) +
   scale_x_continuous(breaks = seq(0, ceiling(x_hi / 7) * 7, by = 7)) +
   coord_cartesian(xlim = c(0, x_hi), ylim = c(0, NA)) +
   labs(title = "Cumulative cases accrued since the confirmed-series start date",
-       subtitle = sprintf("Day 0 = %s (confirmed-series start); fiber = per-R0 mean; data = thick lines; scenario '%s'",
-                          format(rebase_t0, "%d %b %Y"), EXTRAP_SCENARIO),
+       subtitle = sprintf("Day 0 = %s (confirmed-series start); fiber = per-R0 %s; data = thick lines; scenario '%s'",
+                          format(rebase_t0, "%d %b %Y"), stat_label("rebased"), EXTRAP_SCENARIO),
        x = sprintf("Days since %s", format(rebase_t0, "%d %b %Y")),
        y = "Cumulative cases since day 0") +
   theme_bw(base_size = 11)
