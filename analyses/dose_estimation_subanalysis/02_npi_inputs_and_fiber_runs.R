@@ -84,7 +84,8 @@ NPI_SPECS <- list(
   prob_hosp         = list(q0 = 0.00, q1 = 0.80),   # P(hospitalised | symptomatic)
   delay_hosp        = list(q0 = 6.00, q1 = 1.50),   # onset->hosp delay factor (days); improves DOWN
   prop_etu          = list(q0 = 0.00, q1 = 0.90),   # proportion of hospitalised cases in an ETU
-  safe_funeral_prop = list(q0 = 0.00, q1 = 0.90),   # proportion of funerals that are safe
+  safe_funeral_prop = list(q0 = 0.00, q1 = 0.90),   # COMMUNITY: proportion of funerals that are SAFE (-> 1-this = unsafe comm)
+  unsafe_funeral_prop_hosp = list(q0 = 0.95, q1 = 1.00),  # HOSPITAL (non-ETU): UNSAFE-funeral probability, given directly
   ppe_coverage      = list(q0 = 0.00, q1 = 0.90)    # PPE coverage lever (-> ppe_coverage_hcw)
 )
 # Unsafe-funeral probability for ETU deaths (kept separate; ETU deaths are
@@ -117,9 +118,12 @@ TIMEPOINTS <- c(seq(10L, 360L, by = 10L), 365L)   # days at which to read cumula
 AMOUNTS    <- c(10L, 25L, 50L, 100L, 250L, 500L,  # cumulative case amounts to time
                 1000L, 2000L, 2500L, 4000L, 5000L)
 
-# Adjustable start date for the extra "X to 14 Jun" growth-rate window (section 10),
-# shown alongside the fixed 15 May-14 Jun window.
-GROWTH_X_DATE <- as.Date("2026-05-01")
+# --- Growth-rate analysis (section 10) period boundaries. Edit these freely;
+#     ALL period labels in the table/plot are generated automatically from them.
+GROWTH_MID_START <- as.Date("2026-05-15")  # start of the main window / "pre" cutoff
+GROWTH_MID_END   <- as.Date("2026-06-14")  # shared END date of the windows
+GROWTH_LATE_END  <- as.Date("2026-07-14")  # end of the "after MID_END" window
+GROWTH_X_DATE    <- as.Date("2026-05-01")  # adjustable alternative window start (to MID_END)
 
 # --- Scenario identity + horizon over which the NPI matrix is defined.
 SCENARIO_ID     <- "dose_npi"
@@ -244,7 +248,8 @@ q_on_grid   <- clip01(q_on_grid)
 # ----------------------------------------------------------------------------
 lin <- function(spec, q) spec$q0 + (spec$q1 - spec$q0) * q
 
-safe_funeral_prop <- clip01(lin(NPI_SPECS$safe_funeral_prop, q_on_grid))
+safe_funeral_prop   <- clip01(lin(NPI_SPECS$safe_funeral_prop, q_on_grid))       # community
+unsafe_funeral_hosp <- clip01(lin(NPI_SPECS$unsafe_funeral_prop_hosp, q_on_grid)) # hospital (non-ETU), direct
 
 scenario_matrix_df <- data.frame(
   scenario                 = SCENARIO_ID,
@@ -253,7 +258,7 @@ scenario_matrix_df <- data.frame(
   prob_hosp                = clip01(lin(NPI_SPECS$prob_hosp, q_on_grid)),
   delay_hosp               = pmax(lin(NPI_SPECS$delay_hosp, q_on_grid), 0.01),
   prob_unsafe_funeral_comm = clip01(1 - safe_funeral_prop),
-  prob_unsafe_funeral_hosp = clip01(1 - safe_funeral_prop),
+  prob_unsafe_funeral_hosp = unsafe_funeral_hosp,
   prob_unsafe_funeral_etu  = clip01(rep(UNSAFE_FUNERAL_ETU, length(matrix_days))),
   prop_etu                 = clip01(lin(NPI_SPECS$prop_etu, q_on_grid)),
   ipc_helper               = clip01(lin(NPI_SPECS$ppe_coverage, q_on_grid)),
@@ -711,20 +716,21 @@ print(p_traj_inc)
 # ----------------------------------------------------------------------------
 # For each curve we fit log(cumulative) ~ day over a date window; the slope is
 # the exponential growth rate r (per day) and the doubling time is log(2)/r.
-#   * Fiber: the per-R0 MEDIAN cumulative trajectory. NOTE these use the
-#     TIMEPOINTS grid, so the month-long windows have few points -- coarse but
-#     comparable.
-#   * Confirmed cases: full observed range, and 15 May-14 Jun.
-#   * Onsets: pre-15 May, and 15 May-14 Jun (truncated to where the data end).
-# EVERY curve additionally gets an adjustable "GROWTH_X_DATE to 14 Jun" window,
-# shown next to the fixed 15 May-14 Jun window.
+# Windows (all boundaries AND labels come from the GROWTH_* config dates):
+#   * "pre <MID_START>"      : start .. day before MID_START
+#   * "<MID_START>-<MID_END>": the main window
+#   * "<MID_END>-<LATE_END>" : the window after MID_END (fiber only)
+#   * "<X>-<MID_END>"        : adjustable alternative start to MID_END
+#   * "full"                 : a data source's full observed range (confirmed)
 # Doubling time is only defined for r > 0 (a flat/declining curve has r <= 0);
 # we always report r and set doubling time to NA when r <= 0.
 
-D_14MAY <- as.Date("2026-05-14")
-D_15MAY <- as.Date("2026-06-10") # as.Date("2026-05-15")
-D_14JUN <- as.Date("2026-06-16")
-D_14JUL <- as.Date("2026-07-14")
+# Window boundaries + auto-generated labels from the configured GROWTH_* dates.
+pre_end  <- GROWTH_MID_START - 1L
+lab_pre  <- sprintf("pre %s", format(GROWTH_MID_START, "%d %b"))
+lab_mid  <- sprintf("%s-%s",  format(GROWTH_MID_START, "%d %b"), format(GROWTH_MID_END, "%d %b"))
+lab_late <- sprintf("%s-%s",  format(GROWTH_MID_END,   "%d %b"), format(GROWTH_LATE_END, "%d %b"))
+lab_x    <- sprintf("%s-%s",  format(GROWTH_X_DATE,    "%d %b"), format(GROWTH_MID_END, "%d %b"))
 
 # Fit r (per day) + doubling time from (date, value > 0) over the window [lo, hi].
 fit_growth <- function(dates, values, lo, hi) {
@@ -740,13 +746,12 @@ fit_growth <- function(dates, values, lo, hi) {
              date_from     = min(dates[keep]), date_to = max(dates[keep]))
 }
 
-# --- Periods. An adjustable "X to 14 Jun" window (GROWTH_X_DATE) is added to
-#     every curve alongside the fixed 15 May-14 Jun window. -------------------
-growth_x_label <- sprintf("%s-14 Jun", format(GROWTH_X_DATE, "%d %b"))
-fiber_periods <- list("pre-15 May"    = c(epi_start, D_14MAY),
-                      "15 May-14 Jun" = c(D_15MAY,  D_14JUN),
-                      "14 Jun-14 Jul" = c(D_14JUN,  D_14JUL))
-fiber_periods[[growth_x_label]] <- c(GROWTH_X_DATE, D_14JUN)
+# --- Fiber: per-R0 median cumulative trajectory over the windows. ------------
+fiber_periods <- list()
+fiber_periods[[lab_pre]]  <- c(epi_start,        pre_end)
+fiber_periods[[lab_x]]    <- c(GROWTH_X_DATE,    GROWTH_MID_END)
+fiber_periods[[lab_mid]]  <- c(GROWTH_MID_START, GROWTH_MID_END)
+fiber_periods[[lab_late]] <- c(GROWTH_MID_END,   GROWTH_LATE_END)
 growth_fiber <- do.call(rbind, lapply(R0_GRID, function(r0v) {
   cc <- cumulative_cases[cumulative_cases$r0 == r0v, ]
   do.call(rbind, lapply(names(fiber_periods), function(pn) {
@@ -768,23 +773,24 @@ add_data_growth <- function(acc, label, dates, values, periods) {
 }
 growth_data <- NULL
 if (exists("confirmed_obs")) {
-  conf_periods <- list("full"          = c(min(confirmed_obs$date), max(confirmed_obs$date)),
-                       "15 May-14 Jun" = c(D_15MAY, D_14JUN))
-  conf_periods[[growth_x_label]] <- c(GROWTH_X_DATE, D_14JUN)
+  conf_periods <- list("full" = c(min(confirmed_obs$date), max(confirmed_obs$date)))
+  conf_periods[[lab_mid]] <- c(GROWTH_MID_START, GROWTH_MID_END)
+  conf_periods[[lab_x]]   <- c(GROWTH_X_DATE,    GROWTH_MID_END)
   growth_data <- add_data_growth(growth_data, "confirmed cases",
     confirmed_obs$date, confirmed_obs$national_cumulative_confirmed_cases, conf_periods)
 }
 if (exists("onsets_obs")) {
-  onset_periods <- list("pre-15 May"    = c(min(onsets_obs$date), D_14MAY),
-                        "15 May-14 Jun" = c(D_15MAY, D_14JUN))
-  onset_periods[[growth_x_label]] <- c(GROWTH_X_DATE, D_14JUN)
+  onset_periods <- list()
+  onset_periods[[lab_pre]] <- c(min(onsets_obs$date), pre_end)
+  onset_periods[[lab_mid]] <- c(GROWTH_MID_START, GROWTH_MID_END)
+  onset_periods[[lab_x]]   <- c(GROWTH_X_DATE,    GROWTH_MID_END)
   growth_data <- add_data_growth(growth_data, "onsets",
     onsets_obs$date, onsets_obs$cumulative_onsets, onset_periods)
 }
 
 growth_tbl <- rbind(growth_fiber, growth_data)
 growth_tbl$period <- factor(growth_tbl$period,
-  levels = unique(c("pre-15 May", growth_x_label, "15 May-14 Jun", "14 Jun-14 Jul", "full")))
+  levels = unique(c(lab_pre, lab_x, lab_mid, lab_late, "full")))
 
 write.csv(growth_tbl, file.path(DIR_OUT, "dose_growth_rates_doubling_times.csv"), row.names = FALSE)
 disp <- growth_tbl
