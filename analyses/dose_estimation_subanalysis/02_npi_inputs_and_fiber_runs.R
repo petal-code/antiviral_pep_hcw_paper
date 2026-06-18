@@ -72,7 +72,7 @@ set.seed(123)
 # --- Which forward-extrapolation scenario of the dose Q curve to run. One of the
 #     names produced by 01_fit_dose_q_curve.R:
 #       "linear_to_90" | "logistic" | "flat" | "conflict".
-EXTRAP_SCENARIO <- "logistic"
+EXTRAP_SCENARIO <- "linear_to_90"
 
 # --- NPI parameters the Q curve drives. q0 = value at Q = 0 (worst response),
 #     q1 = value at Q = 1 (best response). Edit these min/max values freely.
@@ -127,7 +127,7 @@ MATRIX_HORIZON  <- max(730L, max(TIMEPOINTS))     # days; Q held flat past its g
 EPIDEMIC_START_DATE <- as.Date("2026-02-17")
 
 # --- Parallel + RNG.
-N_WORKERS <- min(future::availableCores() - 4, 50L)
+N_WORKERS <- min(future::availableCores() - 1, 50L)
 SEED_BASE <- 20260617L
 
 # Fail fast if the installed fiber predates the time-varying NPI interface.
@@ -589,7 +589,9 @@ p_cum <- ggplot(cumulative_cases,
        subtitle = "Median (lines) + 25-75% (bands); red = observed cumulative onsets; green = confirmed cases",
        x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
   theme_bw(base_size = 11) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  +
+  coord_cartesian(xlim = c(epi_start, as.Date("2026-06-20")),
+                  ylim = c(0, NA))
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_cases.png"), p_cum, width = 9, height = 5.5, dpi = 150)
 print(p_cum)
 
@@ -617,7 +619,9 @@ p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
                           EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases") +
   theme_bw(base_size = 10) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))  +
+  coord_cartesian(xlim = c(epi_start, as.Date("2026-06-20")),
+                  ylim = c(0, 3000))
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_trajectories.png"), p_traj,
        width = 10, height = 7, dpi = 150)
 print(p_traj)
@@ -631,9 +635,14 @@ p_traj_log10 <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id)
   confirmed_overlay +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  scale_y_log10(labels = scales::label_number()) +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
        subtitle = sprintf("Thin = replicates; black = median; red = onsets; green = confirmed cases; scenario '%s', %d reps",
                           EXTRAP_SCENARIO, N_STOCH),
-       x = "Date", y = "Cumulative cases") +
+       x = "Date", y = "Cumulative cases (log10)") +
   theme_bw(base_size = 10) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))  +
+  coord_cartesian(xlim = c(epi_start, as.Date("2026-06-20")),
+                  ylim = c(1, NA))
+print(p_traj_log10)
+
