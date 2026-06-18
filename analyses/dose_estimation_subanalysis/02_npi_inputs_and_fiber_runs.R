@@ -111,7 +111,7 @@ N_STOCH          <- 25L                          # stochastic replicates per R0
 TAKEOFF_N             <- 250L                     # cumulative infections required ...
 TAKEOFF_DEADLINE_DATE <- as.Date("2026-06-15")     # ... by this calendar date
 MAX_RETRIES      <- 50L                           # cap on re-runs per replicate
-CHECK_FINAL_SIZE <- 15000L                        # stop a run once this many cases exist
+CHECK_FINAL_SIZE <- 20000L                        # stop a run once this many cases exist
 
 # --- Summary grids (computed per run, then median across runs).
 # Daily grid: cumulative cases (and the incidence we derive from them) are read
@@ -744,7 +744,7 @@ print(p_traj_inc)
 GROWTH_MID_START <- as.Date("2026-05-15")  # start of the main window / "pre" cutoff
 GROWTH_MID_END   <- as.Date("2026-06-14")  # shared END date of the windows
 GROWTH_LATE_END  <- as.Date("2026-07-14")  # end of the "after MID_END" window
-GROWTH_X_DATE    <- as.Date("2026-06-04")  # adjustable alternative window start (to MID_END)
+GROWTH_X_DATE    <- as.Date("2026-05-26")  # adjustable alternative window start (to MID_END)
 
 # Window boundaries + auto-generated labels from the configured GROWTH_* dates.
 pre_end  <- GROWTH_MID_START - 1L
@@ -877,6 +877,7 @@ snap_long <- do.call(rbind, lapply(took, function(r)
              cum = r$cum_at[snap_idx])))
 snap_long$snapshot <- factor(snap_long$snapshot, levels = snap_labs)
 snap_mean <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = mean)
+snap_median <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = stats::median)
 
 # Observed cumulative value at a date (interpolated; held flat past the data end).
 obs_at <- function(d, dates, values) {
@@ -912,7 +913,7 @@ ref_desc <- paste(mapply(function(lab, srcs) sprintf("%s = %s", lab, paste(srcs,
 
 p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
-  geom_point(data = snap_mean, aes(factor(r0), cum), colour = "black", size = 4) +
+  geom_point(data = snap_median, aes(factor(r0), cum), colour = "black", size = 4) +
   ref_layer +
   facet_wrap(~ snapshot, scales = "free_y") +
   scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
@@ -1004,8 +1005,7 @@ rebased_cols <- c(setNames(viridisLite::viridis(length(R0_GRID), option = "C", e
 write.csv(rebased_all, file.path(DIR_OUT, "dose_r0_grid_cumulative_rebased.csv"),
           row.names = FALSE)
 
-x_hi <- if (length(REBASE_END_DATE) && is.na(REBASE_END_DATE)) max(rebased_all$days_since)
-        else as.numeric(REBASE_END_DATE - rebase_t0)
+x_hi <- if (length(REBASE_END_DATE) && is.na(REBASE_END_DATE)) max(rebased_all$days_since) else as.numeric(REBASE_END_DATE - rebase_t0)
 
 p_rebased <- ggplot(rebased_all, aes(days_since, cum_since, colour = series)) +
   geom_line(aes(linewidth = source_type)) +
