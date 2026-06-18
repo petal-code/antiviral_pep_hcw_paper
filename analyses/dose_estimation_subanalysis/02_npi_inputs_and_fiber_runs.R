@@ -37,6 +37,8 @@
 #          data-processed/onsets_daily_incidence.csv  (optional; from
 #          analyses/onset_incidence/compute_daily_incidence_from_onsets.R --
 #          its observed cumulative-onset curve is overlaid on the trajectory plots).
+#          data-processed/insp_sitrep__national_cumulative_confirmed_cases__daily.csv
+#          (optional; observed national cumulative confirmed cases, also overlaid).
 # Output : outputs/dose_npi_scenario_matrix.csv / .rds   (the NPI inputs)
 #          outputs/dose_npi_timevarying_long.csv         (tidy, for plotting)
 #          outputs/dose_r0_grid_rt_profiles.csv / .png   (analytic Rt per R0, pre-run)
@@ -539,6 +541,23 @@ if (file.exists(onset_csv)) {
           "overlay. Run analyses/onset_incidence/compute_daily_incidence_from_onsets.R.")
 }
 
+# Observed national cumulative CONFIRMED cases (INSP sitrep), overlaid on the
+# same cumulative trajectory plots in a distinct colour. NULL no-op if absent.
+confirmed_csv     <- here("data-processed", "insp_sitrep__national_cumulative_confirmed_cases__daily.csv")
+confirmed_overlay <- NULL
+if (file.exists(confirmed_csv)) {
+  confirmed_obs      <- read.csv(confirmed_csv, stringsAsFactors = FALSE)
+  confirmed_obs$date <- as.Date(confirmed_obs$date)
+  confirmed_overlay <- geom_line(
+    data = confirmed_obs, aes(date, national_cumulative_confirmed_cases),
+    inherit.aes = FALSE, colour = "#1a9850", linewidth = 1.1)
+  message(sprintf("Overlaying observed cumulative confirmed cases (%s to %s, max %.0f).",
+                  as.character(min(confirmed_obs$date)), as.character(max(confirmed_obs$date)),
+                  max(confirmed_obs$national_cumulative_confirmed_cases, na.rm = TRUE)))
+} else {
+  message("Note: ", basename(confirmed_csv), " not found -- skipping confirmed-cases overlay.")
+}
+
 # (i) The time-varying NPI inputs.
 tv_long$date <- day_to_date(tv_long$relative_day)
 p_inputs <- ggplot(tv_long, aes(date, value)) +
@@ -564,9 +583,10 @@ p_cum <- ggplot(cumulative_cases,
               colour = NA, alpha = 0.12) +
   geom_line(linewidth = 0.8) +
   onset_overlay +
+  confirmed_overlay +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Median cumulative cases by baseline R0",
-       subtitle = "Lines = median across replicates; bands = 25-75%; dashes = dose-data window; red = observed cumulative onsets",
+       subtitle = "Median (lines) + 25-75% (bands); red = observed cumulative onsets; green = confirmed cases",
        x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
   theme_bw(base_size = 11) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
@@ -589,10 +609,11 @@ p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
   geom_line(data = cumulative_cases, aes(date, mean),
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   onset_overlay +
+  confirmed_overlay +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = replicates; black = median; red = observed cumulative onsets; scenario '%s', %d reps",
+       subtitle = sprintf("Thin = replicates; black = median; red = onsets; green = confirmed cases; scenario '%s', %d reps",
                           EXTRAP_SCENARIO, N_STOCH),
        x = "Date", y = "Cumulative cases") +
   theme_bw(base_size = 10) +
