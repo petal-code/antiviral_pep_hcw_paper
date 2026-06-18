@@ -85,7 +85,7 @@ NPI_SPECS <- list(
   delay_hosp        = list(q0 = 6.00, q1 = 1.50),   # onset->hosp delay factor (days); improves DOWN
   prop_etu          = list(q0 = 0.00, q1 = 0.90),   # proportion of hospitalised cases in an ETU
   safe_funeral_prop = list(q0 = 0.00, q1 = 0.90),   # COMMUNITY: proportion of funerals that are SAFE (-> 1-this = unsafe comm)
-  unsafe_funeral_prop_hosp = list(q0 = 0.95, q1 = 1.00),  # HOSPITAL (non-ETU): UNSAFE-funeral probability, given directly
+  unsafe_funeral_prop_hosp = list(q0 = 0.90, q1 = 1.00),  # HOSPITAL (non-ETU): UNSAFE-funeral probability, given directly
   ppe_coverage      = list(q0 = 0.00, q1 = 0.90)    # PPE coverage lever (-> ppe_coverage_hcw)
 )
 # Unsafe-funeral probability for ETU deaths (kept separate; ETU deaths are
@@ -103,8 +103,8 @@ SCALAR_OVERRIDES <- list(
 # --- Simulation grid + controls.
 R0_GRID          <- seq(1.45, 1.75, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
-SEEDING_CASES    <- 3L                            # initial seeding infections
-N_STOCH          <- 20L                          # stochastic replicates per R0
+SEEDING_CASES    <- 5L                            # initial seeding infections
+N_STOCH          <- 25L                          # stochastic replicates per R0
 # Takeoff condition: an outbreak counts as "taken off" only if it has reached at
 # least TAKEOFF_N cumulative infections BY the deadline date (relative to
 # EPIDEMIC_START_DATE); otherwise it is re-run (seed advanced).
@@ -117,13 +117,6 @@ CHECK_FINAL_SIZE <- 15000L                        # stop a run once this many ca
 TIMEPOINTS <- c(seq(10L, 360L, by = 10L), 365L)   # days at which to read cumulative cases
 AMOUNTS    <- c(10L, 25L, 50L, 100L, 250L, 500L,  # cumulative case amounts to time
                 1000L, 2000L, 2500L, 4000L, 5000L)
-
-# --- Growth-rate analysis (section 10) period boundaries. Edit these freely;
-#     ALL period labels in the table/plot are generated automatically from them.
-GROWTH_MID_START <- as.Date("2026-05-15")  # start of the main window / "pre" cutoff
-GROWTH_MID_END   <- as.Date("2026-06-14")  # shared END date of the windows
-GROWTH_LATE_END  <- as.Date("2026-07-14")  # end of the "after MID_END" window
-GROWTH_X_DATE    <- as.Date("2026-05-01")  # adjustable alternative window start (to MID_END)
 
 # --- Scenario identity + horizon over which the NPI matrix is defined.
 SCENARIO_ID     <- "dose_npi"
@@ -139,7 +132,7 @@ MATRIX_HORIZON  <- max(730L, max(TIMEPOINTS))     # days; Q held flat past its g
 EPIDEMIC_START_DATE <- as.Date("2026-02-17")
 
 # --- Parallel + RNG.
-N_WORKERS <- min(future::availableCores() - 1, 50L)
+N_WORKERS <- min(future::availableCores() - 3, 50L)
 SEED_BASE <- 20260617L
 
 # Fail fast if the installed fiber predates the time-varying NPI interface.
@@ -731,6 +724,13 @@ print(p_traj_inc)
 #   * "full"                 : a data source's full observed range (confirmed)
 # Doubling time is only defined for r > 0 (a flat/declining curve has r <= 0);
 # we always report r and set doubling time to NA when r <= 0.
+
+# --- Growth-rate analysis (section 10) period boundaries. Edit these freely;
+#     ALL period labels in the table/plot are generated automatically from them.
+GROWTH_MID_START <- as.Date("2026-05-15")  # start of the main window / "pre" cutoff
+GROWTH_MID_END   <- as.Date("2026-06-14")  # shared END date of the windows
+GROWTH_LATE_END  <- as.Date("2026-07-14")  # end of the "after MID_END" window
+GROWTH_X_DATE    <- as.Date("2026-06-04")  # adjustable alternative window start (to MID_END)
 
 # Window boundaries + auto-generated labels from the configured GROWTH_* dates.
 pre_end  <- GROWTH_MID_START - 1L
