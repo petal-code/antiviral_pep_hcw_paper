@@ -229,13 +229,13 @@ message(sprintf("Takeoff: >= %d infections by %s (relative day %d).",
 # at these dates (rather than interpolated off the 10-day grid).
 # Snapshot dates for the per-R0 cumulative-infection plot, paired with which
 # observed reference line(s) to draw at each: 14 May (confirmed-series start ->
-# both onsets and confirmed), 7 Jun (onsets finish -> red/onsets only), 16 Jun
-# (confirmed finish -> green/confirmed only). SNAPSHOT_REFS is matched to
-# SNAPSHOT_DATES element-by-element; edit them together.
+# both onsets and confirmed), 7 Jun (onsets finish, but confirmed is also still
+# available -> both), 16 Jun (confirmed finish; onsets ended -> confirmed only).
+# SNAPSHOT_REFS is matched to SNAPSHOT_DATES element-by-element; edit together.
 SNAPSHOT_DATES <- as.Date(c("2026-05-14", "2026-06-07", "2026-06-16"))
 SNAPSHOT_REFS  <- list(c("onsets", "confirmed cases"),  # 14 May: both available
-                       "onsets",                         # 07 Jun: onsets finish
-                       "confirmed cases")                # 16 Jun: confirmed finish
+                       c("onsets", "confirmed cases"),  # 07 Jun: onsets finish + confirmed
+                       "confirmed cases")                # 16 Jun: confirmed finish (onsets ended)
 snapshot_days  <- as.integer(SNAPSHOT_DATES - epi_start)
 TIMEPOINTS     <- sort(unique(c(TIMEPOINTS, snapshot_days[snapshot_days > 0])))
 
