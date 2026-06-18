@@ -93,15 +93,22 @@ NPI_SPECS <- list(
 UNSAFE_FUNERAL_ETU <- 0.0
 
 # --- Fixed efficacy scalars (NOT time-varying; override DEFAULT_SCALAR_INPUTS).
+# SCALAR_OVERRIDES <- list(
+#   etu_efficacy                         = 0.60,
+#   general_hospital_quarantine_efficacy = 0.20,
+#   ppe_efficacy                         = 0.60,
+#   safe_funeral_efficacy                = 0.70
+# )
 SCALAR_OVERRIDES <- list(
-  etu_efficacy                         = 0.60,
-  general_hospital_quarantine_efficacy = 0.20,
-  ppe_efficacy                         = 0.60,
-  safe_funeral_efficacy                = 0.70
+  etu_efficacy                         = 0.84,
+  general_hospital_quarantine_efficacy = 0.68,
+  ppe_efficacy                         = 0.84,
+  safe_funeral_efficacy                = 0.88
 )
 
+
 # --- Simulation grid + controls.
-R0_GRID          <- seq(1.45, 1.7, by = 0.05)   # baseline (t=0) R0 grid
+R0_GRID          <- seq(1.45, 1.75, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
 SEEDING_CASES    <- 5L                            # initial seeding infections
 N_STOCH          <- 25L                          # stochastic replicates per R0
@@ -232,8 +239,9 @@ message(sprintf("Takeoff: >= %d infections by %s (relative day %d).",
 # both onsets and confirmed), 7 Jun (onsets finish, but confirmed is also still
 # available -> both), 16 Jun (confirmed finish; onsets ended -> confirmed only).
 # SNAPSHOT_REFS is matched to SNAPSHOT_DATES element-by-element; edit together.
-SNAPSHOT_DATES <- as.Date(c("2026-05-14", "2026-06-07", "2026-06-16"))
+SNAPSHOT_DATES <- as.Date(c("2026-05-14", "2026-05-27", "2026-06-07", "2026-06-17"))
 SNAPSHOT_REFS  <- list(c("onsets", "confirmed cases"),  # 14 May: both available
+                       c("onsets", "confirmed cases"),  # 27 May: both available
                        c("onsets", "confirmed cases"),  # 07 Jun: onsets finish + confirmed
                        "confirmed cases")                # 16 Jun: confirmed finish (onsets ended)
 snapshot_days  <- as.integer(SNAPSHOT_DATES - epi_start)
@@ -951,9 +959,13 @@ ref <- do.call(rbind, lapply(seq_along(SNAPSHOT_DATES), function(k) {
 }))
 if (is.null(ref)) ref <- data.frame()
 
+ref <- rbind(ref,
+             data.frame(snapshot = c("27 May 2026", "27 May 2026"),
+                        source = c("mccabe", "mccabe"),
+                        value = c(600, 1000)))
 ref_layer <- if (nrow(ref) > 0)
   geom_hline(data = ref, aes(yintercept = value, colour = source), linewidth = 0.9) else NULL
-
+  
 # Describe the per-date reference scheme in the subtitle (generated from config).
 ref_desc <- paste(mapply(function(lab, srcs) sprintf("%s = %s", lab, paste(srcs, collapse = " + ")),
                          snap_labs, SNAPSHOT_REFS), collapse = "; ")
@@ -962,8 +974,8 @@ p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
   geom_point(data = snap_central, aes(factor(r0), cum), colour = "black", size = 4) +
   ref_layer +
-  mccabe_hlines +
-  facet_wrap(~ snapshot, scales = "free_y") +
+  # mccabe_hlines +
+  facet_wrap(~ snapshot, scales = "free_y", nrow = 1) +
   scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
                       name = "Observed") +
   labs(title = "Cumulative infections by R0 at snapshot dates",
@@ -1061,7 +1073,7 @@ p_rebased <- ggplot(rebased_all, aes(days_since, cum_since, colour = series)) +
   scale_colour_manual(values = rebased_cols, name = NULL) +
   scale_linewidth_manual(values = c(fiber = 0.7, data = 1.3), guide = "none") +
   scale_x_continuous(breaks = seq(0, ceiling(x_hi / 7) * 7, by = 7)) +
-  coord_cartesian(xlim = c(0, x_hi), ylim = c(0, NA)) +
+  coord_cartesian(xlim = c(0, x_hi), ylim = c(0, 4000)) +
   labs(title = "Cumulative cases accrued since the confirmed-series start date",
        subtitle = sprintf("Day 0 = %s (confirmed-series start); fiber = per-R0 %s; data = thick lines; scenario '%s'",
                           format(rebase_t0, "%d %b %Y"), stat_label("rebased"), EXTRAP_SCENARIO),

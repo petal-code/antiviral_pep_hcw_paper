@@ -42,7 +42,7 @@ source(here::here("analyses", "dose_estimation_subanalysis", "helpers.R"))  # DI
 # ---- config ----------------------------------------------------------------
 CONFIRMED_CSV  <- here::here("data-processed",
                              "insp_sitrep__national_cumulative_confirmed_cases__daily.csv")
-END_DATE       <- as.Date("2026-06-16")   # fixed window END (last confirmed obs)
+END_DATE       <- as.Date("2026-06-17")   # fixed window END (last confirmed obs)
 MIN_WIN_POINTS <- 2L                       # min INCIDENCE points (>=2) for a fit
 
 # ---- read + derive daily incidence -----------------------------------------
@@ -170,7 +170,8 @@ p1 <- ggplot(long, aes(start_date, value, colour = method)) +
                           format(END_DATE, "%d %b %Y")),
        x = "Window start date", y = NULL) +
   theme_bw(base_size = 11) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_cartesian(ylim = c(-0.05, 0.2))
 ggsave(file.path(DIR_OUT, "dose_confirmed_growth_by_start.png"), p1,
        width = 9, height = 7, dpi = 150)
 print(p1)
