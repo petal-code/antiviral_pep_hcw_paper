@@ -184,6 +184,17 @@ offset_days <- as.integer(q_first_date - epi_start)   # days of Q = 0 prepended
 message(sprintf("Epidemic starts %s; Q curve starts %s -> %d day(s) of Q = 0 prepended.",
                 as.character(epi_start), as.character(q_first_date), offset_days))
 
+# All time-axis plots below are drawn in CALENDAR time: a relative day `d` maps
+# to the date epi_start + d. The dose-data window (first and last observation)
+# is marked on every such plot with dashed verticals.
+day_to_date     <- function(d) epi_start + d
+DATA_FIRST_DATE <- min(DOSE_OBS$date)   # 18 May 2026 (first dose observation)
+DATA_LAST_DATE  <- max(DOSE_OBS$date)   # 14 Jun 2026 (last  dose observation)
+data_window_vlines <- list(
+  geom_vline(xintercept = DATA_FIRST_DATE, linetype = "dashed", colour = "grey40"),
+  geom_vline(xintercept = DATA_LAST_DATE,  linetype = "dashed", colour = "grey40")
+)
+
 # Map the Q curve onto the simulation's relative-day axis (day 0 = epi_start):
 # each Q point's sim day = its calendar date - epi_start. rule = 2 holds Q flat
 # beyond the curve's last day; days before the roll-out are set to exactly 0.
@@ -295,18 +306,21 @@ rt_long <- rbind(
              mode = "case",          Rt = rt_profiles$R_case)
 )
 rt_long$mode <- factor(rt_long$mode, levels = c("instantaneous", "case"))
+rt_long$date <- day_to_date(rt_long$day)
 
-p_rt <- ggplot(rt_long, aes(day, Rt, colour = factor(r0), linetype = mode,
+p_rt <- ggplot(rt_long, aes(date, Rt, colour = factor(r0), linetype = mode,
                             group = interaction(r0, mode))) +
   geom_hline(yintercept = 1, colour = "grey55", linewidth = 0.4) +
+  data_window_vlines +
   geom_line(linewidth = 0.8) +
   scale_linetype_manual(values = c(instantaneous = "solid", case = "22"),
                         name = "Rt type") +
   scale_colour_viridis_d(option = "C", end = 0.9, name = expression(R[0] ~ "(t=0)")) +
+  scale_x_date(date_labels = "%b %Y") +
   labs(title = "Analytic Rt profile by starting R0 (before the fiber runs)",
-       subtitle = sprintf("Single-type approximation; solid = instantaneous, dashed = case; day 0 = %s",
-                          as.character(epi_start)),
-       x = "Day since epidemic start", y = expression(R[t])) +
+       subtitle = sprintf("Single-type approximation; solid = instantaneous, dashed = case; vertical dashes = dose-data window (%s, %s)",
+                          format(DATA_FIRST_DATE, "%d %b"), format(DATA_LAST_DATE, "%d %b")),
+       x = "Date", y = expression(R[t])) +
   theme_bw(base_size = 11)
 ggsave(file.path(DIR_OUT, "dose_r0_grid_rt_profiles.png"), p_rt, width = 9, height = 5.5, dpi = 150)
 print(p_rt)
@@ -479,24 +493,33 @@ message("\n02_npi_inputs_and_fiber_runs.R complete. Results in outputs/.")
 # 9. Quick diagnostic plots (display + saved)
 # ----------------------------------------------------------------------------
 # (i) The time-varying NPI inputs.
-p_inputs <- ggplot(tv_long, aes(relative_day, value)) +
+tv_long$date <- day_to_date(tv_long$relative_day)
+p_inputs <- ggplot(tv_long, aes(date, value)) +
+  data_window_vlines +
   geom_line(colour = "#1f77b4", linewidth = 0.8) +
   facet_wrap(~ input, scales = "free_y") +
+  scale_x_date(date_labels = "%b %Y") +
   labs(title = "Time-varying NPI inputs driven by the dose Q curve",
-       x = "Relative day", y = "Input value") +
-  theme_bw(base_size = 10)
+       subtitle = sprintf("Vertical dashes = dose-data window (%s, %s)",
+                          format(DATA_FIRST_DATE, "%d %b"), format(DATA_LAST_DATE, "%d %b")),
+       x = "Date", y = "Input value") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(file.path(DIR_OUT, "dose_npi_timevarying.png"), p_inputs, width = 9, height = 6, dpi = 150)
 print(p_inputs)
 
 # (ii) Median cumulative cases over time, by R0.
+cumulative_cases$date <- day_to_date(cumulative_cases$timepoint_day)
 p_cum <- ggplot(cumulative_cases,
-                aes(timepoint_day, median_cum_cases, colour = factor(r0))) +
+                aes(date, median_cum_cases, colour = factor(r0))) +
+  data_window_vlines +
   geom_ribbon(aes(ymin = q25_cum_cases, ymax = q75_cum_cases, fill = factor(r0)),
               colour = NA, alpha = 0.12) +
   geom_line(linewidth = 0.8) +
+  scale_x_date(date_labels = "%b %Y") +
   labs(title = "Median cumulative cases by baseline R0",
-       subtitle = "Lines = median across replicates; bands = 25-75%",
-       x = "Day", y = "Cumulative cases", colour = "R0", fill = "R0") +
+       subtitle = "Lines = median across replicates; bands = 25-75%; vertical dashes = dose-data window",
+       x = "Date", y = "Cumulative cases", colour = "R0", fill = "R0") +
   theme_bw(base_size = 11)
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_cases.png"), p_cum, width = 9, height = 5.5, dpi = 150)
 print(p_cum)
@@ -506,20 +529,24 @@ print(p_cum)
 # at TIMEPOINTS); the bold line is the median. One facet per starting R0.
 traj_long <- do.call(rbind, lapply(took, function(r)
   data.frame(r0 = r$r0, rep_id = r$rep_id, day = TIMEPOINTS, cum = r$cum_at)))
+traj_long$date <- day_to_date(traj_long$day)
 
 # Fade individual lines more when there are many replicates, less when few.
 traj_alpha <- max(0.06, min(0.6, 25 / N_STOCH))
 
-p_traj <- ggplot(traj_long, aes(day, cum, group = interaction(r0, rep_id))) +
+p_traj <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id))) +
+  data_window_vlines +
   geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.35) +
-  geom_line(data = cumulative_cases, aes(timepoint_day, median_cum_cases),
+  geom_line(data = cumulative_cases, aes(date, median_cum_cases),
             inherit.aes = FALSE, colour = "black", linewidth = 0.9) +
   facet_wrap(~ r0, scales = "free_y", labeller = label_both) +
+  scale_x_date(date_labels = "%b %Y") +
   labs(title = "Cumulative-incidence trajectories by replicate, per R0",
-       subtitle = sprintf("Thin = individual replicates; black = median; scenario '%s', %d reps",
+       subtitle = sprintf("Thin = individual replicates; black = median; scenario '%s', %d reps; dashes = dose-data window",
                           EXTRAP_SCENARIO, N_STOCH),
-       x = "Day since epidemic start", y = "Cumulative cases") +
-  theme_bw(base_size = 10)
+       x = "Date", y = "Cumulative cases") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_trajectories.png"), p_traj,
        width = 10, height = 7, dpi = 150)
 print(p_traj)
