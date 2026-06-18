@@ -46,6 +46,8 @@
 #          outputs/dose_r0_grid_cumulative_cases.csv     (median cum cases)
 #          outputs/dose_r0_grid_cumulative_trajectories.png (per-replicate curves by R0)
 #          outputs/dose_r0_grid_time_to_amounts.csv      (median time-to-amount)
+#          outputs/dose_growth_rates_doubling_times.csv / .png (growth rate + doubling
+#                                          time per period: fiber R0s vs data sources)
 #          outputs/dose_r0_grid_results.rds              (everything bundled)
 # ============================================================================
 
@@ -646,3 +648,112 @@ p_traj_log10 <- ggplot(traj_long, aes(date, cum, group = interaction(r0, rep_id)
                   ylim = c(1, NA))
 print(p_traj_log10)
 
+# ----------------------------------------------------------------------------
+# 10. Growth rate + doubling time by period (fiber curves vs data sources)
+# ----------------------------------------------------------------------------
+# For each curve we fit log(cumulative) ~ day over a date window; the slope is
+# the exponential growth rate r (per day) and the doubling time is log(2)/r.
+#   * Fiber: the per-R0 MEDIAN cumulative trajectory, over three periods
+#     (pre-15 May; 15 May-14 Jun; 14 Jun-14 Jul). NOTE these use the TIMEPOINTS
+#     grid, so the month-long windows have few points -- coarse but comparable.
+#   * Confirmed cases: full observed range, and 15 May-14 Jun.
+#   * Onsets: pre-15 May, and 15 May-14 Jun (truncated to where the data end).
+# Doubling time is only defined for r > 0 (a flat/declining curve has r <= 0);
+# we always report r and set doubling time to NA when r <= 0.
+
+D_14MAY <- as.Date("2026-05-14"); D_15MAY <- as.Date("2026-05-15")
+D_14JUN <- as.Date("2026-06-14"); D_14JUL <- as.Date("2026-07-14")
+
+# Fit r (per day) + doubling time from (date, value > 0) over the window [lo, hi].
+fit_growth <- function(dates, values, lo, hi) {
+  keep <- is.finite(values) & values > 0 & dates >= lo & dates <= hi
+  d <- as.numeric(dates[keep]); v <- values[keep]
+  if (length(unique(d)) < 2L)
+    return(data.frame(growth_rate = NA_real_, doubling_time = NA_real_,
+                      n_points = sum(keep), date_from = as.Date(NA), date_to = as.Date(NA)))
+  r <- unname(coef(stats::lm(log(v) ~ d))[2])
+  data.frame(growth_rate   = r,
+             doubling_time = if (is.finite(r) && r > 0) log(2) / r else NA_real_,
+             n_points      = length(v),
+             date_from     = min(dates[keep]), date_to = max(dates[keep]))
+}
+
+# --- Fiber: per-R0 median cumulative trajectory over three periods. ----------
+fiber_periods <- list("pre-15 May"    = c(epi_start, D_14MAY),
+                      "15 May-14 Jun" = c(D_15MAY,  D_14JUN),
+                      "14 Jun-14 Jul" = c(D_14JUN,  D_14JUL))
+growth_fiber <- do.call(rbind, lapply(R0_GRID, function(r0v) {
+  cc <- cumulative_cases[cumulative_cases$r0 == r0v, ]
+  do.call(rbind, lapply(names(fiber_periods), function(pn) {
+    rng <- fiber_periods[[pn]]
+    data.frame(series = sprintf("R0=%.2f", r0v), source_type = "fiber", r0 = r0v,
+               period = pn, fit_growth(cc$date, cc$median_cum_cases, rng[1], rng[2]),
+               row.names = NULL)
+  }))
+}))
+
+# --- Data sources (reuse the curves read for the overlays, if present). ------
+add_data_growth <- function(acc, label, dates, values, periods) {
+  rows <- do.call(rbind, lapply(names(periods), function(pn) {
+    rng <- periods[[pn]]
+    data.frame(series = label, source_type = "data", r0 = NA_real_,
+               period = pn, fit_growth(dates, values, rng[1], rng[2]), row.names = NULL)
+  }))
+  rbind(acc, rows)
+}
+growth_data <- NULL
+if (exists("confirmed_obs")) {
+  growth_data <- add_data_growth(growth_data, "confirmed cases",
+    confirmed_obs$date, confirmed_obs$national_cumulative_confirmed_cases,
+    list("full"          = c(min(confirmed_obs$date), max(confirmed_obs$date)),
+         "15 May-14 Jun" = c(D_15MAY, D_14JUN)))
+}
+if (exists("onsets_obs")) {
+  growth_data <- add_data_growth(growth_data, "onsets",
+    onsets_obs$date, onsets_obs$cumulative_onsets,
+    list("pre-15 May"    = c(min(onsets_obs$date), D_14MAY),
+         "15 May-14 Jun" = c(D_15MAY, D_14JUN)))
+}
+
+growth_tbl <- rbind(growth_fiber, growth_data)
+growth_tbl$period <- factor(growth_tbl$period,
+  levels = c("pre-15 May", "15 May-14 Jun", "14 Jun-14 Jul", "full"))
+
+write.csv(growth_tbl, file.path(DIR_OUT, "dose_growth_rates_doubling_times.csv"), row.names = FALSE)
+disp <- growth_tbl
+disp$growth_rate   <- round(disp$growth_rate, 4)
+disp$doubling_time <- round(disp$doubling_time, 1)
+cat("\nGrowth rate (per day) + doubling time (days) by period:\n")
+print(disp[order(disp$period, disp$series),
+           c("series", "period", "growth_rate", "doubling_time", "n_points",
+             "date_from", "date_to")], row.names = FALSE)
+
+# --- Graphical comparison: bars per series, faceted by metric x period. ------
+series_levels <- c(sprintf("R0=%.2f", R0_GRID), "confirmed cases", "onsets")
+series_cols   <- c(setNames(viridisLite::viridis(length(R0_GRID), option = "C", end = 0.9),
+                            sprintf("R0=%.2f", R0_GRID)),
+                   "confirmed cases" = "#1a9850", "onsets" = "#d62728")
+growth_tbl$series <- factor(growth_tbl$series, levels = series_levels)
+
+growth_long <- tidyr::pivot_longer(growth_tbl, c(growth_rate, doubling_time),
+                                   names_to = "metric", values_to = "value")
+# Hide very long doubling times (near-zero growth) so that facet stays readable.
+growth_long$value[growth_long$metric == "doubling_time" &
+                  is.finite(growth_long$value) & growth_long$value > 120] <- NA
+growth_long$metric <- factor(growth_long$metric, levels = c("growth_rate", "doubling_time"),
+                             labels = c("Growth rate (per day)", "Doubling time (days)"))
+
+p_growth <- ggplot(growth_long, aes(series, value, fill = series)) +
+  geom_hline(yintercept = 0, colour = "grey70", linewidth = 0.3) +
+  geom_col() +
+  facet_grid(metric ~ period, scales = "free_y") +
+  scale_fill_manual(values = series_cols, guide = "none") +
+  labs(title = "Growth rate and doubling time by period",
+       subtitle = sprintf("Fiber per-R0 median trajectories vs data sources; scenario '%s' (doubling times > 120 d hidden)",
+                          EXTRAP_SCENARIO),
+       x = NULL, y = NULL) +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7))
+ggsave(file.path(DIR_OUT, "dose_growth_rates_doubling_times.png"), p_growth,
+       width = 11, height = 6.5, dpi = 150)
+print(p_growth)
