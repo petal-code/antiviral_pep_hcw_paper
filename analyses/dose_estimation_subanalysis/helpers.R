@@ -141,11 +141,23 @@ fit_dose_q_curve <- function(start_date,
     mod <- cmdstanr::cmdstan_model(file.path(DIR_STAN, "logistic_qcurve_single.stan"))
   }
 
+  # Explicit, in-range initial values per chain. These keep early warmup away
+  # from the awkward boundaries (sigma -> 0, U pinned at 1, t50/k far off) that
+  # otherwise trigger sporadic "student_t scale = 0" proposal-rejection messages.
+  init_fun <- function() list(
+    L     = stats::runif(1, 0.00, 0.05),
+    U     = stats::runif(1, 0.85, 0.99),
+    t50   = stats::rnorm(1, t50_prior_mean, 5),
+    log_k = stats::rnorm(1, logk_prior[["mean"]], 0.3),
+    sigma = stats::runif(1, 0.05, 0.20)
+  )
+
   fit <- mod$sample(
     data = stan_data, seed = seed,
     chains = chains, parallel_chains = chains,
     iter_warmup = iter_warmup, iter_sampling = iter_sampling,
-    adapt_delta = adapt_delta, max_treedepth = max_treedepth, refresh = refresh
+    adapt_delta = adapt_delta, max_treedepth = max_treedepth, refresh = refresh,
+    init = init_fun
   )
 
   # Parse q_pred[m] -> m (base R; no stringr dependency in helpers).

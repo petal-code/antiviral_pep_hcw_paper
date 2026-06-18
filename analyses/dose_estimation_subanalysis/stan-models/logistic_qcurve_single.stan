@@ -73,7 +73,9 @@ parameters {
   real<lower=0, upper=1> U;             // upper endpoint (max level)
   real t50;                             // logistic midpoint (days)
   real log_k;                           // log growth rate (k > 0)
-  real<lower=0> sigma;                  // observation noise scale
+  real<lower=1e-3> sigma;               // observation noise scale; floored a hair
+                                        // above 0 so it can never underflow to an
+                                        // exact 0 student_t scale during warmup
 }
 
 transformed parameters {
