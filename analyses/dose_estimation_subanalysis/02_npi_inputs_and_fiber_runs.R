@@ -74,7 +74,7 @@ set.seed(123)
 # --- Which forward-extrapolation scenario of the dose Q curve to run. One of the
 #     names produced by 01_fit_dose_q_curve.R:
 #       "linear_to_90" | "logistic" | "flat" | "conflict".
-EXTRAP_SCENARIO <- "linear_to_90"
+EXTRAP_SCENARIO <- "logistic"
 
 # --- NPI parameters the Q curve drives. q0 = value at Q = 0 (worst response),
 #     q1 = value at Q = 1 (best response). Edit these min/max values freely.
@@ -105,10 +105,10 @@ N_STOCH          <- 30L                          # stochastic replicates per R0
 # Takeoff condition: an outbreak counts as "taken off" only if it has reached at
 # least TAKEOFF_N cumulative infections BY the deadline date (relative to
 # EPIDEMIC_START_DATE); otherwise it is re-run (seed advanced).
-TAKEOFF_N             <- 200L                     # cumulative infections required ...
+TAKEOFF_N             <- 250L                     # cumulative infections required ...
 TAKEOFF_DEADLINE_DATE <- as.Date("2026-06-15")     # ... by this calendar date
 MAX_RETRIES      <- 50L                           # cap on re-runs per replicate
-CHECK_FINAL_SIZE <- 10000L                        # stop a run once this many cases exist
+CHECK_FINAL_SIZE <- 15000L                        # stop a run once this many cases exist
 
 # --- Summary grids (computed per run, then median across runs).
 TIMEPOINTS <- c(seq(10L, 360L, by = 10L), 365L)   # days at which to read cumulative cases
@@ -661,8 +661,11 @@ print(p_traj_log10)
 # Doubling time is only defined for r > 0 (a flat/declining curve has r <= 0);
 # we always report r and set doubling time to NA when r <= 0.
 
-D_14MAY <- as.Date("2026-05-14"); D_15MAY <- as.Date("2026-05-15")
-D_14JUN <- as.Date("2026-06-14"); D_14JUL <- as.Date("2026-07-14")
+D_14MAY <- as.Date("2026-05-14")
+D_15MAY <- as.Date("2026-06-05") # as.Date("2026-05-15")
+D_01JUN <- as.Date("2026-06-05")
+D_14JUN <- as.Date("2026-06-14")
+D_14JUL <- as.Date("2026-07-14")
 
 # Fit r (per day) + doubling time from (date, value > 0) over the window [lo, hi].
 fit_growth <- function(dates, values, lo, hi) {
