@@ -566,7 +566,8 @@ CENTRAL_STAT <- list(
   incidence    = "mean",   # p_traj_inc central daily-incidence line
   snapshot     = "median", # p_snap large central dot
   rebased      = "mean",   # p_rebased (section 12) fiber central trajectory
-  growth       = "mean"    # section 10 fiber incidence (diff of central cumulative)
+  growth       = "mean",   # section 10 fiber incidence (diff of central cumulative)
+  rt           = "median"  # section 13 across-replicate central smoothed r(t)
 )
 # Column of cumulative_cases / aggregation function / label for a given figure.
 cum_central_col <- function(key)
@@ -1101,3 +1102,85 @@ p_rebased <- ggplot(rebased_all, aes(days_since, cum_since, colour = series)) +
 ggsave(file.path(DIR_OUT, "dose_r0_grid_cumulative_rebased.png"), p_rebased,
        width = 9, height = 5.5, dpi = 150)
 print(p_rebased)
+
+# ----------------------------------------------------------------------------
+# 13. Smoothed instantaneous growth rate r(t): fiber replicates vs confirmed
+# ----------------------------------------------------------------------------
+# For every fiber replicate we smooth its daily incidence (diff of cum_at) the
+# same way as the confirmed cases in 04 -- a quasi-Poisson GAM spline of time
+# (fit_incidence_smoother in helpers.R) -- and take the instantaneous growth rate
+# r(t) = d/dt log(smoothed incidence). One panel per R0 shows every replicate's
+# r(t) (thin) plus the across-replicate central r(t) (bold, CENTRAL_STAT$rt); the
+# confirmed-case r(t), smoothed the same way, is overlaid on every panel for
+# comparison. r(t) is the log-derivative of a smooth, so it is robust to the
+# day-to-day noise that makes raw growth-rate estimates jump.
+RT_PLOT_START <- as.Date("2026-04-15")   # x-axis window for the r(t) comparison
+RT_PLOT_END   <- as.Date("2026-07-01")
+rt_grid_day <- seq(as.integer(RT_PLOT_START - epi_start),
+                   as.integer(RT_PLOT_END   - epi_start), by = 1)
+# Fit each smoother on a slightly wider window than we plot, for clean edges.
+rt_fit_lo <- as.integer(RT_PLOT_START - epi_start) - 21L
+rt_fit_hi <- as.integer(RT_PLOT_END   - epi_start) + 21L
+
+# r(t) on rt_grid_day from a (day, incidence) series; NA if it cannot be fit.
+rt_from_incidence <- function(day, value) {
+  keep <- is.finite(day) & is.finite(value) & day >= rt_fit_lo & day <= rt_fit_hi
+  if (sum(keep) < 6L) return(rep(NA_real_, length(rt_grid_day)))
+  fit <- tryCatch(fit_incidence_smoother(day[keep], value[keep]), error = function(e) NULL)
+  if (is.null(fit)) return(rep(NA_real_, length(rt_grid_day)))
+  tryCatch(smooth_r_at(fit, rt_grid_day), error = function(e) rep(NA_real_, length(rt_grid_day)))
+}
+
+message("Computing smoothed r(t) for ", length(took), " fiber replicates ...")
+rt_fiber <- do.call(rbind, lapply(took, function(r) {
+  inc_val <- diff(r$cum_at) / diff(TIMEPOINTS)
+  data.frame(r0 = r$r0, rep_id = r$rep_id, day = rt_grid_day,
+             r = rt_from_incidence(inc_mids, inc_val), row.names = NULL)
+}))
+rt_fiber$date <- day_to_date(rt_fiber$day)
+
+# Across-replicate central r(t) per R0 (median/mean per CENTRAL_STAT$rt).
+rt_central <- aggregate(r ~ r0 + day, data = rt_fiber, FUN = central_fun("rt"))
+rt_central$date <- day_to_date(rt_central$day)
+
+# Confirmed-case r(t), smoothed the same way, masked to the confirmed data range.
+confirmed_rt <- NULL
+if (exists("confirmed_obs")) {
+  co2  <- confirmed_obs[order(confirmed_obs$date), ]
+  cday <- as.numeric(co2$date - epi_start)
+  cinc_day <- (cday[-1] + cday[-length(cday)]) / 2
+  cinc_val <- diff(co2$national_cumulative_confirmed_cases) / diff(cday)
+  cr   <- rt_from_incidence(cinc_day, cinc_val)
+  cr[rt_grid_day < min(cinc_day) | rt_grid_day > max(cinc_day)] <- NA_real_
+  confirmed_rt <- data.frame(date = day_to_date(rt_grid_day), r = cr)
+}
+
+# y-limits from the central + confirmed lines (per-replicate spikes are clipped).
+rt_ylim <- range(c(rt_central$r, if (!is.null(confirmed_rt)) confirmed_rt$r), na.rm = TRUE)
+if (!all(is.finite(rt_ylim))) rt_ylim <- c(-0.1, 0.2)
+rt_ylim <- rt_ylim + c(-1, 1) * 0.05 * diff(rt_ylim)
+
+confirmed_rt_layer <- if (!is.null(confirmed_rt))
+  geom_line(data = confirmed_rt, aes(date, r), inherit.aes = FALSE,
+            colour = "#1a9850", linewidth = 1.1) else NULL
+
+p_rt_growth <- ggplot(rt_fiber, aes(date, r, group = interaction(r0, rep_id))) +
+  geom_hline(yintercept = 0, colour = "grey70", linewidth = 0.3) +
+  data_window_vlines +
+  geom_line(colour = "#1f77b4", alpha = traj_alpha, linewidth = 0.3) +
+  geom_line(data = rt_central, aes(date, r), inherit.aes = FALSE,
+            colour = "black", linewidth = 0.9) +
+  confirmed_rt_layer +
+  facet_wrap(~ r0, labeller = label_both) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  coord_cartesian(xlim = c(RT_PLOT_START, RT_PLOT_END), ylim = rt_ylim) +
+  labs(title = "Smoothed instantaneous growth rate r(t): fiber vs confirmed",
+       subtitle = sprintf("Thin = replicate r(t); black = across-replicate %s; green = confirmed-case r(t) (smoothed); scenario '%s'",
+                          stat_label("rt"), EXTRAP_SCENARIO),
+       x = "Date", y = "Instantaneous growth rate r(t) (per day)") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
+ggsave(file.path(DIR_OUT, "dose_r0_grid_growth_rate_rt.png"), p_rt_growth,
+       width = 10, height = 7, dpi = 150)
+print(p_rt_growth)
+write.csv(rt_fiber, file.path(DIR_OUT, "dose_r0_grid_growth_rate_rt.csv"), row.names = FALSE)
