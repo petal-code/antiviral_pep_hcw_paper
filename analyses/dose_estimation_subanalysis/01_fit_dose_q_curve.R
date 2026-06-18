@@ -233,22 +233,29 @@ saveRDS(scenarios, file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.rds"
 write.csv(scenarios, file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.csv"),
           row.names = FALSE)
 
-# Plot: the fit (90% band + data) plus the four extrapolations on one graph.
-p_scen <- ggplot(scenarios, aes(relative_day, q, colour = scenario)) +
+# Plot: the fit (90% band + data) plus the four extrapolations on one graph, in
+# calendar time with the dose-data window marked (matching 02).
+data_first_date <- min(DOSE_OBS$date)   # 18 May 2026 (first dose observation)
+data_last_date  <- max(DOSE_OBS$date)   # 14 Jun 2026 (last  dose observation)
+
+p_scen <- ggplot(scenarios, aes(date, q, colour = scenario)) +
   geom_ribbon(data = q_curve[q_curve$relative_day <= last_obs_day, ],
-              aes(x = relative_day, ymin = q_lower, ymax = q_upper),
+              aes(x = date, ymin = q_lower, ymax = q_upper),
               inherit.aes = FALSE, fill = "grey70", alpha = 0.35) +
-  geom_vline(xintercept = last_obs_day, linetype = "dotted", colour = "grey50") +
+  geom_vline(xintercept = data_first_date, linetype = "dashed", colour = "grey40") +
+  geom_vline(xintercept = data_last_date,  linetype = "dashed", colour = "grey40") +
   geom_line(linewidth = 0.9) +
-  geom_point(data = obs, aes(relative_day, proportion),
+  geom_point(data = obs, aes(date, proportion),
              inherit.aes = FALSE, colour = "black", size = 2.2) +
   scale_colour_brewer(palette = "Dark2", labels = scen_labels, name = "Extrapolation") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
   labs(title = "Dose Q curve: fit + forward-extrapolation scenarios",
-       subtitle = sprintf("Shared fit to day %d (grey = 90%% CI, points = data); scenarios diverge after the last data point",
-                          last_obs_day),
-       x = "Relative day", y = "Dose coverage (Q)") +
-  theme_bw(base_size = 11)
+       subtitle = sprintf("Grey = 90%% CI, points = data; dashed verticals = dose-data window (%s, %s); scenarios diverge after the last data point",
+                          format(data_first_date, "%d %b"), format(data_last_date, "%d %b")),
+       x = "Date", y = "Dose coverage (Q)") +
+  theme_bw(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggsave(file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.png"), p_scen,
        width = 9.5, height = 5.5, dpi = 150)
