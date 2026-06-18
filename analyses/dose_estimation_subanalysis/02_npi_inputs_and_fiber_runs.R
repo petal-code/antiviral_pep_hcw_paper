@@ -56,10 +56,10 @@ set.seed(123)
 # --- NPI parameters the Q curve drives. q0 = value at Q = 0 (worst response),
 #     q1 = value at Q = 1 (best response). Edit these min/max values freely.
 NPI_SPECS <- list(
-  prob_hosp         = list(q0 = 0.30, q1 = 0.80),   # P(hospitalised | symptomatic)
+  prob_hosp         = list(q0 = 0.00, q1 = 0.80),   # P(hospitalised | symptomatic)
   delay_hosp        = list(q0 = 6.00, q1 = 1.50),   # onset->hosp delay factor (days); improves DOWN
   prop_etu          = list(q0 = 0.00, q1 = 0.90),   # proportion of hospitalised cases in an ETU
-  safe_funeral_prop = list(q0 = 0.10, q1 = 0.90),   # proportion of funerals that are safe
+  safe_funeral_prop = list(q0 = 0.00, q1 = 0.90),   # proportion of funerals that are safe
   ppe_coverage      = list(q0 = 0.00, q1 = 0.90)    # PPE coverage lever (-> ppe_coverage_hcw)
 )
 # Unsafe-funeral probability for ETU deaths (kept separate; ETU deaths are
@@ -93,6 +93,14 @@ SCENARIO_ID     <- "dose_npi"
 SCENARIO_LABEL  <- "Dose-driven NPIs"
 MATRIX_HORIZON  <- max(730L, max(TIMEPOINTS))     # days; Q held flat past its grid
 
+# --- Epidemic start date. The epidemic (relative day 0) is seeded on this
+#     calendar date, which MUST be on or before the Q curve's first date (from
+#     01). If it is earlier, the gap before the dose roll-out is filled with
+#     Q = 0, so the NPIs sit at their worst-response (q0) values and the epidemic
+#     runs unmitigated until the dose curve begins. Set to NA to start exactly at
+#     the Q curve's first date (no prepended zeros).
+EPIDEMIC_START_DATE <- as.Date("2026-05-01")
+
 # --- Parallel + RNG.
 N_WORKERS <- min(future::availableCores(), 50L)
 SEED_BASE <- 20260617L
@@ -109,16 +117,40 @@ if (CHECK_FINAL_SIZE < max(AMOUNTS)) {
 # ----------------------------------------------------------------------------
 # 2. Read the Q curve and map it onto the NPI-matrix day grid
 # ----------------------------------------------------------------------------
+# The Q curve carries calendar dates (the `date` column from 01). The epidemic
+# is seeded at EPIDEMIC_START_DATE, which may be EARLIER than the Q curve's first
+# date: the days in between (before the dose roll-out) get Q = 0 prepended, so
+# the NPIs sit at their worst-response values until the curve begins.
 q_curve <- readRDS(file.path(DIR_OUT, "dose_q_curve.rds"))
 if (is.list(q_curve) && !is.data.frame(q_curve) && !is.null(q_curve$q_curve)) {
   q_curve <- q_curve$q_curve   # tolerate being handed the full fit list
 }
+if (is.null(q_curve$date)) {
+  stop("The Q curve has no `date` column; re-run 01_fit_dose_q_curve.R so it ",
+       "stores calendar dates.", call. = FALSE)
+}
+q_curve$date <- as.Date(q_curve$date)
+q_first_date <- min(q_curve$date)
 
+# Resolve + validate the epidemic start date (day 0 of the simulation).
+epi_start <- if (is.null(EPIDEMIC_START_DATE) || all(is.na(EPIDEMIC_START_DATE)))
+  q_first_date else as.Date(EPIDEMIC_START_DATE)
+if (epi_start > q_first_date) {
+  stop("EPIDEMIC_START_DATE (", epi_start, ") must be on or before the Q curve's ",
+       "first date (", q_first_date, ").", call. = FALSE)
+}
+offset_days <- as.integer(q_first_date - epi_start)   # days of Q = 0 prepended
+message(sprintf("Epidemic starts %s; Q curve starts %s -> %d day(s) of Q = 0 prepended.",
+                as.character(epi_start), as.character(q_first_date), offset_days))
+
+# Map the Q curve onto the simulation's relative-day axis (day 0 = epi_start):
+# each Q point's sim day = its calendar date - epi_start. rule = 2 holds Q flat
+# beyond the curve's last day; days before the roll-out are set to exactly 0.
 matrix_days <- 0:MATRIX_HORIZON
-# Posterior-mean Q on the matrix grid; rule = 2 holds Q flat beyond the fitted
-# curve's last day (by then the logistic has saturated near its ceiling).
-q_on_grid <- clip01(approx(q_curve$relative_day, q_curve$q_mean,
-                           xout = matrix_days, rule = 2)$y)
+q_sim_day   <- as.integer(q_curve$date - epi_start)
+q_on_grid   <- approx(q_sim_day, q_curve$q_mean, xout = matrix_days, rule = 2)$y
+q_on_grid[matrix_days < offset_days] <- 0
+q_on_grid   <- clip01(q_on_grid)
 
 # ----------------------------------------------------------------------------
 # 3. Build + save the time-varying NPI inputs (the scenario matrix)
@@ -346,7 +378,9 @@ saveRDS(list(
     scalar_overrides = SCALAR_OVERRIDES, r0_grid = R0_GRID,
     funeral_frac = FUNERAL_FRAC, seeding_cases = SEEDING_CASES,
     n_stoch = N_STOCH, takeoff_n = TAKEOFF_N, max_retries = MAX_RETRIES,
-    check_final_size = CHECK_FINAL_SIZE, timepoints = TIMEPOINTS, amounts = AMOUNTS
+    check_final_size = CHECK_FINAL_SIZE, timepoints = TIMEPOINTS, amounts = AMOUNTS,
+    epidemic_start_date = epi_start, q_first_date = q_first_date,
+    offset_days = offset_days
   )
 ), file.path(DIR_OUT, "dose_r0_grid_results.rds"))
 
