@@ -114,7 +114,11 @@ MAX_RETRIES      <- 50L                           # cap on re-runs per replicate
 CHECK_FINAL_SIZE <- 15000L                        # stop a run once this many cases exist
 
 # --- Summary grids (computed per run, then median across runs).
-TIMEPOINTS <- c(seq(10L, 360L, by = 10L), 365L)   # days at which to read cumulative cases
+# Daily grid: cumulative cases (and the incidence we derive from them) are read
+# at every day, so even very short growth-rate windows resolve. cum_at is just
+# count(infections <= t), so a daily grid is cheap. Push the upper bound out if
+# you set GROWTH_LATE_END beyond day 365.
+TIMEPOINTS <- 0:365                               # days at which to read cumulative cases
 AMOUNTS    <- c(10L, 25L, 50L, 100L, 250L, 500L,  # cumulative case amounts to time
                 1000L, 2000L, 2500L, 4000L, 5000L)
 
@@ -223,7 +227,15 @@ message(sprintf("Takeoff: >= %d infections by %s (relative day %d).",
 # Snapshot dates for the end-of-script cumulative-infection comparison. Add their
 # relative days to TIMEPOINTS so each replicate's cumulative is read off EXACTLY
 # at these dates (rather than interpolated off the 10-day grid).
-SNAPSHOT_DATES <- as.Date(c("2026-05-14", "2026-06-14"))
+# Snapshot dates for the per-R0 cumulative-infection plot, paired with which
+# observed reference line(s) to draw at each: 14 May (confirmed-series start ->
+# both onsets and confirmed), 7 Jun (onsets finish -> red/onsets only), 16 Jun
+# (confirmed finish -> green/confirmed only). SNAPSHOT_REFS is matched to
+# SNAPSHOT_DATES element-by-element; edit them together.
+SNAPSHOT_DATES <- as.Date(c("2026-05-14", "2026-06-07", "2026-06-16"))
+SNAPSHOT_REFS  <- list(c("onsets", "confirmed cases"),  # 14 May: both available
+                       "onsets",                         # 07 Jun: onsets finish
+                       "confirmed cases")                # 16 Jun: confirmed finish
 snapshot_days  <- as.integer(SNAPSHOT_DATES - epi_start)
 TIMEPOINTS     <- sort(unique(c(TIMEPOINTS, snapshot_days[snapshot_days > 0])))
 
@@ -389,7 +401,9 @@ run_one_takeoff <- function(args, base_seed, takeoff_n, max_retries, takeoff_day
 summarise_run <- function(inf_times, timepoints, amounts) {
   st <- sort(inf_times); n <- length(st)
   list(
-    cum_at  = vapply(timepoints, function(t) sum(st <= t), numeric(1)),
+    # cum_at[k] = count of infections on/before timepoints[k]; findInterval on the
+    # sorted times is O(n + m) (matters now that timepoints is a daily grid).
+    cum_at  = findInterval(timepoints, st),
     time_to = vapply(amounts,    function(a) if (n >= a) st[a] else NA_real_, numeric(1)),
     n_cases = n
   )
@@ -743,7 +757,8 @@ lab_x    <- sprintf("%s-%s",  format(GROWTH_X_DATE,    "%d %b"), format(GROWTH_M
 # window [lo, hi]. Non-positive / non-finite points are dropped (log undefined);
 # NA is returned when fewer than two distinct days remain in the window.
 fit_growth <- function(dates, values, lo, hi) {
-  keep <- is.finite(values) & values > 0 & dates >= lo & dates <= hi
+  dates <- as.Date(dates); values <- suppressWarnings(as.numeric(values))
+  keep <- is.finite(values) & values > 0 & !is.na(dates) & dates >= lo & dates <= hi
   d <- as.numeric(dates[keep]); v <- values[keep]
   if (length(unique(d)) < 2L)
     return(data.frame(growth_rate = NA_real_, doubling_time = NA_real_,
@@ -850,12 +865,11 @@ print(p_growth)
 # ----------------------------------------------------------------------------
 # 11. Cumulative infections at two snapshot dates (per R0) vs data sources
 # ----------------------------------------------------------------------------
-# For each replicate, its cumulative infections at 14 May and 14 Jun 2026 (read
-# EXACTLY off TIMEPOINTS, which were augmented with these days): one dot per
-# replicate at its R0, with the mean drawn as a large dot. Observed references
-# are overlaid as horizontal lines: onsets on both dates and confirmed cases on
-# 14 Jun. (Onsets end before 14 Jun, so the 14 Jun onset line is the last
-# observed onset value.)
+# For each replicate, its cumulative infections at each SNAPSHOT_DATES entry
+# (read EXACTLY off the daily TIMEPOINTS): one dot per replicate at its R0, with
+# the mean drawn as a large dot. Observed reference lines are overlaid, but only
+# the source(s) listed in SNAPSHOT_REFS for that date (so 7 Jun shows onsets only
+# and 16 Jun shows confirmed only).
 snap_idx  <- match(snapshot_days, TIMEPOINTS)
 snap_labs <- format(SNAPSHOT_DATES, "%d %b %Y")
 snap_long <- do.call(rbind, lapply(took, function(r)
@@ -866,23 +880,35 @@ snap_mean <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = mean)
 
 # Observed cumulative value at a date (interpolated; held flat past the data end).
 obs_at <- function(d, dates, values) {
+  dates <- as.Date(dates); values <- as.numeric(values)
   if (d <= max(dates)) approx(as.numeric(dates), values, as.numeric(d))$y
   else values[which.max(dates)]
 }
-ref <- data.frame()
+# Requestable observed sources (only those whose file was read are available).
+obs_sources <- list()
 if (exists("onsets_obs"))
-  ref <- rbind(ref, data.frame(
-    snapshot = factor(snap_labs, levels = snap_labs), source = "onsets",
-    value = vapply(SNAPSHOT_DATES, function(d)
-      obs_at(d, onsets_obs$date, onsets_obs$cumulative_onsets), numeric(1))))
+  obs_sources[["onsets"]] <- list(d = onsets_obs$date, v = onsets_obs$cumulative_onsets)
 if (exists("confirmed_obs"))
-  ref <- rbind(ref, data.frame(
-    snapshot = factor(snap_labs[2], levels = snap_labs), source = "confirmed cases",
-    value = obs_at(SNAPSHOT_DATES[2], confirmed_obs$date,
-                   confirmed_obs$national_cumulative_confirmed_cases)))
+  obs_sources[["confirmed cases"]] <- list(
+    d = confirmed_obs$date, v = confirmed_obs$national_cumulative_confirmed_cases)
+
+# One reference row per (snapshot, requested-and-available source).
+ref <- do.call(rbind, lapply(seq_along(SNAPSHOT_DATES), function(k) {
+  do.call(rbind, lapply(SNAPSHOT_REFS[[k]], function(sr) {
+    s <- obs_sources[[sr]]
+    if (is.null(s)) return(NULL)
+    data.frame(snapshot = factor(snap_labs[k], levels = snap_labs), source = sr,
+               value = obs_at(SNAPSHOT_DATES[k], s$d, s$v))
+  }))
+}))
+if (is.null(ref)) ref <- data.frame()
 
 ref_layer <- if (nrow(ref) > 0)
   geom_hline(data = ref, aes(yintercept = value, colour = source), linewidth = 0.9) else NULL
+
+# Describe the per-date reference scheme in the subtitle (generated from config).
+ref_desc <- paste(mapply(function(lab, srcs) sprintf("%s = %s", lab, paste(srcs, collapse = " + ")),
+                         snap_labs, SNAPSHOT_REFS), collapse = "; ")
 
 p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
@@ -892,9 +918,8 @@ p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
                       name = "Observed") +
   labs(title = "Cumulative infections by R0 at snapshot dates",
-       subtitle = sprintf("Blue = replicates; large black dot = mean; lines = observed (14 Jun onset = last obs, %s); scenario '%s'",
-                          if (exists("onsets_obs")) format(max(onsets_obs$date), "%d %b") else "n/a",
-                          EXTRAP_SCENARIO),
+       subtitle = sprintf("Blue = replicates; large black dot = mean; reference lines: %s; scenario '%s'",
+                          ref_desc, EXTRAP_SCENARIO),
        x = "Baseline R0", y = "Cumulative infections") +
   theme_bw(base_size = 11)
 ggsave(file.path(DIR_OUT, "dose_r0_grid_snapshot_cumulative.png"), p_snap,
@@ -917,8 +942,10 @@ print(p_snap)
 # to the onset-series start, then to the epidemic start.
 REBASE_END_DATE <- as.Date("2026-06-20")   # right-hand x limit (set NA for auto)
 
-rebase_t0 <- if (exists("confirmed_obs")) min(confirmed_obs$date) else
-             if (exists("onsets_obs"))    min(onsets_obs$date)    else epi_start
+rebase_t0 <- if (exists("confirmed_obs") && any(!is.na(as.Date(confirmed_obs$date))))
+               min(as.Date(confirmed_obs$date), na.rm = TRUE) else
+             if (exists("onsets_obs") && any(!is.na(as.Date(onsets_obs$date))))
+               min(as.Date(onsets_obs$date), na.rm = TRUE) else epi_start
 message(sprintf("Re-zeroing cumulative curves at t0 = %s (day 0).",
                 as.character(rebase_t0)))
 
@@ -927,9 +954,16 @@ message(sprintf("Re-zeroing cumulative curves at t0 = %s (day 0).",
 # curve starts at the origin. rule = 2 holds the series flat outside its range,
 # so t0 need not be one of the series' own observation dates.
 rebase_cum <- function(dates, values, t0) {
-  o <- order(dates); dates <- dates[o]; values <- values[o]
-  ok <- is.finite(values); dates <- dates[ok]; values <- values[ok]
-  if (length(dates) < 1L) return(NULL)
+  # Coerce defensively: `dates` may arrive as character (e.g. an un-converted
+  # CSV column), in which case as.numeric() would silently give all-NA and break
+  # approx(); as.Date() turns ISO strings into real dates (and is a no-op on a
+  # Date). `values` is coerced to numeric for the same reason.
+  dates  <- as.Date(dates)
+  values <- suppressWarnings(as.numeric(values))
+  t0     <- as.Date(t0)
+  ok <- !is.na(dates) & is.finite(values); dates <- dates[ok]; values <- values[ok]
+  o  <- order(dates); dates <- dates[o]; values <- values[o]
+  if (length(unique(dates)) < 2L || length(t0) != 1L || is.na(t0)) return(NULL)
   v0  <- stats::approx(as.numeric(dates), values, xout = as.numeric(t0), rule = 2)$y
   sel <- dates >= t0
   out <- data.frame(days_since = as.numeric(dates[sel] - t0),
