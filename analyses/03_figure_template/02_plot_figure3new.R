@@ -1,14 +1,10 @@
 # =============================================================================
 # 02_plot_figure3new.R
-# Visualise figure3_new: efficacy curve, coverage/DPC scenarios, weekly HCW
-# deaths under each scenario, and decomposition of lost impact by efficacy arm.
-#
-# Panel a: efficacy vs DPC (data-driven, low/median/high curves)
-# Panel b: coverage & DPC over time (with conflict / without conflict)
-# Panel c: weekly HCW deaths (incident or cumulative; two separate files)
-# Panel d: decomposition of HCW deaths averted % by efficacy arm
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
+source(here::here("functions", "setup_model_parameters.R"))
+library(fiber)
+
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -19,59 +15,128 @@ save_fig <- function(filename_base, plot, width, height) {
          plot, width = width, height = height, units = "in")
 }
 
-ts_3new       <- read.csv(here("output_figgen", "figure_3new_weekly_ts.csv"))
-particle_3new <- read.csv(here("output_figgen", "figure_3new_particle_summary.csv"))
+# =============================================================================
+# Load data
+# =============================================================================
+ts_3new         <- read.csv(here("output_figgen", "figure_3new_weekly_ts.csv"))
+particle_3new   <- read.csv(here("output_figgen", "figure_3new_particle_summary.csv"))
+pep_uptake_3new <- read.csv(here("output_figgen", "figure_3new_pep_uptake_summary.csv"))
+curve_d50_dat   <- readRDS(here("data-processed", "DPC_fixed_efficacy_varied_d50.rds"))
 
 # =============================================================================
-# Panel a: efficacy vs DPC, low/median/high curves (data-driven)
-# =============================================================================
-curve_d50_dat <- readRDS(here("data-processed", "DPC_fixed_efficacy_varied_d50.rds"))
-
-panel_a <- ggplot(curve_d50_dat, aes(x = dpc)) +
-  geom_line(aes(y = eighty_efficacy_hi), color = "#1a9641", linetype = "dashed", linewidth = 1) +
-  geom_line(aes(y = efficacy),            color = "black",   linewidth = 1.2) +
-  geom_line(aes(y = eighty_efficacy_lo), color = "#d7191c", linetype = "dotted", linewidth = 1) +
-  scale_y_continuous(limits = c(0, NA), labels = scales::percent) +
-  labs(x = "Days post-exposure (DPC)", y = "Efficacy",
-       title = "Efficacy vs days post-exposure (DPC)") +
-  theme_fig()
-
-# =============================================================================
-# Panel b: coverage & DPC over time (with conflict / without conflict)
+# SDB: load and apply conflict tweak (150-400 day window)
+# Shape-preserving x-axis rescale: curve form maintained, trough shifted
+# from day 200 to day 325.
+#   150-200 (original descent) stretched onto 150-325
+#   200-350 (original recovery) squeezed onto 325-400
+# Days outside 150-400 are untouched.
 # =============================================================================
 sdb <- readRDS(here("data-processed", "SDB_communityDeath_blended.rds"))
 
-sdb$coverage_conflict <- sdb$value * 80 / max(sdb$value)
-sdb$dpc_conflict       <- 1 + 4 * (1 - sdb$value / max(sdb$value))
+rescale_sdb_segment <- function(day_out, orig_from, orig_to) {
+  t        <- (day_out - day_out[1]) / (day_out[length(day_out)] - day_out[1])
+  day_orig <- orig_from + t * (orig_to - orig_from)
+  approx(sdb$day, sdb$value, xout = day_orig, rule = 2)$y
+}
 
-sub <- sdb[sdb$day < 200, ]
+sdb$value_tweaked <- sdb$value
+idx_150_325 <- sdb$day >= 150 & sdb$day <= 325
+idx_325_400 <- sdb$day >  325 & sdb$day <= 400
+sdb$value_tweaked[idx_150_325] <- rescale_sdb_segment(sdb$day[idx_150_325], 150, 200)
+sdb$value_tweaked[idx_325_400] <- rescale_sdb_segment(sdb$day[idx_325_400], 200, 350)
+
+sdb$coverage_conflict <- sdb$value_tweaked * 80 / max(sdb$value_tweaked)
+sdb$dpc_conflict       <- 1 + 6 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked))^1)
+
+sub      <- sdb[sdb$day < 200, ]
 peak_row <- sub[which.max(sub$coverage_conflict), ]
 peak_day <- peak_row$day
 
 sdb$dpc_conflict[sdb$day <= peak_day] <- 1
 
-sdb$coverage_noconflict <- sdb$coverage_conflict
-sdb$coverage_noconflict[sdb$day > peak_day] <- peak_row$coverage_conflict
-sdb$dpc_noconflict <- 1
+# Flat versions: unaffected dimension held constant at peak
+sdb$coverage_flat <- sdb$coverage_conflict
+sdb$coverage_flat[sdb$day > peak_day] <- peak_row$coverage_conflict
+sdb$dpc_flat <- 1
 
-scale_factor <- 5 / 80
-cov_color <- "#E08214"
-dpc_color <- "black"
+# Shared constants
+scale_factor <- 10 / 80
+cov_color    <- "#E08214"
+dpc_color    <- "black"
+day_max_tv   <- max(ts_3new$week[ts_3new$scenario == "DRC"], na.rm = TRUE) * 7
 
-conflict_start <- peak_day
-conflict_end   <- sdb$day[which.min(sdb$dpc_conflict[sdb$day < 365])]
+# =============================================================================
+# Shared label/color constants
+# =============================================================================
+EFF_ARM_LABELS <- c(hi = "Optimistic", mid = "Central", lo = "Pessimistic")
+EFF_ARM_ORDER  <- c("hi", "mid", "lo")
 
+# Coverage scenario labels for panels e/f
+COV_SCEN_LABELS <- c(
+  optimistic    = "Ideal (100% coverage, 0 delay)",
+  dpc_conflict  = "DPC impacted",
+  with_conflict = "Both impacted"
+)
+COV_SCEN_ORDER  <- c("optimistic", "dpc_conflict", "with_conflict")
+COV_SCEN_COLORS <- c(
+  "Ideal (100% coverage, 0 delay)" = "#1a9641",
+  "DPC impacted"                   = "#f58231",
+  "Both impacted"                  = "#d7191c"
+)
+
+# Arms shown in panel c (mid efficacy only; cov_conflict removed per feedback)
+ARM_LABELS_C <- c(
+  no_pep            = "No PEP",
+  optimistic_mid    = "Ideal (100% coverage, 0 delay)",
+  dpc_conflict_mid  = "DPC impacted",
+  with_conflict_mid = "Both impacted"
+)
+ARM_COLORS_C <- c(
+  "No PEP"                          = "black",
+  "Ideal (100% coverage, 0 delay)"  = "#1a9641",
+  "DPC impacted"                    = "#f58231",
+  "Both impacted"                   = "#d7191c"
+)
+
+# Arms shown in panel bottom
+ARM_LABELS_BOTTOM <- c(
+  no_pep            = "No PEP",
+  optimistic_mid    = "Ideal (100% coverage, 0 delay)",
+  with_conflict_mid = "Both impacted"
+)
+ARM_COLORS_BOTTOM <- c(
+  "No PEP"                          = "black",
+  "Ideal (100% coverage, 0 delay)"  = "#1a9641",
+  "Both impacted"                   = "#d7191c"
+)
+
+# =============================================================================
+# Panel a: efficacy vs DPC
+# =============================================================================
+panel_a <- ggplot(curve_d50_dat, aes(x = dpc)) +
+  geom_line(aes(y = eighty_efficacy_hi), color = "#1a9641", linetype = "dashed",  linewidth = 1) +
+  geom_line(aes(y = efficacy),            color = "black",   linewidth = 1.2) +
+  geom_line(aes(y = eighty_efficacy_lo), color = "#d7191c", linetype = "dotted", linewidth = 1) +
+  scale_y_continuous(limits = c(0, NA), labels = scales::percent) +
+  labs(x = "Days post-exposure (DPC)", y = "Efficacy",
+       title = "Efficacy vs DPC") +
+  theme_fig()
+
+# =============================================================================
+# Panel b: coverage & DPC over time
+# Conflict period shaded from day 110 to 300 (fixed)
+# =============================================================================
 panel_b <- ggplot(sdb, aes(x = day)) +
-  annotate("rect", xmin = conflict_start, xmax = conflict_end, ymin = -Inf, ymax = Inf,
+  annotate("rect", xmin = 110, xmax = 300, ymin = -Inf, ymax = Inf,
            fill = "grey85", alpha = 0.6) +
-  annotate("text", x = (conflict_start + conflict_end) / 2, y = 78,
+  annotate("text", x = (110 + 300) / 2, y = 78,
            label = "conflict", size = 3.5, color = "grey30") +
-  geom_line(aes(y = coverage_conflict), color = cov_color, linetype = "dashed", linewidth = 1.1) +
-  geom_line(aes(y = coverage_noconflict), color = cov_color, linetype = "solid", linewidth = 1.1) +
+  geom_line(aes(y = coverage_conflict),           color = cov_color, linetype = "dashed", linewidth = 1.1) +
+  geom_line(aes(y = coverage_flat),               color = cov_color, linetype = "solid",  linewidth = 1.1) +
   geom_line(aes(y = dpc_conflict / scale_factor), color = dpc_color, linetype = "dashed", linewidth = 0.9) +
-  geom_line(aes(y = dpc_noconflict / scale_factor), color = dpc_color, linetype = "solid", linewidth = 0.9) +
+  geom_line(aes(y = dpc_flat     / scale_factor), color = dpc_color, linetype = "solid",  linewidth = 0.9) +
   scale_y_continuous(
-    name   = "Coverage",
+    name     = "Coverage (%)",
     sec.axis = sec_axis(~ . * scale_factor, name = "DPC (days)")
   ) +
   labs(x = "Day", title = "Coverage & DPC over time") +
@@ -79,104 +144,271 @@ panel_b <- ggplot(sdb, aes(x = day)) +
   theme(
     axis.title.y       = element_text(color = cov_color),
     axis.text.y        = element_text(color = cov_color),
-    axis.title.y.right  = element_text(color = dpc_color),
-    axis.text.y.right   = element_text(color = dpc_color)
+    axis.title.y.right = element_text(color = dpc_color),
+    axis.text.y.right  = element_text(color = dpc_color)
   )
 
 # =============================================================================
-# Panel c: weekly HCW deaths (mid efficacy arm), no PEP / with conflict /
-# without conflict / optimistic. Two versions: incident and cumulative.
+# Panel c: cumulative HCW deaths (mean +/- 95% CI ribbons, mid efficacy)
+# x-axis fixed to 420 days to match panel b
+# cov_conflict arm removed per feedback
 # =============================================================================
-ARM_LABELS_C <- c(
-  no_pep               = "No PEP",
-  optimistic_mid       = "Ideal (100% coverage, 0 delay)",
-  without_conflict_mid = "Without conflict",
-  with_conflict_mid    = "With conflict"
-)
-ARM_COLORS_C <- c(
-  no_pep               = "black",
-  optimistic_mid       = "#1a9641",
-  without_conflict_mid = "#E08214",
-  with_conflict_mid    = "#d7191c"
-)
-
-make_panel_c <- function(sc, metric_name, y_label) {
+make_panel_c <- function(metric_name, y_label) {
   df <- ts_3new %>%
-    filter(scenario == sc, arm %in% names(ARM_LABELS_C), metric == metric_name) %>%
-    mutate(arm_label = factor(ARM_LABELS_C[arm], levels = ARM_LABELS_C))
-  
-  ggplot(df, aes(x = week, y = q50, color = arm_label)) +
+    filter(scenario == "DRC", arm %in% names(ARM_LABELS_C), metric == metric_name) %>%
+    mutate(
+      day       = week * 7,
+      arm_label = factor(ARM_LABELS_C[arm], levels = ARM_LABELS_C)
+    )
+  ggplot(df, aes(x = day, y = mean_val, color = arm_label, fill = arm_label)) +
+    geom_ribbon(aes(ymin = pmax(ci_lo, 0), ymax = ci_hi), alpha = 0.15, color = NA) +
     geom_line(linewidth = 1) +
-    scale_color_manual(values = setNames(ARM_COLORS_C, ARM_LABELS_C), name = NULL) +
-    labs(x = "Week", y = y_label,
-         title = sprintf("%s (mid efficacy)", SCENARIO_LABELS[sc])) +
+    scale_color_manual(values = ARM_COLORS_C, name = NULL) +
+    scale_fill_manual(values = ARM_COLORS_C, name = NULL) +
+    scale_x_continuous(limits = c(0, 420), expand = c(0, 0)) +
+    labs(x = "Day", y = y_label, title = "DRC archetype (mid efficacy)") +
     theme_fig()
 }
 
-panel_c_incident   <- make_panel_c("DRC", "hcw_deaths_incidence", "Weekly incident HCW deaths")
-panel_c_cumulative <- make_panel_c("DRC", "hcw_deaths",            "Cumulative HCW deaths")
+panel_c_incident   <- make_panel_c("hcw_deaths_incidence", "Mean weekly incident HCW deaths")
+panel_c_cumulative <- make_panel_c("hcw_deaths",           "Mean cumulative HCW deaths")
 
 # =============================================================================
 # Panel d: decomposition of HCW deaths averted % by efficacy arm
+#
+# Decomposition steps (computed at particle level before taking medians):
+#   realised = with_conflict                       (both coverage and DPC impacted)
+#   cov_loss = dpc_conflict - with_conflict        (additional loss from imperfect coverage)
+#   dpc_loss = optimistic   - dpc_conflict         (additional loss from DPC delay)
+#
+# Stack order bottom->top: Realised (green), Coverage loss (tomato), DPC loss (orange)
+# Loss sections are made transparent to emphasise they represent losses.
+# Black dot/errorbar overlay removed per feedback.
 # =============================================================================
-EFF_ARM_LABELS <- c(lo = "Pessimistic", mid = "Central", hi = "Optimistic")
-EFF_ARM_ORDER  <- c("lo", "mid", "hi")
+DECOMP_ARMS <- c(
+  "optimistic_mid",   "optimistic_lo",   "optimistic_hi",
+  "dpc_conflict_mid", "dpc_conflict_lo",  "dpc_conflict_hi",
+  "with_conflict_mid","with_conflict_lo", "with_conflict_hi"
+)
 
-decomp_df <- particle_3new %>%
-  filter(arm %in% c("optimistic_mid", "optimistic_lo", "optimistic_hi",
-                    "without_conflict_mid", "without_conflict_lo", "without_conflict_hi",
-                    "with_conflict_mid", "with_conflict_lo", "with_conflict_hi")) %>%
+decomp_particle <- particle_3new %>%
+  filter(arm %in% DECOMP_ARMS) %>%
   mutate(
-    eff_arm  = sub("^(optimistic|without_conflict|with_conflict)_", "", arm),
+    eff_arm  = sub("^(optimistic|dpc_conflict|with_conflict)_", "", arm),
     cov_scen = sub("_(mid|lo|hi)$", "", arm)
   ) %>%
-  group_by(scenario, eff_arm, cov_scen) %>%
-  summarise(median_pct = median(pct_hcw_deaths_averted, na.rm = TRUE), .groups = "drop")
-
-decomp_wide <- decomp_df %>%
-  pivot_wider(names_from = cov_scen, values_from = median_pct) %>%
+  select(particle_id, eff_arm, cov_scen, pct_hcw_deaths_averted) %>%
+  pivot_wider(names_from = cov_scen, values_from = pct_hcw_deaths_averted) %>%
   mutate(
     realised = with_conflict,
-    dpc_loss = pmax(without_conflict - with_conflict, 0),
-    cov_loss = pmax(optimistic - without_conflict, 0)
+    cov_loss = pmax(dpc_conflict - with_conflict, 0),
+    dpc_loss = pmax(optimistic   - dpc_conflict,  0)
+  )
+
+decomp_summary <- decomp_particle %>%
+  group_by(eff_arm) %>%
+  summarise(
+    realised_med = median(realised, na.rm = TRUE),
+    realised_lo  = quantile(realised, 0.025, na.rm = TRUE),
+    realised_hi  = quantile(realised, 0.975, na.rm = TRUE),
+    cov_loss_med = median(cov_loss, na.rm = TRUE),
+    dpc_loss_med = median(dpc_loss, na.rm = TRUE),
+    .groups = "drop"
   ) %>%
-  select(scenario, eff_arm, realised, dpc_loss, cov_loss) %>%
-  pivot_longer(cols = c(realised, dpc_loss, cov_loss),
-               names_to = "component", values_to = "value") %>%
   mutate(
-    component = factor(component, levels = c("realised", "dpc_loss", "cov_loss"),
-                       labels = c("Realised", "Conflict (dpc)", "Coverage (cov)")),
+    scenario      = "DRC",
     eff_arm_label = factor(EFF_ARM_LABELS[eff_arm],
                            levels = EFF_ARM_LABELS[EFF_ARM_ORDER])
   )
 
-DECOMP_COLORS <- c("Realised" = "#1a9641", "Conflict (dpc)" = "#d7191c", "Coverage (cov)" = "#fdae61")
+# Loss sections use alpha to emphasise they represent unrealised potential
+DECOMP_COLORS <- c(
+  "Realised"      = "#1a9641",
+  "Coverage loss" = scales::alpha("#FF6347", 0.45),
+  "DPC loss"      = scales::alpha("#fdae61", 0.45)
+)
+
+decomp_long <- decomp_summary %>%
+  select(scenario, eff_arm_label, realised_med, cov_loss_med, dpc_loss_med) %>%
+  pivot_longer(
+    cols      = c(realised_med, cov_loss_med, dpc_loss_med),
+    names_to  = "component",
+    values_to = "value"
+  ) %>%
+  mutate(
+    component = factor(component,
+                       levels = c("realised_med", "cov_loss_med", "dpc_loss_med"),
+                       labels = c("Realised", "Coverage loss", "DPC loss"))
+  )
 
 make_panel_d <- function(sc) {
-  df <- filter(decomp_wide, scenario == sc)
+  df <- filter(decomp_long, scenario == sc)
   ggplot(df, aes(x = eff_arm_label, y = value, fill = component)) +
-    geom_col(position = "stack", width = 0.6, color = "black", linewidth = 0.3) +
+    geom_col(position = position_stack(reverse = TRUE), width = 0.6,
+             color = "black", linewidth = 0.3) +
     scale_fill_manual(values = DECOMP_COLORS, name = NULL) +
+    scale_y_continuous(limits = c(0, 100),
+                       labels = function(x) paste0(x, "%")) +
     labs(x = "Antiviral efficacy", y = "HCW deaths averted (%)",
-         title = sprintf("Decomposition by DPC (%s)", SCENARIO_LABELS[sc])) +
+         title = "Decomposition (DRC archetype)") +
     theme_fig()
 }
 
 panel_d <- make_panel_d("DRC")
 
 # =============================================================================
-# Save individual panels
+# Panel e: PEP uptake % by coverage scenario x efficacy arm
+# cov_conflict removed; three scenarios shown
 # =============================================================================
-save_fig("figure_3new_panel_a_efficacy", panel_a, 5, 4)
-save_fig("figure_3new_panel_b_coverage_dpc", panel_b, 6, 4)
-save_fig("figure_3new_panel_c_incident", panel_c_incident, 6, 4)
-save_fig("figure_3new_panel_c_cumulative", panel_c_cumulative, 6, 4)
-save_fig("figure_3new_panel_d_decomposition", panel_d, 5, 4)
+pep_uptake_3new <- pep_uptake_3new %>%
+  mutate(
+    eff_arm        = sub("^(optimistic|with_conflict|cov_conflict|dpc_conflict)_", "", arm),
+    cov_scen       = sub("_(mid|lo|hi)$", "", arm),
+    eff_arm_label  = factor(EFF_ARM_LABELS[eff_arm],   levels = EFF_ARM_LABELS[EFF_ARM_ORDER]),
+    cov_scen_label = factor(COV_SCEN_LABELS[cov_scen], levels = COV_SCEN_LABELS[COV_SCEN_ORDER])
+  ) %>%
+  filter(!is.na(cov_scen_label))  # drop cov_conflict rows
 
-# Combined layout (a top-left, b top-right, c bottom-left, d bottom-right)
+uptake_summary <- pep_uptake_3new %>%
+  group_by(eff_arm_label, cov_scen_label) %>%
+  summarise(
+    median_pct = median(pct_received, na.rm = TRUE),
+    lo_pct     = quantile(pct_received, 0.025, na.rm = TRUE),
+    hi_pct     = quantile(pct_received, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+panel_e <- ggplot(uptake_summary, aes(x = eff_arm_label, y = median_pct, fill = cov_scen_label)) +
+  geom_col(position = position_dodge(0.7), width = 0.6, color = "black", linewidth = 0.3) +
+  geom_errorbar(aes(ymin = lo_pct, ymax = hi_pct),
+                position = position_dodge(0.7), width = 0.2, linewidth = 0.4) +
+  scale_fill_manual(values = COV_SCEN_COLORS, name = NULL) +
+  scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
+  labs(x = "Antiviral efficacy", y = "HCW receiving PEP (%)",
+       title = "PEP uptake by scenario") +
+  theme_fig()
+
+# =============================================================================
+# Panel f: DPC distribution among infected PEP recipients
+# =============================================================================
+dpc_long <- pep_uptake_3new %>%
+  filter(!is.na(dpc_mean)) %>%
+  select(eff_arm_label, cov_scen_label, dpc_mean, dpc_median, dpc_min, dpc_max)
+
+panel_f <- ggplot(dpc_long, aes(x = cov_scen_label, y = dpc_median, fill = cov_scen_label)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, color = "black", linewidth = 0.3) +
+  scale_fill_manual(values = COV_SCEN_COLORS, name = NULL, guide = "none") +
+  facet_wrap(~ eff_arm_label, nrow = 1) +
+  labs(x = NULL, y = "DPC among infected PEP recipients (days)",
+       title = "DPC distribution by scenario") +
+  theme_fig() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+# =============================================================================
+# Panel top: time-varying parameters + SDB (normalised), matching day range
+# =============================================================================
+mp <- make_model_parameters(
+  scenario_id     = "Middle_DRC_ConflictSmoothed_PlusPlus",
+  scenario_matrix = read_scenario_matrix(here("data-processed",
+                                              "final_six_scenario_values_original_approach.csv")),
+  overrides       = list(seeding_cases = 25L, check_final_size = 10000)
+)
+
+TV_LABELS <- c(
+  prob_hospitalised_genPop     = "P(hospitalised), general population",
+  prob_hospitalised_hcw        = "P(hospitalised), HCW",
+  hospitalisation_delay_factor = "Hospitalisation delay factor",
+  p_unsafe_funeral_comm_genPop = "P(unsafe funeral, community), general population",
+  p_unsafe_funeral_comm_hcw   = "P(unsafe funeral, community), HCW",
+  p_unsafe_funeral_hosp_genPop = "P(unsafe funeral, hospital), general population",
+  p_unsafe_funeral_hosp_hcw   = "P(unsafe funeral, hospital), HCW",
+  prop_etu                     = "ETU proportion",
+  ppe_coverage_hcw             = "PPE coverage, HCW"
+)
+
+TV_COLORS <- c(
+  "P(hospitalised), general population"               = "#e6194b",
+  "P(hospitalised), HCW"                               = "#3cb44b",
+  "Hospitalisation delay factor"                       = "#4363d8",
+  "P(unsafe funeral, community), general population"   = "#f58231",
+  "P(unsafe funeral, community), HCW"                  = "#911eb4",
+  "P(unsafe funeral, hospital), general population"    = "#42d4f4",
+  "P(unsafe funeral, hospital), HCW"                   = "#f032e6",
+  "ETU proportion"                                      = "#9A6324",
+  "PPE coverage, HCW"                                   = "#000000",
+  "SDB blended success (conflict driver)"               = "#bcf60c"
+)
+
+t_seq_tv <- seq(0, day_max_tv, by = 1)
+
+tv_long <- do.call(rbind, lapply(names(mp$tv_args), function(nm) {
+  fn      <- mp$tv_args[[nm]]
+  raw_val <- fn(t_seq_tv)
+  max_val <- max(raw_val, na.rm = TRUE)
+  data.frame(
+    day        = t_seq_tv,
+    value_norm = if (max_val > 0) raw_val / max_val else raw_val,
+    parameter  = TV_LABELS[nm],
+    stringsAsFactors = FALSE
+  )
+}))
+
+sdb_tv <- data.frame(
+  day        = sdb$day,
+  value_norm = sdb$value_tweaked / max(sdb$value_tweaked, na.rm = TRUE),
+  parameter  = "SDB blended success (conflict driver)",
+  stringsAsFactors = FALSE
+)
+
+tv_long_all <- bind_rows(tv_long, sdb_tv)
+
+panel_top <- ggplot(tv_long_all, aes(x = day, y = value_norm, color = parameter)) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(values = TV_COLORS) +
+  scale_x_continuous(limits = c(0, day_max_tv), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Day", y = "Normalised value (0-1)",
+       title = "Time-varying parameters (DRC archetype, conflict)") +
+  theme_fig() +
+  theme(legend.position = "right", legend.text = element_text(size = 7)) +
+  guides(color = guide_legend(ncol = 1))
+
+# Panel bottom: weekly HCW deaths (day units, three arms)
+bottom_df <- ts_3new %>%
+  filter(scenario == "DRC", arm %in% names(ARM_LABELS_BOTTOM),
+         metric == "hcw_deaths_incidence") %>%
+  mutate(
+    day       = week * 7,
+    arm_label = factor(ARM_LABELS_BOTTOM[arm], levels = ARM_LABELS_BOTTOM)
+  )
+
+panel_bottom <- ggplot(bottom_df, aes(x = day, y = mean_val, color = arm_label, fill = arm_label)) +
+  geom_ribbon(aes(ymin = pmax(ci_lo, 0), ymax = ci_hi), alpha = 0.15, color = NA) +
+  geom_line(linewidth = 1) +
+  scale_color_manual(values = ARM_COLORS_BOTTOM, name = NULL) +
+  scale_fill_manual(values = ARM_COLORS_BOTTOM, name = NULL) +
+  scale_x_continuous(limits = c(0, day_max_tv), expand = c(0, 0)) +
+  labs(x = "Day", y = "Mean weekly incident HCW deaths") +
+  theme_fig()
+
+# =============================================================================
+# Save all panels
+# =============================================================================
+save_fig("figure_3new_panel_a_efficacy",         panel_a,            5,   4)
+save_fig("figure_3new_panel_b_coverage_dpc",     panel_b,            6,   4)
+save_fig("figure_3new_panel_c_incident",         panel_c_incident,   6,   4)
+save_fig("figure_3new_panel_c_cumulative",       panel_c_cumulative, 6,   4)
+save_fig("figure_3new_panel_d_decomposition",    panel_d,            5,   4)
+save_fig("figure_3new_panel_e_uptake",           panel_e,            7,   4.5)
+save_fig("figure_3new_panel_f_dpc_distribution", panel_f,            10,  4.5)
+save_fig("figure_3new_tv_params_and_deaths",
+         panel_top / panel_bottom +
+           plot_layout(heights = c(1, 1)) +
+           plot_annotation(tag_levels = "a"),
+         7, 7)
+
 fig_combined <- (panel_a | panel_b) / (panel_c_cumulative | panel_d) +
   plot_annotation(tag_levels = "a")
-
 save_fig("figure_3new_combined", fig_combined, 11, 8)
 
 message("Figure 3new plotting complete.")

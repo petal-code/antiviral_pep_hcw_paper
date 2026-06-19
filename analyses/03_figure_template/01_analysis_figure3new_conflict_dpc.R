@@ -1,35 +1,5 @@
 # =============================================================================
 # 01_analysis_figure3new_conflict_dpc.R
-#
-# Runs antiviral simulations under four coverage/DPC scenarios, each combined
-# with three efficacy curves derived from the DPC-efficacy lookup table
-# (data-processed/DPC_fixed_efficacy_varied_d50.rds).
-#
-# Coverage/DPC scenarios:
-#   with_conflict    : coverage and DPC derived from sdb$value (conflict-disrupted)
-#   without_conflict : same up to peak day, then held flat (no disruption)
-#   optimistic       : coverage = 100%, DPC = 0 throughout
-#   no_pep           : coverage = 0% throughout (no antiviral)
-#
-# Efficacy arms (from curve_d50_dat, interpolated against the DPC(t) curve):
-#   mid : efficacy
-#   lo  : eighty_efficacy_lo
-#   hi  : eighty_efficacy_hi
-#
-# Arms (10 total):
-#   with_conflict_mid, with_conflict_lo, with_conflict_hi
-#   without_conflict_mid, without_conflict_lo, without_conflict_hi
-#   optimistic_mid, optimistic_lo, optimistic_hi
-#   no_pep
-#
-# obv_pep_dpc is passed the same DPC(t) function used to derive obv_pep_efficacy,
-# so the per-individual treatment delay and the DPC-dependent efficacy are both
-# driven by the same underlying coverage/DPC scenario curve.
-#
-# Each RDS file contains the full fiber output (out$tdf + out$prevented_completed
-# + out$sim_info).
-#
-# N_WORKERS must be a divisor of N_PARTICLES.
 # =============================================================================
 
 library(here)
@@ -68,47 +38,77 @@ PARTICLES_PER_WORKER <- N_PARTICLES %/% N_WORKERS
 # =============================================================================
 sdb <- readRDS(here("data-processed", "SDB_communityDeath_blended.rds"))
 
-# With conflict: direct transform of sdb$value
-sdb$coverage_conflict <- sdb$value * 80 / max(sdb$value)
-sdb$dpc_conflict       <- 1 + 4 * (1 - sdb$value / max(sdb$value))
+# ---- Tweak sdb$value in the 150-350 day window only ----
+# Shape-preserving x-axis rescale: the original curve form is maintained but
+# the trough position is shifted from day 200 to day 250.
+#   150-200 (original descent) stretched onto 150-250
+#   200-350 (original recovery) squeezed onto 250-350
+sdb_tweaked <- sdb$value
+
+# idx_150_250 <- sdb$day >= 150 & sdb$day <= 250
+# idx_250_350 <- sdb$day > 250  & sdb$day <= 350
+idx_150_325 <- sdb$day >= 150 & sdb$day <= 325
+idx_325_400 <- sdb$day > 325  & sdb$day <= 400
+
+rescale_sdb_segment <- function(day_out, orig_from, orig_to) {
+  t        <- (day_out - day_out[1]) / (day_out[length(day_out)] - day_out[1])
+  day_orig <- orig_from + t * (orig_to - orig_from)
+  approx(sdb$day, sdb$value, xout = day_orig, rule = 2)$y
+}
+
+# sdb_tweaked[idx_150_250] <- rescale_sdb_segment(sdb$day[idx_150_250], 150, 200)
+# sdb_tweaked[idx_250_350] <- rescale_sdb_segment(sdb$day[idx_250_350], 200, 350)
+sdb_tweaked[idx_150_325] <- rescale_sdb_segment(sdb$day[idx_150_325], 150, 200)
+sdb_tweaked[idx_325_400] <- rescale_sdb_segment(sdb$day[idx_325_400], 200, 350)
+sdb$value_tweaked <- sdb_tweaked
+
+# ---- With conflict: derived from tweaked sdb$value ----
+sdb$coverage_conflict <- sdb$value_tweaked * 80 / max(sdb$value_tweaked)
+sdb$dpc_conflict       <- 1 + 6* (1 - (sdb$value_tweaked / max(sdb$value_tweaked))^2)
 
 # Find peak coverage day restricted to day < 200
-sub <- sdb[sdb$day < 200, ]
+sub      <- sdb[sdb$day < 200, ]
 peak_row <- sub[which.max(sub$coverage_conflict), ]
 peak_day <- peak_row$day
 
-# Hold DPC at 1 up until peak_day (with conflict)
+# Hold DPC at 1 up until peak_day (before conflict disruption begins)
 sdb$dpc_conflict[sdb$day <= peak_day] <- 1
-
-# Without conflict: coverage same up to peak_day, then flat; DPC held at 1 throughout
-sdb$coverage_noconflict <- sdb$coverage_conflict
-sdb$coverage_noconflict[sdb$day > peak_day] <- peak_row$coverage_conflict
-sdb$dpc_noconflict <- 1
 
 message(sprintf("peak_day = %d, peak_coverage = %.2f", peak_day, peak_row$coverage_conflict))
 
-# Build interpolating step functions from the day-indexed sdb table.
-# Coverage values in sdb are on a 0-100 scale; obv_pep_coverage expects a
-# 0-1 proportion, so divide by 100 here.
+# ---- Flat coverage: same ramp up to peak_day, held constant thereafter ----
+# Used for dpc_conflict arm: coverage is unaffected, only DPC varies
+sdb$coverage_flat <- sdb$coverage_conflict
+sdb$coverage_flat[sdb$day > peak_day] <- peak_row$coverage_conflict
+
+# ---- Step function builders ----
 make_step_fn <- function(days, values) {
-  function(t) {
-    approx(x = days, y = values, xout = t, rule = 2)$y
-  }
+  function(t) approx(x = days, y = values, xout = t, rule = 2)$y
 }
 
-cov_with_conflict_fn    <- make_step_fn(sdb$day, sdb$coverage_conflict / 100)
-cov_without_conflict_fn <- make_step_fn(sdb$day, sdb$coverage_noconflict / 100)
-dpc_with_conflict_fn    <- make_step_fn(sdb$day, sdb$dpc_conflict)
-dpc_without_conflict_fn <- make_step_fn(sdb$day, sdb$dpc_noconflict)
+cov_with_conflict_fn <- make_step_fn(sdb$day, sdb$coverage_conflict / 100)
+dpc_with_conflict_fn <- make_step_fn(sdb$day, sdb$dpc_conflict)
 
-cov_optimistic_fn <- function(t) rep(1.0, length(t))
-dpc_optimistic_fn <- function(t) rep(0,   length(t))
+# Flat versions: unaffected dimension held constant
+cov_flat_fn <- make_step_fn(sdb$day, sdb$coverage_flat / 100)
+dpc_flat_fn <- make_step_fn(sdb$day, rep(1, nrow(sdb)))
 
+# Perfect PEP: 100% coverage, 0 DPC delay
+cov_perfect_fn <- function(t) rep(1.0, length(t))
+dpc_perfect_fn <- function(t) rep(0,   length(t))
+
+# No PEP
 cov_no_pep_fn <- function(t) rep(0.0, length(t))
-dpc_no_pep_fn <- function(t) rep(0,   length(t))   # irrelevant when coverage = 0
+dpc_no_pep_fn <- function(t) rep(0,   length(t))
 
 # =============================================================================
-# 2. Build efficacy(t) functions by interpolating DPC(t) against the lookup table
+# 2. Build efficacy(t) functions
+#
+# Efficacy depends on DPC, so arms that differ in DPC also differ in efficacy:
+#   with_conflict arm : DPC conflict-impacted      -> efficacy from dpc_with_conflict_fn
+#   cov_conflict arm  : DPC flat (=1)              -> efficacy from dpc_flat_fn
+#   dpc_conflict arm  : DPC conflict-impacted      -> efficacy from dpc_with_conflict_fn
+#   optimistic arm    : DPC = 0 (immediate PEP)   -> efficacy from dpc_perfect_fn
 # =============================================================================
 curve_d50_dat <- readRDS(here("data-processed", "DPC_fixed_efficacy_varied_d50.rds"))
 
@@ -120,32 +120,49 @@ make_efficacy_fn_from_dpc <- function(dpc_t_fn, efficacy_col) {
   }
 }
 
-eff_with_conflict_mid <- make_efficacy_fn_from_dpc(dpc_with_conflict_fn, "efficacy")
-eff_with_conflict_lo  <- make_efficacy_fn_from_dpc(dpc_with_conflict_fn, "eighty_efficacy_lo")
-eff_with_conflict_hi  <- make_efficacy_fn_from_dpc(dpc_with_conflict_fn, "eighty_efficacy_hi")
+# with_conflict and dpc_conflict share the same DPC function -> same efficacy
+eff_dpc_conflict_mid <- make_efficacy_fn_from_dpc(dpc_with_conflict_fn, "efficacy")
+eff_dpc_conflict_lo  <- make_efficacy_fn_from_dpc(dpc_with_conflict_fn, "eighty_efficacy_lo")
+eff_dpc_conflict_hi  <- make_efficacy_fn_from_dpc(dpc_with_conflict_fn, "eighty_efficacy_hi")
 
-eff_without_conflict_mid <- make_efficacy_fn_from_dpc(dpc_without_conflict_fn, "efficacy")
-eff_without_conflict_lo  <- make_efficacy_fn_from_dpc(dpc_without_conflict_fn, "eighty_efficacy_lo")
-eff_without_conflict_hi  <- make_efficacy_fn_from_dpc(dpc_without_conflict_fn, "eighty_efficacy_hi")
+# cov_conflict arm: DPC is flat
+eff_cov_conflict_mid <- make_efficacy_fn_from_dpc(dpc_flat_fn, "efficacy")
+eff_cov_conflict_lo  <- make_efficacy_fn_from_dpc(dpc_flat_fn, "eighty_efficacy_lo")
+eff_cov_conflict_hi  <- make_efficacy_fn_from_dpc(dpc_flat_fn, "eighty_efficacy_hi")
 
-eff_optimistic_mid <- make_efficacy_fn_from_dpc(dpc_optimistic_fn, "efficacy")
-eff_optimistic_lo  <- make_efficacy_fn_from_dpc(dpc_optimistic_fn, "eighty_efficacy_lo")
-eff_optimistic_hi  <- make_efficacy_fn_from_dpc(dpc_optimistic_fn, "eighty_efficacy_hi")
+# optimistic arm: DPC = 0
+eff_optimistic_mid <- make_efficacy_fn_from_dpc(dpc_perfect_fn, "efficacy")
+eff_optimistic_lo  <- make_efficacy_fn_from_dpc(dpc_perfect_fn, "eighty_efficacy_lo")
+eff_optimistic_hi  <- make_efficacy_fn_from_dpc(dpc_perfect_fn, "eighty_efficacy_hi")
 
 # =============================================================================
-# 3. Arm definitions: coverage_fn, dpc_fn, efficacy_fn triples
+# 3. Arm definitions
+#
+# All arms run under DRC_conflict trajectory.
+#   no_pep        : no PEP
+#   with_conflict : both coverage and DPC conflict-impacted
+#   cov_conflict  : coverage conflict-impacted, DPC flat
+#   dpc_conflict  : DPC conflict-impacted, coverage flat
+#   optimistic    : perfect coverage (100%) and perfect DPC (0)
 # =============================================================================
 ARM_DEFS <- list(
-  with_conflict_mid    = list(cov_fn = cov_with_conflict_fn,    dpc_fn = dpc_with_conflict_fn,    eff_fn = eff_with_conflict_mid),
-  with_conflict_lo     = list(cov_fn = cov_with_conflict_fn,    dpc_fn = dpc_with_conflict_fn,    eff_fn = eff_with_conflict_lo),
-  with_conflict_hi     = list(cov_fn = cov_with_conflict_fn,    dpc_fn = dpc_with_conflict_fn,    eff_fn = eff_with_conflict_hi),
-  without_conflict_mid = list(cov_fn = cov_without_conflict_fn, dpc_fn = dpc_without_conflict_fn, eff_fn = eff_without_conflict_mid),
-  without_conflict_lo  = list(cov_fn = cov_without_conflict_fn, dpc_fn = dpc_without_conflict_fn, eff_fn = eff_without_conflict_lo),
-  without_conflict_hi  = list(cov_fn = cov_without_conflict_fn, dpc_fn = dpc_without_conflict_fn, eff_fn = eff_without_conflict_hi),
-  optimistic_mid       = list(cov_fn = cov_optimistic_fn,       dpc_fn = dpc_optimistic_fn,       eff_fn = eff_optimistic_mid),
-  optimistic_lo        = list(cov_fn = cov_optimistic_fn,       dpc_fn = dpc_optimistic_fn,       eff_fn = eff_optimistic_lo),
-  optimistic_hi        = list(cov_fn = cov_optimistic_fn,       dpc_fn = dpc_optimistic_fn,       eff_fn = eff_optimistic_hi),
-  no_pep               = list(cov_fn = cov_no_pep_fn,           dpc_fn = dpc_no_pep_fn,           eff_fn = function(t) rep(0, length(t)))
+  no_pep           = list(cov_fn = cov_no_pep_fn,        dpc_fn = dpc_no_pep_fn,        eff_fn = function(t) rep(0, length(t))),
+  
+  with_conflict_mid = list(cov_fn = cov_with_conflict_fn, dpc_fn = dpc_with_conflict_fn, eff_fn = eff_dpc_conflict_mid),
+  with_conflict_lo  = list(cov_fn = cov_with_conflict_fn, dpc_fn = dpc_with_conflict_fn, eff_fn = eff_dpc_conflict_lo),
+  with_conflict_hi  = list(cov_fn = cov_with_conflict_fn, dpc_fn = dpc_with_conflict_fn, eff_fn = eff_dpc_conflict_hi),
+  
+  cov_conflict_mid = list(cov_fn = cov_with_conflict_fn, dpc_fn = dpc_flat_fn,           eff_fn = eff_cov_conflict_mid),
+  cov_conflict_lo  = list(cov_fn = cov_with_conflict_fn, dpc_fn = dpc_flat_fn,           eff_fn = eff_cov_conflict_lo),
+  cov_conflict_hi  = list(cov_fn = cov_with_conflict_fn, dpc_fn = dpc_flat_fn,           eff_fn = eff_cov_conflict_hi),
+  
+  dpc_conflict_mid = list(cov_fn = cov_flat_fn,          dpc_fn = dpc_with_conflict_fn,  eff_fn = eff_dpc_conflict_mid),
+  dpc_conflict_lo  = list(cov_fn = cov_flat_fn,          dpc_fn = dpc_with_conflict_fn,  eff_fn = eff_dpc_conflict_lo),
+  dpc_conflict_hi  = list(cov_fn = cov_flat_fn,          dpc_fn = dpc_with_conflict_fn,  eff_fn = eff_dpc_conflict_hi),
+  
+  optimistic_mid   = list(cov_fn = cov_perfect_fn,       dpc_fn = dpc_perfect_fn,        eff_fn = eff_optimistic_mid),
+  optimistic_lo    = list(cov_fn = cov_perfect_fn,       dpc_fn = dpc_perfect_fn,        eff_fn = eff_optimistic_lo),
+  optimistic_hi    = list(cov_fn = cov_perfect_fn,       dpc_fn = dpc_perfect_fn,        eff_fn = eff_optimistic_hi)
 )
 
 ARM_NAMES <- names(ARM_DEFS)
@@ -153,19 +170,25 @@ message(sprintf("Total arms: %d", length(ARM_NAMES)))
 print(ARM_NAMES)
 
 # =============================================================================
-# 4. Scenarios
+# 4. Scenarios: all arms run under DRC_conflict trajectory
 # =============================================================================
+SCENARIO_CSV <- here("data-processed", "final_six_scenario_values_original_approach.csv")
+
 SCENARIOS <- list(
-  DRC = list(
-    id           = "Middle_DRC_ConflictSmoothed_PlusPlus",
-    rds          = here("outputs", "02_ABC_model_fits_Final",
-                        "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260607_215621_check_NP5_NS4_NBREPS_30_NBSIMUL_590.RDS"),
-    scenario_csv = here("data-processed", "final_six_scenario_values_original_approach.csv"),
-    param_names  = c("R0", "prop_funeral", "etu_efficacy", "ppe_efficacy", "hcw_risk_scalar"),
-    check_final_size = 10000
+  DRC_conflict = list(
+    id               = "Middle_DRC_ConflictSmoothed_PlusPlus",
+    rds              = here("outputs", "02_ABC_model_fits_Final",
+                            "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260607_215621_check_NP5_NS4_NBREPS_30_NBSIMUL_590.RDS"),
+    scenario_csv     = SCENARIO_CSV,
+    param_names      = c("R0", "prop_funeral", "etu_efficacy", "ppe_efficacy", "hcw_risk_scalar"),
+    check_final_size = 10000,
+    arms             = ARM_NAMES
   )
 )
 
+# =============================================================================
+# 5. Pre-compute particle args per scenario
+# =============================================================================
 OUT_BASE <- here("outputs", "simulation", "conflict_dpc")
 for (arm_name in ARM_NAMES) {
   dir.create(file.path(OUT_BASE, arm_name), recursive = TRUE, showWarnings = FALSE)
@@ -173,14 +196,11 @@ for (arm_name in ARM_NAMES) {
 
 check_model_function_version()
 
-# =============================================================================
-# 5. Pre-compute particle args per scenario
-# =============================================================================
 message("Pre-computing particle args...")
 
 scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
   sc <- SCENARIOS[[sc_name]]
-  message(sprintf("  %s...", sc_name))
+  message(sprintf("  %s (scenario_id: %s)...", sc_name, sc$id))
   
   res       <- readRDS(sc$rds)
   posterior <- data.frame(weight = res$weights)
@@ -191,7 +211,8 @@ scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
                                 seed = RESAMPLE_SEED, param_names = sc$param_names)
   
   scenario_matrix <- read_scenario_matrix(sc$scenario_csv)
-  mp <- make_model_parameters(
+  
+  mp  <- make_model_parameters(
     scenario_id     = sc$id,
     scenario_matrix = scenario_matrix,
     overrides       = list(seeding_cases    = SEEDING_CASES,
@@ -223,6 +244,7 @@ scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
   list(
     sc_name            = sc_name,
     sc_idx             = match(sc_name, names(SCENARIOS)),
+    arms               = sc$arms,
     theta              = theta,
     base_particle_args = base_particle_args
   )
@@ -238,11 +260,13 @@ jobs <- lapply(seq_len(N_WORKERS), function(w) {
   list(worker_id = w, p_from = p_from, p_to = p_to)
 })
 
+total_runs <- sum(sapply(names(SCENARIOS), function(sc_name) {
+  length(SCENARIOS[[sc_name]]$arms) * N_PARTICLES * N_REPS
+}))
+
 message(sprintf(
-  "%d workers | %d particles each | %d scenarios x %d arms x %d reps = %d total runs",
-  N_WORKERS, PARTICLES_PER_WORKER,
-  length(SCENARIOS), length(ARM_NAMES), N_REPS,
-  length(SCENARIOS) * length(ARM_NAMES) * N_PARTICLES * N_REPS
+  "%d workers | %d particles each | %d total runs",
+  N_WORKERS, PARTICLES_PER_WORKER, total_runs
 ))
 
 # =============================================================================
@@ -255,12 +279,11 @@ t_start <- proc.time()
 future_lapply(jobs, function(job) {
   for (p in seq(job$p_from, job$p_to)) {
     for (sc_name in names(scenario_setups)) {
-      setup  <- scenario_setups[[sc_name]]
-      sc_idx <- setup$sc_idx
+      setup <- scenario_setups[[sc_name]]
       
-      for (arm_idx in seq_along(ARM_NAMES)) {
-        arm_name <- ARM_NAMES[arm_idx]
-        arm_def  <- ARM_DEFS[[arm_name]]
+      for (arm_name in setup$arms) {
+        arm_idx <- which(ARM_NAMES == arm_name)
+        arm_def <- ARM_DEFS[[arm_name]]
         
         for (r in seq_len(N_REPS)) {
           fname    <- sprintf("%s_p%03d_r%02d.rds", sc_name, p, r)
@@ -268,7 +291,7 @@ future_lapply(jobs, function(job) {
           if (file.exists(out_path)) next
           
           seed <- SEED_BASE +
-            (sc_idx  - 1L) * N_PARTICLES * length(ARM_NAMES) * N_REPS +
+            (which(names(scenario_setups) == sc_name) - 1L) * N_PARTICLES * length(ARM_NAMES) * N_REPS +
             (arm_idx - 1L) * N_PARTICLES * N_REPS +
             (p       - 1L) * N_REPS +
             (r       - 1L)
@@ -319,36 +342,37 @@ future_lapply(jobs, function(job) {
   NULL
 },
 future.globals = list(
-  scenario_setups         = scenario_setups,
-  OUT_BASE                = OUT_BASE,
-  ARM_NAMES               = ARM_NAMES,
-  ARM_DEFS                = ARM_DEFS,
-  sdb                     = sdb,
-  curve_d50_dat           = curve_d50_dat,
+  scenario_setups           = scenario_setups,
+  OUT_BASE                  = OUT_BASE,
+  ARM_NAMES                 = ARM_NAMES,
+  ARM_DEFS                  = ARM_DEFS,
+  sdb                       = sdb,
+  curve_d50_dat             = curve_d50_dat,
   make_step_fn              = make_step_fn,
+  rescale_sdb_segment       = rescale_sdb_segment,
   make_efficacy_fn_from_dpc = make_efficacy_fn_from_dpc,
   cov_with_conflict_fn      = cov_with_conflict_fn,
-  cov_without_conflict_fn   = cov_without_conflict_fn,
   dpc_with_conflict_fn      = dpc_with_conflict_fn,
-  dpc_without_conflict_fn   = dpc_without_conflict_fn,
-  cov_optimistic_fn         = cov_optimistic_fn,
-  dpc_optimistic_fn         = dpc_optimistic_fn,
-  cov_no_pep_fn              = cov_no_pep_fn,
-  dpc_no_pep_fn              = dpc_no_pep_fn,
-  eff_with_conflict_mid      = eff_with_conflict_mid,
-  eff_with_conflict_lo       = eff_with_conflict_lo,
-  eff_with_conflict_hi       = eff_with_conflict_hi,
-  eff_without_conflict_mid   = eff_without_conflict_mid,
-  eff_without_conflict_lo    = eff_without_conflict_lo,
-  eff_without_conflict_hi    = eff_without_conflict_hi,
-  eff_optimistic_mid         = eff_optimistic_mid,
-  eff_optimistic_lo          = eff_optimistic_lo,
-  eff_optimistic_hi          = eff_optimistic_hi,
-  N_PARTICLES             = N_PARTICLES,
-  N_REPS                  = N_REPS,
-  SEED_BASE               = SEED_BASE,
-  TAKEOFF_DEATH_THRESHOLD = TAKEOFF_DEATH_THRESHOLD,
-  MAX_RETRIES             = MAX_RETRIES
+  cov_flat_fn               = cov_flat_fn,
+  dpc_flat_fn               = dpc_flat_fn,
+  cov_perfect_fn            = cov_perfect_fn,
+  dpc_perfect_fn            = dpc_perfect_fn,
+  cov_no_pep_fn             = cov_no_pep_fn,
+  dpc_no_pep_fn             = dpc_no_pep_fn,
+  eff_dpc_conflict_mid      = eff_dpc_conflict_mid,
+  eff_dpc_conflict_lo       = eff_dpc_conflict_lo,
+  eff_dpc_conflict_hi       = eff_dpc_conflict_hi,
+  eff_cov_conflict_mid      = eff_cov_conflict_mid,
+  eff_cov_conflict_lo       = eff_cov_conflict_lo,
+  eff_cov_conflict_hi       = eff_cov_conflict_hi,
+  eff_optimistic_mid        = eff_optimistic_mid,
+  eff_optimistic_lo         = eff_optimistic_lo,
+  eff_optimistic_hi         = eff_optimistic_hi,
+  N_PARTICLES               = N_PARTICLES,
+  N_REPS                    = N_REPS,
+  SEED_BASE                 = SEED_BASE,
+  TAKEOFF_DEATH_THRESHOLD   = TAKEOFF_DEATH_THRESHOLD,
+  MAX_RETRIES               = MAX_RETRIES
 ),
 future.packages = c("fiber", "here"),
 future.seed     = TRUE)

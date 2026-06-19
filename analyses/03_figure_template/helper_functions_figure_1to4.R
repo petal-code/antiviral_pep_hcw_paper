@@ -438,3 +438,46 @@ save_figure_data <- function(df, filename,
   message(sprintf("Saved figure data: %s", path))
   invisible(path)
 }
+
+# =============================================================================
+# make_particle_df_conflict_dpc
+#
+# Variant of make_particle_df for the figure3_new conflict/DPC decomposition.
+# All arms share a common denominator: the no_pep arm's counterfactual_hcw,
+# so that pct_hcw_deaths_averted is comparable across arms regardless of
+# which trajectory (DRC_conflict vs DRC_noconflict) each arm was run under.
+# =============================================================================
+make_particle_df_conflict_dpc <- function(run_df) {
+  # Average across reps within each particle x arm
+  per_particle <- run_df %>%
+    group_by(scenario, particle_id, arm) %>%
+    summarise(
+      n_hcw_deaths       = mean(n_hcw_deaths,       na.rm = TRUE),
+      prevented_hcw      = mean(prevented_hcw,      na.rm = TRUE),
+      counterfactual_hcw = mean(counterfactual_hcw, na.rm = TRUE),
+      hcw_days_lost      = sum(hcw_days_lost,        na.rm = TRUE),
+      baseline_days_lost = sum(baseline_days_lost,   na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  # Extract no_pep counterfactual as the common denominator per particle
+  no_pep_denom <- per_particle %>%
+    filter(arm == "no_pep") %>%
+    select(scenario, particle_id, no_pep_counterfactual = counterfactual_hcw)
+  
+  per_particle %>%
+    left_join(no_pep_denom, by = c("scenario", "particle_id")) %>%
+    mutate(
+      pct_hcw_deaths_averted = ifelse(
+        !is.na(no_pep_counterfactual) & no_pep_counterfactual > 0,
+        # 100 * prevented_hcw / no_pep_counterfactual,
+        100 * (no_pep_counterfactual - n_hcw_deaths) / no_pep_counterfactual,
+        NA_real_
+      ),
+      pct_days_lost_averted = ifelse(
+        !is.na(baseline_days_lost) & baseline_days_lost > 0,
+        100 * (baseline_days_lost - hcw_days_lost) / baseline_days_lost,
+        NA_real_
+      )
+    )
+}
