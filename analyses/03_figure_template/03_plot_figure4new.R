@@ -1,12 +1,10 @@
 # =============================================================================
 # 03_plot_figure4.R
 #
-# Layout: 2 rows x 3 cols
-#    Row 1 (top)    : West Africa
-#    Row 2 (bottom) : DRC
-#    Col 1 : Panel a — HCW deaths averted vs stockpile size
-#    Col 2 : Panel b — % HCW deaths averted vs supply/demand ratio
-#    Col 3 : Panel c — doses per death averted vs intrinsic efficacy (log)
+# Layout variants included:
+#   1. Original 2x3 layout (figure_4)
+#   2. Alternative 2x2 layout (figure_4_alt)
+#   3. Sketch-based 3-column layout (figure_4_alt2)
 #
 # Color  = DPC (teal = 0, red = 5)
 # Linetype = Policy (solid = B targeted, dashed = A broad)
@@ -68,7 +66,7 @@ doses_df <- bind_rows(
 ) %>% mutate(scenario = factor(scenario, levels = SC_ORDER))
 
 # =============================================================================
-# Helper: make one panel per scenario, then combine with /
+# Helper: make one panel per scenario
 # =============================================================================
 
 # --- Panel a: deaths averted vs stockpile ---
@@ -190,7 +188,7 @@ make_panel_c <- function(sc) {
 }
 
 # =============================================================================
-# Build 2x3 layout: row = scenario, col = panel type
+# 1. Build Original 2x3 layout
 # =============================================================================
 wa_a <- make_panel_a("WestAfrica")
 wa_b <- make_panel_b("WestAfrica")
@@ -209,22 +207,10 @@ message("Figure 4 saved.")
 
 
 # =============================================================================
-# Build Alternative 2x2 layout (Figure 4 Alt)
-#
-# Layout: 2 rows x 2 cols
-#    Row 1 (top)    : Panels a, d from original layout (stockpile size vs deaths)
-#    Row 2 (bottom) : Panels b, c from original layout (supply ratio & efficacy)
-#
-# Modifications:
-#    - DPC legend placed inside the top-left panel (wa_a)
-#    - Policy legend placed inside the bottom-left panel (wa_b)
-#    - DRC x-axis limit updated to 2,500
+# 2. Build Alternative 2x2 layout (Figure 4 Alt)
 # =============================================================================
-
-# Update x-limit for DRC panel before recreating it
 XLIM_A["DRC"] <- 2500
 
-# Regenerate and modify panels with updated legend positions for the 2x2 layout
 wa_a_alt <- make_panel_a("WestAfrica") +
   theme(legend.position   = c(0.70, 0.25),
         legend.background = element_rect(fill = "white", color = "grey90", linewidth = 0.3))
@@ -238,11 +224,41 @@ wa_b_alt <- make_panel_b("WestAfrica") +
 
 wa_c_alt <- make_panel_c("WestAfrica")
 
-# Combine into the new 2x2 grid
 fig4_alt <- (wa_a_alt | drc_a_alt) /
   (wa_b_alt | wa_c_alt) +
   plot_annotation(tag_levels = "a")
 
-# Save the alternative figure separately
 save_fig("figure_4_alt", fig4_alt, 11.5, 8.5)
 message("Figure 4 Alt saved.")
+
+
+# =============================================================================
+# 3. Build Alternative Sketch layout (Figure 4 Alt2)
+#
+# Layout: 3 columns matching the hand-drawn diagram layout
+#    Col 1: Stacked panels (Top: West Africa panel a, Bottom: DRC panel a)
+#    Col 2: Full-height panel (West Africa panel b)
+#    Col 3: Full-height panel (West Africa panel c)
+# =============================================================================
+
+# Regenerate layout for alt2 with fine-tuned inside-plot legend positioning
+wa_a_alt2 <- make_panel_a("WestAfrica") +
+  theme(legend.position   = c(0.65, 0.25),
+        legend.background = element_rect(fill = "white", color = "grey90", linewidth = 0.3))
+
+drc_a_alt2 <- make_panel_a("DRC")
+
+wa_b_alt2 <- make_panel_b("WestAfrica") +
+  theme(legend.position   = c(0.65, 0.25),
+        legend.background = element_rect(fill = "white", color = "grey90", linewidth = 0.3),
+        legend.key.width  = unit(1.0, "cm"))
+
+wa_c_alt2 <- make_panel_c("WestAfrica")
+
+# Combine panels into the custom 3-column sketch configuration using patchwork
+fig4_alt2 <- (wa_a_alt2 / drc_a_alt2) | wa_b_alt2 | wa_c_alt2 +
+  plot_annotation(tag_levels = "a")
+
+# Save the final sketch-adapted figure layout
+save_fig("figure_4_alt2", fig4_alt2, 15, 7.5)
+message("Figure 4 Alt2 saved.")
