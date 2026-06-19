@@ -28,7 +28,7 @@
 #          outputs/dose_q_curve.csv       <- the Q curve as plain CSV
 #          outputs/dose_q_curve_fit.png   <- diagnostic fit + extrapolation plot
 #          outputs/dose_q_curve_extrapolation_scenarios.{rds,csv,png}
-#                                          <- 5 forward-extrapolation scenarios + plot
+#                                          <- 6 forward-extrapolation scenarios + plot
 # ============================================================================
 
 suppressPackageStartupMessages({
@@ -71,6 +71,8 @@ N_CHAINS <- 4L; ITER_WARMUP <- 1500L; ITER_SAMPLING <- 1500L
 LINEAR_TARGET_Q      <- 0.90   # scenario 1:  straight line up to this Q ...
 LINEAR_TARGET_Q_95   <- 0.95   # scenario 1b: same ramp, but up to this higher Q ...
 LINEAR_TARGET_DAY    <- 100L   #              ... both reached by this day, flat after
+LINEAR_SLOW_TARGET_Q    <- 0.95               # scenario 1c: ramp to this Q ...
+LINEAR_SLOW_TARGET_DATE <- as.Date("2026-12-31")  # ... but only reached by this date (end 2026)
 CONFLICT_START_DAY   <- 100L   # scenario 4: conflict begins here
 CONFLICT_DROP_DAYS   <- 25L    #   drop from q_end to CONFLICT_LOW_Q over this many days
 CONFLICT_LOW_DAYS    <- 50L    #   then hold at CONFLICT_LOW_Q this many days
@@ -155,12 +157,14 @@ print(p)   # also display
 # ----------------------------------------------------------------------------
 # 5. Forward-extrapolation scenarios (applied AFTER the last data point)
 # ----------------------------------------------------------------------------
-# All five scenarios share the fitted curve up to last_obs_day and start their
+# All six scenarios share the fitted curve up to last_obs_day and start their
 # continuation from the fitted value there (q_end). They differ only afterwards:
 #   1. linear_to_90  -- straight line from (last_obs_day, q_end) to
 #                        (LINEAR_TARGET_DAY, LINEAR_TARGET_Q); flat thereafter.
 #   1b. linear_to_95 -- the same ramp, but to LINEAR_TARGET_Q_95 by the SAME
 #                        LINEAR_TARGET_DAY; flat thereafter.
+#   1c. linear_to_95_dec -- a much SLOWER ramp to LINEAR_SLOW_TARGET_Q, reached
+#                        only by LINEAR_SLOW_TARGET_DATE (end 2026); flat after.
 #   2. logistic      -- the fitted logistic projected forward (current behaviour).
 #   3. flat          -- held flat at q_end (no further improvement).
 #   4. conflict      -- flat at q_end until CONFLICT_START_DAY, then a conflict
@@ -206,6 +210,18 @@ if (LINEAR_TARGET_DAY > last_obs_day) {
   s_linear_95[post] <- LINEAR_TARGET_Q_95
 }
 
+# 1c. Slow linear ramp to LINEAR_SLOW_TARGET_Q reached only by the end of 2026
+#     (a much shallower climb to ~95%), flat thereafter.
+slow_target_day <- as.integer(LINEAR_SLOW_TARGET_DATE - START_DATE)
+s_linear_slow <- fit_on
+if (slow_target_day > last_obs_day) {
+  lin_fun_slow <- approxfun(c(last_obs_day, slow_target_day),
+                            c(q_end, LINEAR_SLOW_TARGET_Q), rule = 2)
+  s_linear_slow[post] <- lin_fun_slow(scen_days[post])
+} else {
+  s_linear_slow[post] <- LINEAR_SLOW_TARGET_Q
+}
+
 # 2. Logistic forward projection (the fit itself).
 s_logistic <- fit_on
 
@@ -228,22 +244,27 @@ s_conflict <- fit_on
 s_conflict[post] <- conflict_fun(scen_days[post])
 
 scenarios <- rbind(
-  data.frame(relative_day = scen_days, q = clip01(s_linear),    scenario = "linear_to_90"),
-  data.frame(relative_day = scen_days, q = clip01(s_linear_95), scenario = "linear_to_95"),
-  data.frame(relative_day = scen_days, q = clip01(s_logistic), scenario = "logistic"),
-  data.frame(relative_day = scen_days, q = clip01(s_flat),     scenario = "flat"),
-  data.frame(relative_day = scen_days, q = clip01(s_conflict), scenario = "conflict")
+  data.frame(relative_day = scen_days, q = clip01(s_linear),      scenario = "linear_to_90"),
+  data.frame(relative_day = scen_days, q = clip01(s_linear_95),   scenario = "linear_to_95"),
+  data.frame(relative_day = scen_days, q = clip01(s_linear_slow), scenario = "linear_to_95_dec"),
+  data.frame(relative_day = scen_days, q = clip01(s_logistic),  scenario = "logistic"),
+  data.frame(relative_day = scen_days, q = clip01(s_flat),      scenario = "flat"),
+  data.frame(relative_day = scen_days, q = clip01(s_conflict),  scenario = "conflict")
 )
 scenarios$date <- START_DATE + scenarios$relative_day
 
-scen_levels <- c("linear_to_90", "linear_to_95", "logistic", "flat", "conflict")
+scen_levels <- c("linear_to_90", "linear_to_95", "linear_to_95_dec",
+                 "logistic", "flat", "conflict")
 scen_labels <- c(linear_to_90 = sprintf("1. Linear to %d%% by day %d",
                                         round(100 * LINEAR_TARGET_Q), LINEAR_TARGET_DAY),
                  linear_to_95 = sprintf("2. Linear to %d%% by day %d",
                                         round(100 * LINEAR_TARGET_Q_95), LINEAR_TARGET_DAY),
-                 logistic     = "3. Logistic projection (current)",
-                 flat         = "4. Flat at last value",
-                 conflict     = sprintf("5. Conflict at day %d", CONFLICT_START_DAY))
+                 linear_to_95_dec = sprintf("3. Linear to %d%% by %s",
+                                        round(100 * LINEAR_SLOW_TARGET_Q),
+                                        format(LINEAR_SLOW_TARGET_DATE, "%b %Y")),
+                 logistic     = "4. Logistic projection (current)",
+                 flat         = "5. Flat at last value",
+                 conflict     = sprintf("6. Conflict at day %d", CONFLICT_START_DAY))
 scenarios$scenario <- factor(scenarios$scenario, levels = scen_levels)
 
 saveRDS(scenarios, file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.rds"))
