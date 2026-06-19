@@ -2,15 +2,17 @@
 # 004_project_NPI_curves.R
 # ----------------------------------------------------------------------------
 # WHAT THIS SCRIPT DOES
-#   Runs FIBER stochastic epidemic simulations for ALL FOUR forward-extrapolation
+#   Runs FIBER stochastic epidemic simulations for ALL SIX forward-extrapolation
 #   NPI scenarios produced by 01_fit_dose_q_curve.R, at a single fixed R0 value
-#   (default: 1.65), with 100 stochastic replicates per scenario (400 total).
+#   (default: 1.65), with 100 stochastic replicates per scenario (600 total).
 #
-#   The four NPI scenarios are:
-#     1. linear_to_90  -- dose coverage ramps linearly to 90% by day 100 of Q
-#     2. logistic      -- the fitted logistic projection (business as usual)
-#     3. flat          -- held flat at the last observed Q value (~63%)
-#     4. conflict      -- flat, then a conflict episode drops Q to ~20%, reverts
+#   The six NPI scenarios are:
+#     1. linear_to_90      -- dose coverage ramps linearly to 90% by day 100
+#     2. linear_to_95      -- dose coverage ramps linearly to 95% by day 100
+#     3. linear_to_95_dec  -- slow ramp to 95% reached only by end of Dec 2026
+#     4. logistic          -- the fitted logistic projection (business as usual)
+#     5. flat              -- held flat at the last observed Q value (~63%)
+#     6. conflict          -- flat, then a conflict episode drops Q to ~20%, reverts
 #
 #   NPI parameters are carried over from 02_npi_inputs_and_fiber_runs.R unchanged.
 #
@@ -124,7 +126,8 @@ all_scen$date <- as.Date(all_scen$date)
 
 # Preserve the canonical scenario order set by script 01.
 scen_names <- if (is.factor(all_scen$scenario)) levels(all_scen$scenario) else as.character(unique(all_scen$scenario))
-expected <- c("linear_to_90", "logistic", "flat", "conflict")
+expected <- c("linear_to_90", "linear_to_95", "linear_to_95_dec",
+              "logistic", "flat", "conflict")
 missing  <- setdiff(expected, scen_names)
 if (length(missing) > 0L)
   stop("Expected scenario(s) not found in the file: ", paste(missing, collapse = ", "),
@@ -206,16 +209,20 @@ message("Wrote NPI scenario matrices to ", mat_dir)
 # 4. Plot NPI input curves for all scenarios
 # ----------------------------------------------------------------------------
 scenario_colours <- c(
-  linear_to_90 = "#1b9e77",
-  logistic     = "#7570b3",
-  flat         = "#d95f02",
-  conflict     = "#e7298a"
+  linear_to_90     = "#1b9e77",
+  linear_to_95     = "#66a61e",
+  linear_to_95_dec = "#e6ab02",
+  logistic         = "#7570b3",
+  flat             = "#d95f02",
+  conflict         = "#e7298a"
 )
 scenario_labels <- c(
-  linear_to_90 = "1. Linear to 90%",
-  logistic     = "2. Logistic projection",
-  flat         = "3. Flat at last value",
-  conflict     = "4. Conflict episode"
+  linear_to_90     = "1. Linear to 90% by day 100",
+  linear_to_95     = "2. Linear to 95% by day 100",
+  linear_to_95_dec = "3. Linear to 95% by Dec 2026",
+  logistic         = "4. Logistic projection (current)",
+  flat             = "5. Flat at last value",
+  conflict         = "6. Conflict at day 100"
 )
 
 npi_long <- do.call(rbind, lapply(scen_names, function(sn) {
@@ -547,8 +554,8 @@ p_all_traj <- ggplot(traj_long,
                       name = "Scenario") +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
   labs(
-    title    = sprintf("Cumulative incidence: all 4 NPI scenarios (R0 = %.2f, n = %d reps each)",
-                       R0_TARGET, N_STOCH),
+    title    = sprintf("Cumulative incidence: all %d NPI scenarios (R0 = %.2f, n = %d reps each)",
+                       length(scen_names), R0_TARGET, N_STOCH),
     subtitle = sprintf("Thin lines = stochastic replicates; bold = median; red = onsets; green = confirmed\nDashed verticals = PHEIC dates (%s, %s)",
                        format(PHEIC_DATES[1], "%d %b"), format(PHEIC_DATES[2], "%d %b")),
     x = "Date", y = "Cumulative cases"
