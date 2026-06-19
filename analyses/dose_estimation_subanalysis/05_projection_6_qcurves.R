@@ -28,6 +28,8 @@
 # 05_cumulative_trajectories.png  Individual replicate traces, faceted by scen.
 # 05_cumulative_bands.png         Median + 50% / 95% CI ribbons, faceted
 # 05_daily_incidence.png          Implied daily incidence
+# 05_snapshot_cumulative.png      Cumulative infections by R0 at snapshot dates
+# 05_snapshot_cumulative_rebased.png  ... re-zeroed to the confirmed-series start
 # 05_cumulative_summary.csv       Aggregated cumulative incidence (median + CIs)
 # 05_summary_table.csv            Cumulative cases at Sep 1 / Dec 31 + final size
 # 05_rt_profiles.csv              Analytic Rt values (numeric)
@@ -876,6 +878,137 @@ ggsave(file.path(out_dir, "05_daily_incidence.png"), p_inc,
        width = 12, height = 10, dpi = 150)
 print(p_inc)
 message("Saved 05_daily_incidence.png")
+
+# ============================================================================
+# 15b. Snapshot: cumulative infections by R0 at snapshot dates (vs data)
+# ============================================================================
+# Mirrors p_snap / p_snap_rebased in 02_npi_inputs_and_fiber_runs.R, generalised
+# to the (R0 x scenario) grid via facet_grid(scenario ~ snapshot), x = R0:
+#   * p_snap          -- absolute cumulative infections at each snapshot date.
+#   * p_snap_rebased  -- cumulative SINCE rebase_t0 (confirmed-series start), i.e.
+#                        cum(snapshot) - cum(t0), so model & data share a baseline.
+# At these data-comparison dates the six scenarios are essentially identical
+# (they only diverge after the last Q observation ~14 Jun), so the scenario rows
+# act as a sanity check; the informative axis here is R0.
+
+# Snapshot dates (data-comparison; same as 02) + which observed reference line(s)
+# to draw at each (matched to SNAPSHOT_DATES element-by-element).
+SNAPSHOT_DATES <- as.Date(c("2026-05-14", "2026-05-27", "2026-06-07", "2026-06-17"))
+SNAPSHOT_REFS  <- list(c("onsets", "confirmed cases"),  # 14 May
+                       c("onsets", "confirmed cases"),  # 27 May
+                       c("onsets", "confirmed cases"),  # 07 Jun
+                       "confirmed cases")                # 17 Jun (onsets ended)
+SNAPSHOT_REBASED_DATES <- as.Date(c("2026-06-07", "2026-06-17"))
+SNAPSHOT_REBASED_REFS  <- list(c("onsets", "confirmed cases"), "confirmed cases")
+
+# Re-zero date for the rebased version: confirmed-series start (~mid-May).
+rebase_t0 <- if (exists("confirmed_obs") && any(!is.na(confirmed_obs$date)))
+               min(confirmed_obs$date, na.rm = TRUE) else
+             if (exists("onsets_obs") && any(!is.na(onsets_obs$date)))
+               min(onsets_obs$date, na.rm = TRUE) else epi_start
+
+# Observed cumulative value at a date (interpolated; held flat past the data end).
+obs_at <- function(d, dates, values) {
+  dates <- as.Date(dates); values <- as.numeric(values)
+  if (d <= max(dates)) approx(as.numeric(dates), values, as.numeric(d))$y
+  else values[which.max(dates)]
+}
+obs_sources <- list()
+if (exists("onsets_obs"))
+  obs_sources[["onsets"]] <- list(d = onsets_obs$date, v = onsets_obs$cumulative_onsets)
+if (exists("confirmed_obs"))
+  obs_sources[["confirmed cases"]] <- list(
+    d = confirmed_obs$date, v = confirmed_obs$national_cumulative_confirmed_cases)
+snap_ref_cols <- c("onsets" = "#d62728", "confirmed cases" = "#1a9850",
+                   "McCabe" = "#984ea3")
+
+# --- p_snap: absolute cumulative at each snapshot date. ----------------------
+snap_days <- as.integer(SNAPSHOT_DATES - epi_start)
+snap_idx  <- match(snap_days, TIMEPOINTS)
+snap_labs <- format(SNAPSHOT_DATES, "%d %b %Y")
+snap_long <- do.call(rbind, lapply(took, function(r)
+  data.frame(r0 = r$r0, scenario = r$scenario, rep_id = r$rep_id,
+             snapshot = snap_labs, cum = r$cum_at[snap_idx])))
+snap_long$snapshot <- factor(snap_long$snapshot, levels = snap_labs)
+snap_long$scenario <- factor(snap_long$scenario, levels = scen_names)
+snap_central <- aggregate(cum ~ r0 + scenario + snapshot, data = snap_long, FUN = stats::median)
+
+# Observed reference lines per snapshot (scenario-independent), + McCabe at its date.
+ref <- do.call(rbind, lapply(seq_along(SNAPSHOT_DATES), function(k)
+  do.call(rbind, lapply(SNAPSHOT_REFS[[k]], function(sr) {
+    s <- obs_sources[[sr]]; if (is.null(s)) return(NULL)
+    data.frame(snapshot = factor(snap_labs[k], levels = snap_labs), source = sr,
+               value = obs_at(SNAPSHOT_DATES[k], s$d, s$v))
+  }))))
+if (is.null(ref)) ref <- data.frame()
+mc_lab <- format(MCCABE_DATE, "%d %b %Y")
+if (mc_lab %in% snap_labs)
+  ref <- rbind(ref, data.frame(snapshot = factor(mc_lab, levels = snap_labs),
+                               source = "McCabe", value = MCCABE_VALUES))
+snap_ref_layer <- if (nrow(ref) > 0)
+  geom_hline(data = ref, aes(yintercept = value, colour = source), linewidth = 0.8) else NULL
+
+p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
+  geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.4, size = 1.1) +
+  geom_point(data = snap_central, aes(factor(r0), cum), colour = "black", size = 2.8) +
+  snap_ref_layer +
+  facet_grid(scenario ~ snapshot, scales = "free_y",
+             labeller = labeller(scenario = scen_labels)) +
+  scale_colour_manual(values = snap_ref_cols, name = "Observed / est.") +
+  labs(title = "Cumulative infections by R0 at snapshot dates",
+       subtitle = "Blue = replicates; black dot = median; lines = onsets (red) / confirmed (green) / McCabe (purple, 27 May)",
+       x = "Baseline R0", y = "Cumulative infections") +
+  theme_bw(base_size = 9) +
+  theme(legend.position = "bottom", strip.text.y = element_text(angle = 0, size = 6))
+ggsave(file.path(out_dir, "05_snapshot_cumulative.png"), p_snap,
+       width = 11, height = 12, dpi = 150)
+print(p_snap)
+message("Saved 05_snapshot_cumulative.png")
+
+# --- p_snap_rebased: cumulative SINCE rebase_t0 at 7 & 17 Jun. ---------------
+snap_reb_days <- as.integer(SNAPSHOT_REBASED_DATES - epi_start)
+t0_day        <- as.integer(rebase_t0 - epi_start)
+snap_reb_idx  <- match(snap_reb_days, TIMEPOINTS)
+t0_idx        <- match(t0_day, TIMEPOINTS)
+snap_reb_labs <- format(SNAPSHOT_REBASED_DATES, "%d %b %Y")
+snap_reb_long <- do.call(rbind, lapply(took, function(r)
+  data.frame(r0 = r$r0, scenario = r$scenario, rep_id = r$rep_id,
+             snapshot = snap_reb_labs, cum = r$cum_at[snap_reb_idx] - r$cum_at[t0_idx])))
+snap_reb_long$snapshot <- factor(snap_reb_long$snapshot, levels = snap_reb_labs)
+snap_reb_long$scenario <- factor(snap_reb_long$scenario, levels = scen_names)
+snap_reb_central <- aggregate(cum ~ r0 + scenario + snapshot, data = snap_reb_long,
+                              FUN = stats::median)
+
+ref_reb <- do.call(rbind, lapply(seq_along(SNAPSHOT_REBASED_DATES), function(k)
+  do.call(rbind, lapply(SNAPSHOT_REBASED_REFS[[k]], function(sr) {
+    s <- obs_sources[[sr]]; if (is.null(s)) return(NULL)
+    val <- obs_at(SNAPSHOT_REBASED_DATES[k], s$d, s$v) - obs_at(rebase_t0, s$d, s$v)
+    data.frame(snapshot = factor(snap_reb_labs[k], levels = snap_reb_labs),
+               source = sr, value = val)
+  }))))
+if (is.null(ref_reb)) ref_reb <- data.frame()
+snap_reb_ref_layer <- if (nrow(ref_reb) > 0)
+  geom_hline(data = ref_reb, aes(yintercept = value, colour = source), linewidth = 0.8) else NULL
+
+p_snap_rebased <- ggplot(snap_reb_long, aes(factor(r0), cum)) +
+  geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.4, size = 1.1) +
+  geom_point(data = snap_reb_central, aes(factor(r0), cum), colour = "black", size = 2.8) +
+  snap_reb_ref_layer +
+  facet_grid(scenario ~ snapshot, scales = "free_y",
+             labeller = labeller(scenario = scen_labels)) +
+  scale_colour_manual(values = snap_ref_cols, name = "Observed") +
+  labs(title = sprintf("Cumulative infections SINCE %s, by R0 at snapshot dates",
+                       format(rebase_t0, "%d %b %Y")),
+       subtitle = sprintf("Re-zeroed at t0 = %s; blue = replicates; black dot = median; lines = onsets/confirmed since t0 (McCabe omitted: a 27-May total)",
+                          format(rebase_t0, "%d %b %Y")),
+       x = "Baseline R0",
+       y = sprintf("Cumulative infections since %s", format(rebase_t0, "%d %b %Y"))) +
+  theme_bw(base_size = 9) +
+  theme(legend.position = "bottom", strip.text.y = element_text(angle = 0, size = 6))
+ggsave(file.path(out_dir, "05_snapshot_cumulative_rebased.png"), p_snap_rebased,
+       width = 8, height = 12, dpi = 150)
+print(p_snap_rebased)
+message("Saved 05_snapshot_cumulative_rebased.png")
 
 # ============================================================================
 # 16. Summary table: cumulative cases at key dates + total epidemic size
