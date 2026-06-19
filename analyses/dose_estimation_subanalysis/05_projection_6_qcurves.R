@@ -149,7 +149,7 @@ EPIDEMIC_START_DATE <- as.Date("2026-02-17")
 
 # Calendar dates at which we read off cumulative case counts for the summary
 # table: "how big is the epidemic by Sep 1?" and "by Dec 31?"
-SUMMARY_DATES <- as.Date(c("2026-09-01", "2026-12-31"))
+SUMMARY_DATES <- as.Date(c("2026-09-01", "2026-12-31", "2026-02-01"))
 
 # PHEIC-related dates: first PHEIC alert and formal PHEIC declaration.
 # These are drawn as dashed vertical lines on every calendar-axis plot.
@@ -804,7 +804,7 @@ p_bands <- ggplot(cumulative_summary,
   pheic_vlines +
   geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.10, colour = NA) +
   geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = 0.20, colour = NA) +
-  geom_line(aes(y = median), linewidth = 1.0) +
+  geom_line(aes(y = mean), linewidth = 1.0) +
   onset_overlay + confirmed_overlay + mccabe_layer +
   facet_wrap(~ scenario, ncol = 2, scales = "free_y",
              labeller = labeller(scenario = scen_labels)) +
@@ -821,7 +821,9 @@ p_bands <- ggplot(cumulative_summary,
   ) +
   theme_bw(base_size = 10) +
   theme(axis.text.x   = element_text(angle = 45, hjust = 1, size = 6),
-        legend.position = "bottom")
+        legend.position = "bottom") +
+  coord_cartesian(xlim = c(as.Date("2026-03-01"), as.Date("2026-07-10")),
+                  ylim = c(0, 5000))
 ggsave(file.path(out_dir, "05_cumulative_bands.png"), p_bands,
        width = 12, height = 10, dpi = 150)
 print(p_bands)
