@@ -85,7 +85,7 @@ NPI_SPECS <- list(
   delay_hosp        = list(q0 = 6.00, q1 = 1.50),   # onset->hosp delay factor (days); improves DOWN
   prop_etu          = list(q0 = 0.00, q1 = 0.90),   # proportion of hospitalised cases in an ETU
   safe_funeral_prop = list(q0 = 0.00, q1 = 0.90),   # COMMUNITY: proportion of funerals that are SAFE (-> 1-this = unsafe comm)
-  unsafe_funeral_prop_hosp = list(q0 = 0.90, q1 = 1.00),  # HOSPITAL (non-ETU): UNSAFE-funeral probability, given directly
+  unsafe_funeral_prop_hosp = list(q0 = 0.05, q1 = 0.01),  # HOSPITAL (non-ETU): UNSAFE-funeral probability, given directly
   ppe_coverage      = list(q0 = 0.00, q1 = 0.90)    # PPE coverage lever (-> ppe_coverage_hcw)
 )
 # Unsafe-funeral probability for ETU deaths (kept separate; ETU deaths are
