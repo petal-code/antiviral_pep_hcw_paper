@@ -1,5 +1,5 @@
 # ============================================================================
-# 05_projection_5_qcurves.R
+# 05_projection_6_qcurves.R
 # ============================================================================
 #
 # INPUTS (must exist before running)
@@ -92,7 +92,7 @@ N_STOCH <- 3 # 10 # 250L
 # Values were confirmed by the PI and correspond to a scalar of 0.6 applied to
 # the baseline values from 02_npi_inputs_and_fiber_runs.R:
 #   ETU efficacy      : 0.60 + (1-0.60)*0.6 = 0.84
-#   Gen hosp efficacy : 0.20 + (1-0.20)*0.6 = 0.68
+#   Gen hosp efficacy : 0.30 (PI-confirmed; lower than scalar formula)
 #   PPE efficacy      : 0.60 + (1-0.60)*0.6 = 0.84
 #   Funeral efficacy  : 0.70 + (1-0.70)*0.6 = 0.88
 SCALAR_OVERRIDES <- list(
@@ -394,29 +394,37 @@ F_fun <- F_from_invariants(inv, mp_ref$args$safe_funeral_efficacy)
 # For each R0 value, solve for the community and funeral offspring means that
 # are consistent with that R0 given D and F_fun. Then build a full args list
 # for every (R0, scenario) combination.
-args_grid <- setNames(
-  do.call(c, lapply(seq_along(R0_GRID), function(ri) {
-    r0    <- R0_GRID[ri]
-    # solve_offspring_means finds mn_genPop and mn_funeral such that the
-    # implied R0 (computed from the branching process) equals r0.
-    means <- solve_offspring_means(r0, FUNERAL_FRAC, D, F_fun)
-    message(sprintf("R0 = %.2f: mn_genPop = %.4f, mn_funeral = %.4f",
-                    r0, means$mn_genPop, means$mn_funeral))
-    lapply(scen_names, function(sn) {
-      sm <- read_scenario_matrix(matrix_csvs[[sn]])
-      mp <- make_model_parameters(sn, sm, overrides = overrides_base)
-      a  <- mp$args
-      a$mn_offspring_genPop  <- means$mn_genPop
-      a$mn_offspring_funeral <- means$mn_funeral
-      a$seed                 <- NULL  # seed is set per-replicate in Section 9
-      a
-    })
-  })),
-  # Key format: "R0_1.50__linear_to_90", "R0_1.50__logistic", etc.
-  as.vector(outer(sprintf("R0_%.2f", R0_GRID), scen_names,
-                  function(r, s) paste(r, s, sep = "__")))
-)
+# Build args_grid as a flat named list. Each element's NAME is attached at the
+# exact point its VALUE is created, so the name and the args it points to can
+# never drift apart (an earlier version generated the names in a separate step,
+# which silently scrambled the R0/scenario lookup).
+args_grid <- list()
+for (r0 in R0_GRID) {
+  # solve_offspring_means finds mn_genPop and mn_funeral such that the implied
+  # R0 (computed from the branching process) equals r0.
+  means <- solve_offspring_means(r0, FUNERAL_FRAC, D, F_fun)
+  message(sprintf("R0 = %.2f: mn_genPop = %.4f, mn_funeral = %.4f",
+                  r0, means$mn_genPop, means$mn_funeral))
+  for (sn in scen_names) {
+    key <- paste(sprintf("R0_%.2f", r0), sn, sep = "__")  # e.g. "R0_1.50__conflict"
+    sm  <- read_scenario_matrix(matrix_csvs[[sn]])
+    mp  <- make_model_parameters(sn, sm, overrides = overrides_base)
+    a   <- mp$args
+    a$mn_offspring_genPop  <- means$mn_genPop
+    a$mn_offspring_funeral <- means$mn_funeral
+    a$seed                 <- NULL  # seed is set per-replicate in Section 9
+    args_grid[[key]] <- a
+  }
+}
 message(sprintf("Assembled %d (R0 x scenario) fiber arg sets.", length(args_grid)))
+
+# Self-check: the keys must be exactly the R0 x scenario product. If this ever
+# fails, a downstream lookup would silently use the wrong args (the original bug).
+stopifnot(setequal(
+  names(args_grid),
+  as.vector(t(outer(sprintf("R0_%.2f", R0_GRID), scen_names,
+                    function(r, s) paste(r, s, sep = "__"))))
+))
 
 # ============================================================================
 # 7. Analytic Rt profiles (fast sanity check before running FIBER)
@@ -431,11 +439,16 @@ message(sprintf("Assembled %d (R0 x scenario) fiber arg sets.", length(args_grid
 # Rt is shown for all (R0, scenario) combinations. Facets = R0 values;
 # colours = scenarios.
 
-RT_TIMES <- 0:365L   # compute Rt for the first year of the epidemic
-RT_MC_N  <- 50000L   # Monte Carlo draws for the analytic calculation
+RT_TIMES <- 0:365L  # compute Rt for the first year of the epidemic
+RT_MC_N  <- 5000L   # Monte Carlo draws; 5k gives a smooth curve and is ~10x faster than 50k
 RT_SEED  <- 1L
 
-message("Computing analytic Rt profiles (sanity check before FIBER)...")
+# Sequential over 18 combinations (3 R0s x 6 scenarios). Parallelising these
+# 18 calls causes scoping issues because draw_nh_variates and other helpers from
+# calculate_model_approx_rt.R are not exportable as future globals. At 5k draws
+# each call takes a few seconds, so the total is well under a minute.
+message(sprintf("Computing analytic Rt profiles: %d R0 values x %d scenarios...",
+                length(R0_GRID), length(scen_names)))
 rt_profiles <- do.call(rbind, lapply(R0_GRID, function(r0) {
   do.call(rbind, lapply(scen_names, function(sn) {
     key <- paste(sprintf("R0_%.2f", r0), sn, sep = "__")
@@ -452,7 +465,8 @@ rt_profiles$r0_label <- sprintf("R0 = %.2f", rt_profiles$r0)
 
 write.csv(rt_profiles, file.path(out_dir, "05_rt_profiles.csv"), row.names = FALSE)
 
-p_rt <- ggplot(rt_profiles, aes(date, R_inst, colour = scenario, group = scenario)) +
+p_rt <- ggplot(rt_profiles, aes(date, R_inst, colour = scenario,
+                               group = interaction(r0_label, scenario))) +
   # Dashed black line at Rt = 1: above = epidemic growing, below = controlled.
   geom_hline(yintercept = 1, linetype = "dashed", colour = "black", linewidth = 0.5) +
   pheic_vlines +
@@ -463,7 +477,7 @@ p_rt <- ggplot(rt_profiles, aes(date, R_inst, colour = scenario, group = scenari
   labs(
     title    = "Analytic instantaneous Rt by R0 and NPI scenario",
     subtitle = paste0(
-      "ETU=0.84, GenHosp=0.68, PPE=0.84, SafeFuneral=0.88\n",
+      "ETU=0.84, GenHosp=0.30, PPE=0.84, SafeFuneral=0.88\n",
       "Black dashed = Rt 1 (above = growing, below = controlled). ",
       "Grey dashed = PHEIC dates."
     ),
@@ -956,5 +970,5 @@ saveRDS(list(
 ), file.path(out_dir, "05_projections.rds"))
 
 message(sprintf(
-  "\n05_projection_5_qcurves.R complete.\n  %d R0 x %d scenarios x %d reps = %d runs.\n  All outputs saved to: %s",
+  "\n05_projection_6_qcurves.R complete.\n  %d R0 x %d scenarios x %d reps = %d runs.\n  All outputs saved to: %s",
   n_r0, n_scen, N_STOCH, total, out_dir))
