@@ -1184,3 +1184,66 @@ ggsave(file.path(DIR_OUT, "dose_r0_grid_growth_rate_rt.png"), p_rt_growth,
        width = 10, height = 7, dpi = 150)
 print(p_rt_growth)
 write.csv(rt_fiber, file.path(DIR_OUT, "dose_r0_grid_growth_rate_rt.csv"), row.names = FALSE)
+
+# ----------------------------------------------------------------------------
+# 14. REBASED cumulative infections at snapshot dates (per R0) vs data sources
+# ----------------------------------------------------------------------------
+# Same as section 11, but on the section-12 REBASED scale: cases accrued SINCE
+# rebase_t0 (the confirmed-series start, ~mid-May), i.e. cum(snapshot) - cum(t0),
+# per replicate, and likewise for the observed onset / confirmed series. This
+# puts the model and the data on a common baseline (0 at t0) so the snapshot
+# comparison is not dominated by cases that had already accrued before t0.
+# McCabe is a 27-May TOTAL, so it does not map onto a "since-t0 at 7/17 Jun"
+# snapshot and is not shown here.
+SNAPSHOT_REBASED_DATES <- as.Date(c("2026-06-07", "2026-06-17"))
+SNAPSHOT_REBASED_REFS  <- list(c("onsets", "confirmed cases"),  # 07 Jun: both available
+                               "confirmed cases")                # 17 Jun: onsets have ended
+
+snap_reb_days <- as.integer(SNAPSHOT_REBASED_DATES - epi_start)
+t0_day        <- as.integer(rebase_t0 - epi_start)
+snap_reb_idx  <- match(snap_reb_days, TIMEPOINTS)
+t0_idx        <- match(t0_day, TIMEPOINTS)
+snap_reb_labs <- format(SNAPSHOT_REBASED_DATES, "%d %b %Y")
+
+# Per-replicate cumulative cases SINCE t0 at each rebased snapshot date.
+snap_reb_long <- do.call(rbind, lapply(took, function(r)
+  data.frame(r0 = r$r0, rep_id = r$rep_id, snapshot = snap_reb_labs,
+             cum = r$cum_at[snap_reb_idx] - r$cum_at[t0_idx])))
+snap_reb_long$snapshot <- factor(snap_reb_long$snapshot, levels = snap_reb_labs)
+snap_reb_central <- aggregate(cum ~ r0 + snapshot, data = snap_reb_long,
+                              FUN = central_fun("snapshot"))
+
+# Observed reference lines, RE-ZEROED the same way (value(snapshot) - value(t0)),
+# honouring SNAPSHOT_REBASED_REFS per date (onsets/confirmed via obs_at, section 11).
+ref_reb <- do.call(rbind, lapply(seq_along(SNAPSHOT_REBASED_DATES), function(k) {
+  do.call(rbind, lapply(SNAPSHOT_REBASED_REFS[[k]], function(sr) {
+    s <- obs_sources[[sr]]
+    if (is.null(s)) return(NULL)
+    val <- obs_at(SNAPSHOT_REBASED_DATES[k], s$d, s$v) - obs_at(rebase_t0, s$d, s$v)
+    data.frame(snapshot = factor(snap_reb_labs[k], levels = snap_reb_labs),
+               source = sr, value = val)
+  }))
+}))
+if (is.null(ref_reb)) ref_reb <- data.frame()
+ref_reb_layer <- if (nrow(ref_reb) > 0)
+  geom_hline(data = ref_reb, aes(yintercept = value, colour = source), linewidth = 0.9) else NULL
+ref_reb_desc <- paste(mapply(function(lab, srcs) sprintf("%s = %s", lab, paste(srcs, collapse = " + ")),
+                             snap_reb_labs, SNAPSHOT_REBASED_REFS), collapse = "; ")
+
+p_snap_rebased <- ggplot(snap_reb_long, aes(factor(r0), cum)) +
+  geom_jitter(width = 0.12, height = 0, colour = "#1f77b4", alpha = 0.5, size = 1.5) +
+  geom_point(data = snap_reb_central, aes(factor(r0), cum), colour = "black", size = 4) +
+  ref_reb_layer +
+  facet_wrap(~ snapshot, scales = "free_y", nrow = 1) +
+  scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
+                      name = "Observed") +
+  labs(title = sprintf("Cumulative infections SINCE %s, by R0 at snapshot dates",
+                       format(rebase_t0, "%d %b %Y")),
+       subtitle = sprintf("Re-zeroed at t0 = %s (confirmed-series start); blue = replicates; large black dot = %s; reference lines: %s; scenario '%s'",
+                          format(rebase_t0, "%d %b %Y"), stat_label("snapshot"), ref_reb_desc, EXTRAP_SCENARIO),
+       x = "Baseline R0",
+       y = sprintf("Cumulative infections since %s", format(rebase_t0, "%d %b %Y"))) +
+  theme_bw(base_size = 11)
+ggsave(file.path(DIR_OUT, "dose_r0_grid_snapshot_cumulative_rebased.png"), p_snap_rebased,
+       width = 7.5, height = 5, dpi = 150)
+print(p_snap_rebased)
