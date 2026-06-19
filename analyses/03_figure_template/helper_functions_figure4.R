@@ -1,39 +1,16 @@
 # =============================================================================
 # helper_functions_figure4.R
-#
-# Post-hoc helper functions for Figure 4 panels a, b, c.
-# All panels are derived from baseline (no antiviral) simulations.
-#
-# Policy definitions:
-#   Policy B : antiviral given only to HCWs who were actually infected
-#              (PPE failed). Doses consumed = n_infected_hcw.
-#   Policy A : antiviral also given to HCWs whom PPE protected, i.e. the
-#              full exposure pool is estimated as
-#              n_infected_hcw / (1 - ppe_efficacy).
-#              Doses consumed = n_policy_A = n_B / (1 - ppe_efficacy).
-#
-# DPC-efficacy lookup:
-#   curve_d50_dat  <- readRDS(here("data-processed",
-#                                  "DPC_fixed_efficacy_varied_d50.rds"))
-#   Columns used   : dpc, efficacy (mid), eighty_efficacy_lo, eighty_efficacy_hi
-#
-# Panel a : stockpile × HCW deaths averted  (DPC 0 and DPC 5, Policy A and B)
-# Panel b : supply/demand × % HCW deaths averted  (DPC 0, Policy A and B)
-# Panel c : intrinsic efficacy × doses per death averted
-#           (DPC 0 vs 5, Policy A vs B)
 # =============================================================================
 
 library(dplyr)
 library(here)
 
+DOSES_PER_COURSE_DEFAULT <- 20L
+
 # =============================================================================
 # get_efficacy_at_dpc
-#
-# Read mid / lo / hi efficacy off the DPC-efficacy lookup curve.
 # =============================================================================
-get_efficacy_at_dpc <- function(dpc_val,
-                                col = "efficacy",
-                                curve_dat = NULL) {
+get_efficacy_at_dpc <- function(dpc_val, col = "efficacy", curve_dat = NULL) {
   if (is.null(curve_dat))
     curve_dat <- readRDS(here("data-processed",
                               "DPC_fixed_efficacy_varied_d50.rds"))
@@ -43,34 +20,19 @@ get_efficacy_at_dpc <- function(dpc_val,
 
 # =============================================================================
 # extract_figure4_posthoc
-#
-# Read all baseline RDS files for one scenario and return a per-run data frame
-# with the information needed for all three panels.
-#
-# Returns one row per (particle_id, rep) with:
-#   scenario, particle_id, rep,
-#   ppe_efficacy,               # posterior draw for this particle
-#   n_hcw_infected,             # Policy B eligible pool (actual infections)
-#   n_hcw_exposed_A,            # Policy A eligible pool = n_B / (1-ppe_eff)
-#   hcw_infection_times,        # list-col: sorted infection times (Policy B order)
-#   hcw_death_flags,            # list-col: logical, did each HCW die (baseline)?
-#   n_hcw_deaths_baseline       # total HCW deaths without antiviral
 # =============================================================================
-extract_figure4_posthoc <- function(sc_name     = "WestAfrica",
-                                    n_workers   = 10L,
-                                    base_dir    = here("outputs", "simulation",
-                                                       "figure4_baseline")) {
+extract_figure4_posthoc <- function(sc_name   = "WestAfrica",
+                                    n_workers = 10L,
+                                    base_dir  = here("outputs", "simulation",
+                                                     "figure4_baseline")) {
   library(future)
   library(future.apply)
   
   dir_path <- file.path(base_dir, sc_name)
-  # Match only simulation output files (WestAfrica_pNNN_rNN.rds pattern)
   files    <- list.files(dir_path, pattern = "_p\\d+_r\\d+\\.rds$",
                          full.names = TRUE)
-  if (length(files) == 0)
-    stop("No RDS files found in: ", dir_path)
+  if (length(files) == 0) stop("No RDS files found in: ", dir_path)
   
-  # Load ppe_efficacy lookup (particle_id -> ppe_efficacy)
   lookup_path <- file.path(base_dir, sc_name,
                            sprintf("ppe_efficacy_lookup_%s.rds", sc_name))
   ppe_lookup  <- readRDS(lookup_path)
@@ -84,40 +46,29 @@ extract_figure4_posthoc <- function(sc_name     = "WestAfrica",
   results <- future_lapply(seq_along(files), function(i) {
     f <- files[[i]]
     tryCatch({
-      x <- readRDS(f)
-      
-      # Parse particle_id and rep from filename
+      x     <- readRDS(f)
       fname <- tools::file_path_sans_ext(basename(f))
-      parts <- regmatches(fname,
-                          regexec("^(.+)_p(\\d+)_r(\\d+)$", fname))[[1]]
+      parts <- regmatches(fname, regexec("^(.+)_p(\\d+)_r(\\d+)$", fname))[[1]]
       if (length(parts) != 4) return(NULL)
-      sc  <- parts[2]
       pid <- as.integer(parts[3])
       rep <- as.integer(parts[4])
       
-      tdf <- x$tdf
-      
-      # Filter to actual HCW infections only
+      tdf         <- x$tdf
       is_hcw      <- !is.na(tdf$class) & tdf$class == "HCW"
       is_infected <- !is.na(tdf$time_infection_absolute)
       hcw_inf     <- tdf[is_hcw & is_infected, ]
+      hcw_inf     <- hcw_inf[order(hcw_inf$time_infection_absolute), ]
       
-      # Sort by infection time for first-come-first-serve stockpile allocation
-      hcw_inf <- hcw_inf[order(hcw_inf$time_infection_absolute), ]
-      
-      n_hcw_infected       <- nrow(hcw_inf)
+      n_hcw_infected        <- nrow(hcw_inf)
       n_hcw_deaths_baseline <- sum(!is.na(hcw_inf$outcome) & hcw_inf$outcome)
       
-      # Retrieve particle-level ppe_efficacy
       ppe_eff <- ppe_lookup$ppe_efficacy[ppe_lookup$particle_id == pid]
       if (length(ppe_eff) == 0) ppe_eff <- NA_real_
       
-      # Policy A eligible pool: back-calculate the full exposure pool
-      # including HCWs whom PPE protected from infection
       n_hcw_exposed_A <- if (!is.na(ppe_eff) && ppe_eff < 1)
         n_hcw_infected / (1 - ppe_eff)
       else
-        n_hcw_infected   # fallback if ppe_efficacy == 1
+        n_hcw_infected
       
       data.frame(
         scenario              = sc_name,
@@ -127,12 +78,8 @@ extract_figure4_posthoc <- function(sc_name     = "WestAfrica",
         n_hcw_infected        = n_hcw_infected,
         n_hcw_exposed_A       = n_hcw_exposed_A,
         n_hcw_deaths_baseline = n_hcw_deaths_baseline,
-        # Store as comma-separated strings to avoid list-column I/O issues
-        hcw_infection_times   = paste(hcw_inf$time_infection_absolute,
-                                      collapse = ","),
-        hcw_died              = paste(as.integer(!is.na(hcw_inf$outcome) &
-                                                   hcw_inf$outcome),
-                                      collapse = ","),
+        hcw_died = paste(as.integer(!is.na(hcw_inf$outcome) & hcw_inf$outcome),
+                         collapse = ","),
         stringsAsFactors = FALSE
       )
     }, error = function(e) {
@@ -149,263 +96,192 @@ extract_figure4_posthoc <- function(sc_name     = "WestAfrica",
 # =============================================================================
 # apply_stockpile_posthoc
 #
-# Given the per-run data frame from extract_figure4_posthoc(), sweep over
-# stockpile sizes and compute HCW deaths averted under Policy A and Policy B.
-#
-# Arguments:
-#   run_df        : output of extract_figure4_posthoc()
-#   stockpile_seq : integer vector of stockpile sizes to evaluate
-#   efficacy      : scalar antiviral efficacy (Bernoulli probability of
-#                   preventing death given drug administered)
-#   seed          : RNG seed for Bernoulli sampling
-#
-# Returns a data frame with columns:
-#   scenario, particle_id, rep, policy, stockpile,
-#   doses_used, deaths_averted, deaths_baseline
+# stockpile_seq in DOSES. Vectorised per-run to avoid stack overflow.
+# averted = cumulative deaths among first k treated HCWs * efficacy.
 # =============================================================================
 apply_stockpile_posthoc <- function(run_df,
                                     stockpile_seq    = seq(1000, 100000, by = 1000),
                                     efficacy         = NULL,
                                     dpc              = 0,
                                     curve_dat        = NULL,
-                                    seed             = 42L,
-                                    DOSES_PER_COURSE = 20L) {
-  # stockpile_seq is in DOSES (not courses).
-  # Internally, n_inf and n_exp_A are in courses (persons), so we convert S
-  # to courses before comparing: S_courses = S / DOSES_PER_COURSE.
+                                    DOSES_PER_COURSE = DOSES_PER_COURSE_DEFAULT) {
   if (is.null(curve_dat))
     curve_dat <- readRDS(here("data-processed",
                               "DPC_fixed_efficacy_varied_d50.rds"))
   if (is.null(efficacy))
-    efficacy <- get_efficacy_at_dpc(dpc, col = "efficacy",
-                                    curve_dat = curve_dat)
+    efficacy <- get_efficacy_at_dpc(dpc, col = "efficacy", curve_dat = curve_dat)
   
-  set.seed(seed)
-  
-  do.call(rbind, lapply(seq_len(nrow(run_df)), function(i) {
-    row <- run_df[i, ]
+  run_results <- lapply(seq_len(nrow(run_df)), function(i) {
+    row           <- run_df[i, ]
+    died_vec      <- as.integer(strsplit(row$hcw_died, ",")[[1]])
+    n_inf         <- row$n_hcw_infected
+    n_exp_A       <- row$n_hcw_exposed_A
+    n_exp_A_round <- max(round(n_exp_A), 1L)
     
-    # Reconstruct per-HCW vectors from stored strings
-    died_vec <- as.integer(strsplit(row$hcw_died, ",")[[1]])
-    n_inf    <- row$n_hcw_infected       # persons (courses)
-    n_exp_A  <- row$n_hcw_exposed_A      # persons (courses), may be fractional
+    cum_deaths    <- cumsum(died_vec)
+    S_courses_vec <- stockpile_seq / DOSES_PER_COURSE
     
-    do.call(rbind, lapply(stockpile_seq, function(S_doses) {
-      
-      # Convert stockpile from doses to courses for person-level comparison
-      S_courses <- S_doses / DOSES_PER_COURSE
-      
-      # --- Policy B ---
-      # Courses go to actually infected HCWs in arrival order.
-      n_treated_B    <- min(S_courses, n_inf)
-      died_treated_B <- died_vec[seq_len(round(n_treated_B))]
-      averted_B      <- sum(died_treated_B) * efficacy  # expected value
-      
-      # --- Policy A ---
-      # Courses distributed across full exposure pool (infections + PPE-protected).
-      # Coverage fraction for actual infections = min(S, n_exp_A) / n_exp_A.
-      n_exp_A_round  <- max(round(n_exp_A), 1L)
-      coverage_A     <- min(S_courses, n_exp_A_round) / n_exp_A_round
-      n_treated_A    <- round(n_inf * coverage_A)
-      died_treated_A <- died_vec[seq_len(min(n_treated_A, n_inf))]
-      averted_A      <- sum(died_treated_A) * efficacy  # expected value
-      
-      rbind(
-        data.frame(scenario         = row$scenario,
-                   particle_id      = row$particle_id,
-                   rep              = row$rep,
-                   policy           = "B",
-                   dpc              = dpc,
-                   stockpile_doses  = S_doses,
-                   doses_used       = n_treated_B * DOSES_PER_COURSE,
-                   deaths_averted   = averted_B,
-                   deaths_baseline  = row$n_hcw_deaths_baseline,
-                   stringsAsFactors = FALSE),
-        data.frame(scenario         = row$scenario,
-                   particle_id      = row$particle_id,
-                   rep              = row$rep,
-                   policy           = "A",
-                   dpc              = dpc,
-                   stockpile_doses  = S_doses,
-                   doses_used       = min(S_courses, n_exp_A_round) * DOSES_PER_COURSE,
-                   deaths_averted   = averted_A,
-                   deaths_baseline  = row$n_hcw_deaths_baseline,
-                   stringsAsFactors = FALSE)
-      )
-    }))
-  }))
+    # Policy B
+    n_treated_B_vec <- pmin(round(S_courses_vec), n_inf)
+    averted_B_vec   <- ifelse(
+      n_treated_B_vec == 0L, 0,
+      cum_deaths[n_treated_B_vec] * efficacy
+    )
+    
+    # Policy A: proportional coverage across full exposure pool
+    coverage_A_vec  <- pmin(S_courses_vec, n_exp_A_round) / n_exp_A_round
+    n_treated_A_vec <- pmin(round(n_inf * coverage_A_vec), n_inf)
+    averted_A_vec   <- ifelse(
+      n_treated_A_vec == 0L, 0,
+      cum_deaths[n_treated_A_vec] * efficacy
+    )
+    
+    rbind(
+      data.frame(scenario        = row$scenario,
+                 particle_id     = row$particle_id,
+                 rep             = row$rep,
+                 policy          = "B",
+                 dpc             = dpc,
+                 stockpile_doses = stockpile_seq,
+                 doses_used      = n_treated_B_vec * DOSES_PER_COURSE,
+                 deaths_averted  = averted_B_vec,
+                 deaths_baseline = row$n_hcw_deaths_baseline,
+                 n_hcw_infected  = n_inf,
+                 n_hcw_exposed_A = n_exp_A,
+                 stringsAsFactors = FALSE),
+      data.frame(scenario        = row$scenario,
+                 particle_id     = row$particle_id,
+                 rep             = row$rep,
+                 policy          = "A",
+                 dpc             = dpc,
+                 stockpile_doses = stockpile_seq,
+                 doses_used      = pmin(S_courses_vec, n_exp_A_round) * DOSES_PER_COURSE,
+                 deaths_averted  = averted_A_vec,
+                 deaths_baseline = row$n_hcw_deaths_baseline,
+                 n_hcw_infected  = n_inf,
+                 n_hcw_exposed_A = n_exp_A,
+                 stringsAsFactors = FALSE)
+    )
+  })
+  do.call(rbind, run_results)
 }
 
 # =============================================================================
 # summarise_stockpile_panel
 #
-# Aggregate apply_stockpile_posthoc() output to particle-level medians and IQR
-# for plotting panel a and panel b.
+# Returns a list with two data frames:
+#   $panel_a : deaths_averted vs stockpile_doses
+#   $panel_b : pct_averted vs supply_ratio (interpolated onto common grid)
 #
-# Panel a : y = deaths_averted (absolute),   x = stockpile
-# Panel b : y = pct_deaths_averted,          x = supply_demand_ratio
-#             supply_demand_ratio = stockpile / n_demand
-#             where n_demand = median n_hcw_infected (Policy B)
-#                            = median n_hcw_exposed_A (Policy A)
+# Panel b key insight: each particle's supply_ratio = stockpile / its own
+# demand. We interpolate pct_averted onto a common ratio grid BEFORE taking
+# the median. This guarantees Policy B plateaus at exactly supply_ratio = 1
+# because at that point every particle has stockpile == its own full demand.
 # =============================================================================
 summarise_stockpile_panel <- function(stockpile_df, run_df,
-                                      DOSES_PER_COURSE = 20L) {
+                                      DOSES_PER_COURSE = DOSES_PER_COURSE_DEFAULT,
+                                      ratio_grid = seq(0, 3.5, by = 0.05)) {
   
-  # Compute demand per policy per run (for panel b x-axis)
-  demand_df <- run_df %>%
-    group_by(scenario, particle_id) %>%
-    summarise(
-      demand_B = mean(n_hcw_infected),     # avg across reps
-      demand_A = mean(n_hcw_exposed_A),
-      .groups = "drop"
-    )
-  
-  # Average across reps within each particle x policy x stockpile
+  # supply_ratio_p uses each rep's own n_hcw_infected so that at ratio=1
+  # every single run has its full demand covered (Policy B fully saturated)
   per_particle <- stockpile_df %>%
-    group_by(scenario, particle_id, policy, dpc, stockpile_doses) %>%
-    summarise(
-      deaths_averted  = mean(deaths_averted),
-      deaths_baseline = mean(deaths_baseline),
-      doses_used      = mean(doses_used),
-      .groups = "drop"
-    ) %>%
-    mutate(pct_averted = 100 * deaths_averted / pmax(deaths_baseline, 1))
-  
-  # Join demand; x-axis for panel b is always Policy B demand in doses
-  # so that both policies share the same x scale
-  per_particle <- per_particle %>%
-    left_join(demand_df, by = c("scenario", "particle_id")) %>%
     mutate(
-      demand_B_doses = demand_B * DOSES_PER_COURSE,
-      supply_ratio   = stockpile_doses / pmax(demand_B_doses, 1)
+      demand_B_doses  = n_hcw_infected * DOSES_PER_COURSE,
+      supply_ratio_p  = stockpile_doses / pmax(demand_B_doses, 1),
+      pct_averted     = 100 * deaths_averted / pmax(deaths_baseline, 1)
     )
   
-  # Summarise across particles: median + IQR
-  per_particle %>%
+  # ----- Panel a: summarise at raw stockpile levels -----
+  panel_a <- per_particle %>%
     group_by(scenario, policy, dpc, stockpile_doses) %>%
     summarise(
-      # Panel a quantities
       deaths_averted_med = median(deaths_averted),
       deaths_averted_lo  = quantile(deaths_averted, 0.25),
       deaths_averted_hi  = quantile(deaths_averted, 0.75),
-      # Panel b quantities
-      pct_averted_med    = median(pct_averted),
-      pct_averted_lo     = quantile(pct_averted, 0.25),
-      pct_averted_hi     = quantile(pct_averted, 0.75),
-      # Supply/demand ratio (median across particles for x-axis placement)
-      supply_ratio_med   = median(supply_ratio),
       .groups = "drop"
     )
+  
+  # ----- Panel b: bin runs by supply_ratio_p, then take median -----
+  # Each run already has supply_ratio_p = stockpile / its own demand.
+  # At ratio_p = 1, every run has exactly full demand covered -> Policy B
+  # is always saturated there by definition. We simply bin all runs by
+  # their ratio_p and summarise — no interpolation needed.
+  panel_b <- per_particle %>%
+    mutate(supply_ratio = round(supply_ratio_p / 0.05) * 0.05) %>%
+    group_by(scenario, policy, dpc, supply_ratio) %>%
+    summarise(
+      pct_averted_med = median(pct_averted),
+      pct_averted_lo  = quantile(pct_averted, 0.25),
+      pct_averted_hi  = quantile(pct_averted, 0.75),
+      .groups = "drop"
+    )
+  
+  list(panel_a = panel_a, panel_b = panel_b)
 }
 
 # =============================================================================
-# compute_doses_per_death
-#
-# Panel c: for each combination of (intrinsic_efficacy_scale, dpc, policy),
-# compute doses per death averted assuming unlimited stockpile
-# (all eligible HCWs receive the drug).
-#
-# Arguments:
-#   run_df         : output of extract_figure4_posthoc()
-#   efficacy_scales: numeric vector in [0, 1]; the max efficacy at DPC=0 is
-#                    scaled by this factor before being applied
-#   dpc_vals       : numeric vector of DPC values (e.g. c(0, 5))
-#   curve_dat      : DPC-efficacy lookup table
-#   seed           : RNG seed
-#
-# Returns a data frame with columns:
-#   scenario, policy, dpc, efficacy_scale, intrinsic_efficacy,
-#   doses_per_death_med, doses_per_death_lo, doses_per_death_hi
+# compute_doses_per_death  (vectorised)
 # =============================================================================
 compute_doses_per_death <- function(run_df,
                                     efficacy_scales  = seq(0.2, 0.9, by = 0.1),
                                     dpc_vals         = c(0, 5),
                                     curve_dat        = NULL,
-                                    seed             = 42L,
-                                    DOSES_PER_COURSE = 20L) {
+                                    DOSES_PER_COURSE = DOSES_PER_COURSE_DEFAULT) {
   if (is.null(curve_dat))
     curve_dat <- readRDS(here("data-processed",
                               "DPC_fixed_efficacy_varied_d50.rds"))
   
-  # Max efficacy at DPC = 0 (the reference peak from the curve)
-  max_eff_dpc0 <- get_efficacy_at_dpc(0, col = "efficacy",
-                                      curve_dat = curve_dat)
+  eff_dpc0 <- get_efficacy_at_dpc(0, col = "efficacy", curve_dat = curve_dat)
   
-  set.seed(seed)
-  
-  results <- do.call(rbind, lapply(dpc_vals, function(dpc) {
-    # Base efficacy at this DPC (mid)
-    eff_base_dpc <- get_efficacy_at_dpc(dpc, col = "efficacy",
-                                        curve_dat = curve_dat)
-    
-    do.call(rbind, lapply(efficacy_scales, function(scale) {
-      # Scaled intrinsic efficacy: adjust the DPC-0 peak by scale,
-      # then apply the same relative DPC decay
-      intrinsic_eff <- max_eff_dpc0 * scale
-      # Efficacy at this DPC preserves the ratio eff_base_dpc / max_eff_dpc0
-      eff_at_dpc    <- intrinsic_eff * (eff_base_dpc / max_eff_dpc0)
-      
-      do.call(rbind, lapply(seq_len(nrow(run_df)), function(i) {
-        row <- run_df[i, ]
-        
-        died_vec <- as.integer(strsplit(row$hcw_died, ",")[[1]])
-        n_inf    <- row$n_hcw_infected
-        n_exp_A  <- round(row$n_hcw_exposed_A)
-        
-        # Policy B: treat all actually infected HCWs (unlimited stockpile)
-        # averted = expected value: n_deaths_baseline * efficacy
-        # (consistent with figure5: averted = n_prevented_hcw * efficacy)
-        n_deaths_B <- sum(died_vec)
-        averted_B  <- n_deaths_B * eff_at_dpc
-        doses_B    <- n_inf * DOSES_PER_COURSE    # convert courses to doses
-        
-        # Policy A: treat the full exposure pool (including PPE-protected HCWs)
-        # averted count is identical (only actual infections contribute to deaths)
-        # but doses consumed are higher
-        n_extra_A  <- max(n_exp_A - n_inf, 0L)
-        averted_A  <- averted_B
-        doses_A    <- (n_inf + n_extra_A) * DOSES_PER_COURSE
-        
-        rbind(
-          data.frame(scenario       = row$scenario,
-                     particle_id    = row$particle_id,
-                     rep            = row$rep,
-                     policy         = "B",
-                     dpc            = dpc,
-                     efficacy_scale = scale,
-                     intrinsic_efficacy = intrinsic_eff,
-                     doses          = doses_B,
-                     deaths_averted = averted_B,
-                     stringsAsFactors = FALSE),
-          data.frame(scenario       = row$scenario,
-                     particle_id    = row$particle_id,
-                     rep            = row$rep,
-                     policy         = "A",
-                     dpc            = dpc,
-                     efficacy_scale = scale,
-                     intrinsic_efficacy = intrinsic_eff,
-                     doses          = doses_A,
-                     deaths_averted = averted_A,
-                     stringsAsFactors = FALSE)
-        )
-      }))
-    }))
-  }))
-  
-  # Average across reps within particle, then summarise across particles
-  results %>%
-    group_by(scenario, particle_id, policy, dpc, efficacy_scale,
-             intrinsic_efficacy) %>%
-    summarise(
-      doses          = mean(doses),
-      deaths_averted = mean(deaths_averted),
-      .groups = "drop"
-    ) %>%
+  run_summary <- run_df %>%
     mutate(
-      doses_per_death = ifelse(deaths_averted > 0,
-                               doses / deaths_averted,
-                               NA_real_)
+      n_extra_A = pmax(round(n_hcw_exposed_A) - n_hcw_infected, 0L),
+      doses_B   = n_hcw_infected * DOSES_PER_COURSE,
+      doses_A   = (n_hcw_infected + n_extra_A) * DOSES_PER_COURSE
     ) %>%
+    select(scenario, particle_id, rep,
+           n_deaths_baseline = n_hcw_deaths_baseline, doses_B, doses_A)
+  
+  grid <- expand.grid(
+    row_idx        = seq_len(nrow(run_summary)),
+    dpc            = dpc_vals,
+    efficacy_scale = efficacy_scales,
+    stringsAsFactors = FALSE
+  )
+  
+  eff_dpc_vals        <- sapply(dpc_vals, function(d)
+    get_efficacy_at_dpc(d, col = "efficacy", curve_dat = curve_dat))
+  names(eff_dpc_vals) <- as.character(dpc_vals)
+  
+  grid$dpc_decay   <- eff_dpc_vals[as.character(grid$dpc)] / eff_dpc0
+  grid$eff_at_dpc  <- grid$efficacy_scale * grid$dpc_decay
+  grid$scenario    <- run_summary$scenario[grid$row_idx]
+  grid$particle_id <- run_summary$particle_id[grid$row_idx]
+  grid$rep         <- run_summary$rep[grid$row_idx]
+  grid$n_deaths    <- run_summary$n_deaths_baseline[grid$row_idx]
+  grid$doses_B     <- run_summary$doses_B[grid$row_idx]
+  grid$doses_A     <- run_summary$doses_A[grid$row_idx]
+  grid$averted     <- grid$n_deaths * grid$eff_at_dpc
+  
+  results <- bind_rows(
+    grid %>% transmute(scenario, particle_id, rep,
+                       policy = "B", dpc, efficacy_scale,
+                       intrinsic_efficacy = efficacy_scale,
+                       doses = doses_B, deaths_averted = averted),
+    grid %>% transmute(scenario, particle_id, rep,
+                       policy = "A", dpc, efficacy_scale,
+                       intrinsic_efficacy = efficacy_scale,
+                       doses = doses_A, deaths_averted = averted)
+  )
+  
+  results %>%
+    group_by(scenario, particle_id, policy, dpc,
+             efficacy_scale, intrinsic_efficacy) %>%
+    summarise(doses          = mean(doses),
+              deaths_averted = mean(deaths_averted),
+              .groups = "drop") %>%
+    mutate(doses_per_death = ifelse(deaths_averted > 0,
+                                    doses / deaths_averted, NA_real_)) %>%
     group_by(scenario, policy, dpc, efficacy_scale, intrinsic_efficacy) %>%
     summarise(
       doses_per_death_med = median(doses_per_death, na.rm = TRUE),
