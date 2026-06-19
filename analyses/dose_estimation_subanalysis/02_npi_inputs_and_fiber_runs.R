@@ -108,7 +108,7 @@ SCALAR_OVERRIDES <- list(
 
 
 # --- Simulation grid + controls.
-R0_GRID          <- seq(1.4, 1.7, by = 0.05)   # baseline (t=0) R0 grid
+R0_GRID          <- seq(1.35, 1.6, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
 SEEDING_CASES    <- 5L                            # initial seeding infections
 N_STOCH          <- 220L                          # stochastic replicates per R0
