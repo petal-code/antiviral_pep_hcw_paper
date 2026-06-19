@@ -101,7 +101,7 @@ UNSAFE_FUNERAL_ETU <- 0.0
 # )
 SCALAR_OVERRIDES <- list(
   etu_efficacy                         = 0.84,
-  general_hospital_quarantine_efficacy = 0.68,
+  general_hospital_quarantine_efficacy = 0.3,
   ppe_efficacy                         = 0.84,
   safe_funeral_efficacy                = 0.88
 )
