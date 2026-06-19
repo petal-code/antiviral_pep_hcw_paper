@@ -61,8 +61,8 @@ sdb$value_tweaked <- sdb_tweaked
 # ---- Coverage and DPC curves derived from tweaked sdb ----
 sdb$coverage_conflict <- sdb$value_tweaked * 80 / max(sdb$value_tweaked)
 # sdb$dpc_conflict      <- 1 + 9 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked))^2)
-sdb$dpc_conflict      <- 1 + 4 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked)))
-
+sdb$dpc_conflict      <- 1 + 2 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked)))
+OUT_BASE <- here("outputs", "simulation", "conflict_dpc_max3")
 # Find peak coverage day restricted to day < 200
 sub      <- sdb[sdb$day < 200, ]
 peak_row <- sub[which.max(sub$coverage_conflict), ]
@@ -169,7 +169,7 @@ SCENARIOS <- list(
 # =============================================================================
 # 5. Pre-compute particle args per scenario
 # =============================================================================
-OUT_BASE <- here("outputs", "simulation", "conflict_dpc")
+
 for (arm_name in ARM_NAMES) {
   dir.create(file.path(OUT_BASE, arm_name), recursive = TRUE, showWarnings = FALSE)
 }
