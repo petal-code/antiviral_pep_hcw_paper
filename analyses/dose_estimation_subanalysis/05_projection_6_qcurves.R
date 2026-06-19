@@ -82,11 +82,11 @@ set.seed(123)
 # susceptible population with NO interventions. We run three scenarios:
 # 1.50 (moderate), 1.55 (medium), 1.60 (higher). The effect of interventions
 # is captured by the time-varying NPI parameters below, not by changing R0.
-R0_GRID <- c(1.40, 1.45, 1.50)
+R0_GRID <- c(1.45, 1.50, 1.55, 1.60, 1.65)
 
 # --- Replicates --------------------------------------------------------------
 # Number of stochastic replicates per (R0, scenario) combination.
-N_STOCH <- 3 # 10 # 250L
+N_STOCH <- 330 # 10 # 250L
 
 # --- Efficacy parameters (PI-confirmed values, scalar = 0.6) -----------------
 # These are FIXED efficacies for each intervention type. They represent how
@@ -133,7 +133,7 @@ SEEDING_CASES <- 5L
 # Hard cap on epidemic size per replicate (L = integer type, required by FIBER).
 # Set to 5000L for a quick test run; 60000L for the full production run.
 # Replicates that hit this cap are flagged in the summary table.
-CHECK_FINAL_SIZE <- 60000L
+CHECK_FINAL_SIZE <- 75000L
 
 # Takeoff criterion: a replicate must accumulate at least TAKEOFF_N infections
 # by TAKEOFF_DEADLINE_DATE to be counted as a "successful" (established)
@@ -179,7 +179,7 @@ AMOUNTS <- c(100L, 500L, 1000L, 5000L, 10000L, 25000L, 50000L, 60000L)
 # Use at most (total cores - 1) workers so the machine stays responsive.
 # On Linux/macOS the future package uses fork-based multicore (lower overhead);
 # on Windows it falls back to socket-based multisession automatically.
-N_WORKERS <- min(future::availableCores() - 4L, 50L)
+N_WORKERS <- min(future::availableCores() - 4L, 120)
 
 # Base random seed. Each replicate gets a unique derived seed so results are
 # exactly reproducible regardless of how many cores are used.
@@ -221,7 +221,7 @@ scen_palette <- c(
 # distinguishable in both colour and greyscale).
 r0_palette <- setNames(
   viridisLite::viridis(length(R0_GRID), option = "C", end = 0.85),
-  sprintf("%.2f", R0_GRID)
+  sprintf("R0 = %.2f", R0_GRID)     # match the r0_label values used in the plots
 )
 
 # ============================================================================
