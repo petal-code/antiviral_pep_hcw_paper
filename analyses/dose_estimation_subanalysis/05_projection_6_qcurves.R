@@ -97,7 +97,7 @@ N_STOCH <- 10 # 250L
 #   Funeral efficacy  : 0.70 + (1-0.70)*0.6 = 0.88
 SCALAR_OVERRIDES <- list(
   etu_efficacy                         = 0.84,  # ETU isolation efficacy
-  general_hospital_quarantine_efficacy = 0.68,  # general hospital quarantine
+  general_hospital_quarantine_efficacy = 0.3,  # general hospital quarantine
   ppe_efficacy                         = 0.84,  # HCW PPE efficacy
   safe_funeral_efficacy                = 0.88   # safe burial efficacy
 )
