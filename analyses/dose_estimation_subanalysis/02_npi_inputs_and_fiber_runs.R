@@ -108,7 +108,7 @@ SCALAR_OVERRIDES <- list(
 
 
 # --- Simulation grid + controls.
-R0_GRID          <- seq(1.35, 1.6, by = 0.05)   # baseline (t=0) R0 grid
+R0_GRID          <- seq(1.35, 1.7, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
 SEEDING_CASES    <- 5L                            # initial seeding infections
 N_STOCH          <- 220L                          # stochastic replicates per R0
@@ -564,10 +564,10 @@ CENTRAL_STAT <- list(
   cumulative   = "mean",   # p_cum (cumulative by R0)
   trajectories = "mean",   # p_traj + p_traj_log10 bold central line
   incidence    = "mean",   # p_traj_inc central daily-incidence line
-  snapshot     = "median", # p_snap large central dot
+  snapshot     = "mean", # p_snap large central dot
   rebased      = "mean",   # p_rebased (section 12) fiber central trajectory
   growth       = "mean",   # section 10 fiber incidence (diff of central cumulative)
-  rt           = "median"  # section 13 across-replicate central smoothed r(t)
+  rt           = "mean"  # section 13 across-replicate central smoothed r(t)
 )
 # Column of cumulative_cases / aggregation function / label for a given figure.
 cum_central_col <- function(key)
@@ -951,7 +951,7 @@ snap_long <- do.call(rbind, lapply(took, function(r)
              cum = r$cum_at[snap_idx])))
 snap_long$snapshot <- factor(snap_long$snapshot, levels = snap_labs)
 snap_central <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = central_fun("snapshot"))
-# snap_central <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = mean)
+snap_central <- aggregate(cum ~ r0 + snapshot, data = snap_long, FUN = mean)
 
 # Observed cumulative value at a date (interpolated; held flat past the data end).
 obs_at <- function(d, dates, values) {
@@ -994,7 +994,7 @@ p_snap <- ggplot(snap_long, aes(factor(r0), cum)) +
   geom_point(data = snap_central, aes(factor(r0), cum), colour = "black", size = 4) +
   ref_layer +
   # mccabe_hlines +
-  facet_wrap(~ snapshot, scales = "free_y", nrow = 1) +
+  facet_wrap(~ snapshot, nrow = 1) +
   scale_colour_manual(values = c("onsets" = "#d62728", "confirmed cases" = "#1a9850"),
                       name = "Observed") +
   labs(title = "Cumulative infections by R0 at snapshot dates",
