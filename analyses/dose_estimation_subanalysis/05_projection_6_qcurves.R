@@ -80,11 +80,11 @@ set.seed(123)
 # susceptible population with NO interventions. We run three scenarios:
 # 1.50 (moderate), 1.55 (medium), 1.60 (higher). The effect of interventions
 # is captured by the time-varying NPI parameters below, not by changing R0.
-R0_GRID <- c(1.50, 1.55, 1.60)
+R0_GRID <- c(1.40, 1.45, 1.50)
 
 # --- Replicates --------------------------------------------------------------
 # Number of stochastic replicates per (R0, scenario) combination.
-N_STOCH <- 10 # 250L
+N_STOCH <- 3 # 10 # 250L
 
 # --- Efficacy parameters (PI-confirmed values, scalar = 0.6) -----------------
 # These are FIXED efficacies for each intervention type. They represent how
@@ -177,7 +177,7 @@ AMOUNTS <- c(100L, 500L, 1000L, 5000L, 10000L, 25000L, 50000L, 60000L)
 # Use at most (total cores - 1) workers so the machine stays responsive.
 # On Linux/macOS the future package uses fork-based multicore (lower overhead);
 # on Windows it falls back to socket-based multisession automatically.
-N_WORKERS <- min(future::availableCores() - 1L, 50L)
+N_WORKERS <- min(future::availableCores() - 4L, 50L)
 
 # Base random seed. Each replicate gets a unique derived seed so results are
 # exactly reproducible regardless of how many cores are used.
