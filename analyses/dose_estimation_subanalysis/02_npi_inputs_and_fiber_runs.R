@@ -108,17 +108,17 @@ SCALAR_OVERRIDES <- list(
 
 
 # --- Simulation grid + controls.
-R0_GRID          <- seq(1.45, 1.75, by = 0.05)   # baseline (t=0) R0 grid
+R0_GRID          <- seq(1.4, 1.7, by = 0.05)   # baseline (t=0) R0 grid
 FUNERAL_FRAC     <- 0.25                          # share of t=0 transmission via funerals
 SEEDING_CASES    <- 5L                            # initial seeding infections
-N_STOCH          <- 25L                          # stochastic replicates per R0
+N_STOCH          <- 220L                          # stochastic replicates per R0
 # Takeoff condition: an outbreak counts as "taken off" only if it has reached at
 # least TAKEOFF_N cumulative infections BY the deadline date (relative to
 # EPIDEMIC_START_DATE); otherwise it is re-run (seed advanced).
 TAKEOFF_N             <- 250L                     # cumulative infections required ...
 TAKEOFF_DEADLINE_DATE <- as.Date("2026-06-15")     # ... by this calendar date
 MAX_RETRIES      <- 50L                           # cap on re-runs per replicate
-CHECK_FINAL_SIZE <- 20000L                        # stop a run once this many cases exist
+CHECK_FINAL_SIZE <- 25000L                        # stop a run once this many cases exist
 
 # --- Summary grids (computed per run, then median across runs).
 # Daily grid: cumulative cases (and the incidence we derive from them) are read
@@ -127,7 +127,7 @@ CHECK_FINAL_SIZE <- 20000L                        # stop a run once this many ca
 # you set GROWTH_LATE_END beyond day 365.
 TIMEPOINTS <- 0:365                               # days at which to read cumulative cases
 AMOUNTS    <- c(10L, 25L, 50L, 100L, 250L, 500L,  # cumulative case amounts to time
-                1000L, 2000L, 2500L, 4000L, 5000L)
+                1000L, 2000L, 2500L, 4000L, 5000L, 10000L)
 
 # --- Scenario identity + horizon over which the NPI matrix is defined.
 SCENARIO_ID     <- "dose_npi"
@@ -143,7 +143,7 @@ MATRIX_HORIZON  <- max(730L, max(TIMEPOINTS))     # days; Q held flat past its g
 EPIDEMIC_START_DATE <- as.Date("2026-02-17")
 
 # --- Parallel + RNG.
-N_WORKERS <- min(future::availableCores() - 3, 50L)
+N_WORKERS <- min(future::availableCores() - 3, 110L)
 SEED_BASE <- 20260617L
 
 # Fail fast if the installed fiber predates the time-varying NPI interface.
