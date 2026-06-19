@@ -153,6 +153,12 @@ SUMMARY_DATES <- as.Date(c("2026-09-01", "2026-12-31"))
 # These are drawn as dashed vertical lines on every calendar-axis plot.
 PHEIC_DATES <- as.Date(c("2026-05-14", "2026-05-18"))
 
+# McCabe external estimate: TOTAL cumulative cases by MCCABE_DATE, given as a
+# low/high pair. Drawn on the cumulative-total plots as a vertical range at that
+# date so it can be read off against the model trajectories and the data.
+MCCABE_DATE   <- as.Date("2026-05-27")
+MCCABE_VALUES <- c(600, 1000)
+
 # How far ahead (in days from epidemic day 0) the NPI matrices extend.
 MATRIX_HORIZON <- 730L  # ~2 years
 
@@ -692,6 +698,30 @@ if (file.exists(confirmed_csv)) {
                   max(confirmed_obs$national_cumulative_confirmed_cases, na.rm = TRUE)))
 }
 
+# Confirmed DAILY incidence (diff of cumulative) for the daily-incidence plot.
+confirmed_inc_overlay <- NULL
+if (exists("confirmed_obs")) {
+  cc_ord <- confirmed_obs[order(confirmed_obs$date), ]
+  confirmed_inc_df <- data.frame(
+    date = cc_ord$date[-1],
+    inc  = diff(cc_ord$national_cumulative_confirmed_cases) / as.numeric(diff(cc_ord$date)))
+  confirmed_inc_overlay <- geom_line(data = confirmed_inc_df, aes(date, inc),
+                                     inherit.aes = FALSE, colour = "#1a9850", linewidth = 1.0)
+}
+
+# McCabe external estimate as a vertical range (+ end points) at MCCABE_DATE,
+# for the CUMULATIVE-total plots (a single absolute total, so not the daily plot).
+mccabe_df    <- data.frame(date = MCCABE_DATE, lo = min(MCCABE_VALUES), hi = max(MCCABE_VALUES))
+mccabe_pts   <- data.frame(date = MCCABE_DATE, value = MCCABE_VALUES)
+mccabe_layer <- list(
+  geom_linerange(data = mccabe_df, aes(x = date, ymin = lo, ymax = hi),
+                 inherit.aes = FALSE, colour = "#984ea3", linewidth = 1.0),
+  geom_point(data = mccabe_pts, aes(x = date, y = value),
+             inherit.aes = FALSE, colour = "#984ea3", size = 2.4, shape = 18)
+)
+mccabe_desc  <- sprintf("Purple = McCabe est. total (%s by %s)",
+                        paste(MCCABE_VALUES, collapse = " & "), format(MCCABE_DATE, "%d %b"))
+
 # ============================================================================
 # 12. Build replicate trajectory long table
 # ============================================================================
@@ -721,7 +751,7 @@ p_traj <- ggplot(traj_long,
   geom_line(data = cumulative_summary,
             aes(date, median, colour = r0_label, group = r0_label),
             inherit.aes = FALSE, linewidth = 1.0) +
-  onset_overlay + confirmed_overlay +
+  onset_overlay + confirmed_overlay + mccabe_layer +
   facet_wrap(~ scenario, ncol = 2, scales = "free_y",
              labeller = labeller(scenario = scen_labels)) +
   scale_colour_manual(values = r0_palette, name = expression(R[0])) +
@@ -730,7 +760,7 @@ p_traj <- ggplot(traj_long,
     title    = sprintf("Cumulative incidence: %d replicates per R0 x scenario", N_STOCH),
     subtitle = paste0(
       "Thin lines = replicates  |  Bold lines = median  |  ",
-      "Red = observed onsets  |  Green = confirmed cases"
+      "Red = observed onsets  |  Green = confirmed cases  |  ", mccabe_desc
     ),
     x = "Date", y = "Cumulative cases"
   ) +
@@ -755,7 +785,7 @@ p_bands <- ggplot(cumulative_summary,
   geom_ribbon(aes(ymin = q025, ymax = q975), alpha = 0.10, colour = NA) +
   geom_ribbon(aes(ymin = q25,  ymax = q75),  alpha = 0.20, colour = NA) +
   geom_line(aes(y = median), linewidth = 1.0) +
-  onset_overlay + confirmed_overlay +
+  onset_overlay + confirmed_overlay + mccabe_layer +
   facet_wrap(~ scenario, ncol = 2, scales = "free_y",
              labeller = labeller(scenario = scen_labels)) +
   scale_colour_manual(values = r0_palette, name = expression(R[0])) +
@@ -765,7 +795,7 @@ p_bands <- ggplot(cumulative_summary,
     title    = "Cumulative incidence: median + 50% and 95% CI",
     subtitle = paste0(
       "Inner ribbon = 25-75%  |  Outer ribbon = 2.5-97.5%  |  ",
-      "Red = onsets  |  Green = confirmed cases"
+      "Red = onsets  |  Green = confirmed cases  |  ", mccabe_desc
     ),
     x = "Date", y = "Cumulative cases"
   ) +
@@ -811,14 +841,14 @@ p_inc <- ggplot(inc_long,
   geom_line(data = inc_mean,
             aes(date, inc, colour = r0_label, group = r0_label),
             inherit.aes = FALSE, linewidth = 1.0) +
-  onset_inc_overlay +
+  onset_inc_overlay + confirmed_inc_overlay +
   facet_wrap(~ scenario, ncol = 2, scales = "free_y",
              labeller = labeller(scenario = scen_labels)) +
   scale_colour_manual(values = r0_palette, name = expression(R[0])) +
   scale_x_date(date_breaks = "2 months", date_labels = "%b %Y") +
   labs(
     title    = "Daily incidence by R0 and NPI scenario",
-    subtitle = "Thin lines = replicates  |  Bold lines = mean  |  Red = observed onsets",
+    subtitle = "Thin lines = replicates  |  Bold lines = mean  |  Red = observed onsets  |  Green = confirmed daily incidence",
     x = "Date", y = "Daily incidence (cases/day)"
   ) +
   theme_bw(base_size = 10) +
