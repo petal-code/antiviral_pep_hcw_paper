@@ -27,8 +27,10 @@
 #          outputs/dose_q_curve_fit.rds   <- full fit (params, draws summary, data)
 #          outputs/dose_q_curve.csv       <- the Q curve as plain CSV
 #          outputs/dose_q_curve_fit.png   <- diagnostic fit + extrapolation plot
+#          outputs/dose_q_curve_good_fit.rds  <- second ("good") fit (params + curve)
 #          outputs/dose_q_curve_extrapolation_scenarios.{rds,csv,png}
-#                                          <- 6 forward-extrapolation scenarios + plot
+#                                          <- 7 forward-extrapolation scenarios + plot
+#                                             (incl. appended `logistic_projection_good`)
 # ============================================================================
 
 suppressPackageStartupMessages({
@@ -59,6 +61,15 @@ FORWARD_DAYS <- 365L
 # the 0% floor and 100% ceiling.
 LOWER_PRIOR_MEAN <- 0.0; LOWER_PRIOR_SD <- 0.01   # min level: 0%
 UPPER_PRIOR_MEAN <- 1.0; UPPER_PRIOR_SD <- 0.3   # max level: 100%
+
+# --- Optimistic "good" logistic projection (appended scenario) ---------------
+# A SECOND logistic fit (section 4b), added to the scenarios as
+# `logistic_projection_good`. Same data + settings as the main fit, but the
+# upper asymptote is pinned TIGHTLY at 95%, so the curve keeps climbing toward
+# 95% instead of levelling off near the current ~63% -- the "things go well"
+# coverage trajectory.
+GOOD_LOWER_PRIOR_MEAN <- 0.0;  GOOD_LOWER_PRIOR_SD <- 0.01   # min level: 0%
+GOOD_UPPER_PRIOR_MEAN <- 0.95; GOOD_UPPER_PRIOR_SD <- 0.01   # max level: 95% (tight)
 
 # Observation-noise prior scale (half-normal); proportions live in [0, 1].
 SIGMA_PRIOR_SD <- 0.15
@@ -155,10 +166,43 @@ ggsave(file.path(DIR_OUT, "dose_q_curve_fit.png"), p, width = 9, height = 5, dpi
 print(p)   # also display
 
 # ----------------------------------------------------------------------------
+# 4b. Optimistic "good" logistic fit (-> 95% asymptote)
+# ----------------------------------------------------------------------------
+# A second logistic fit on the SAME data and settings as the main fit, but with
+# the upper endpoint pinned tightly at 95% (GOOD_UPPER_PRIOR_*). The data still
+# determine the shape (t50, k), so the curve tracks the observations through the
+# data window and then keeps climbing toward 95% in the projection. This is the
+# trajectory used for the appended `logistic_projection_good` scenario below.
+res_good     <- fit_dose_q_curve(
+  start_date     = START_DATE,
+  forward_days   = FORWARD_DAYS,
+  lower_prior    = c(mean = GOOD_LOWER_PRIOR_MEAN, sd = GOOD_LOWER_PRIOR_SD),
+  upper_prior    = c(mean = GOOD_UPPER_PRIOR_MEAN, sd = GOOD_UPPER_PRIOR_SD),
+  sigma_prior_sd = SIGMA_PRIOR_SD,
+  chains = N_CHAINS, iter_warmup = ITER_WARMUP, iter_sampling = ITER_SAMPLING
+)
+q_curve_good <- res_good$q_curve
+
+cat("\nGood-fit sampler diagnostics:\n");           print(res_good$fit$diagnostic_summary())
+cat("\nGood-fit logistic parameters (U ~ 95%):\n"); print(res_good$param_summary)
+
+# Provenance for the second fit (mirrors dose_q_curve_fit.rds for the main fit).
+saveRDS(
+  list(q_curve = q_curve_good, param_summary = res_good$param_summary,
+       observations = res_good$observations,
+       config = list(start_date = START_DATE, forward_days = FORWARD_DAYS,
+                     last_obs_day = res_good$last_obs_day,
+                     horizon_day  = res_good$horizon_day,
+                     priors       = res_good$priors_used)),
+  file.path(DIR_OUT, "dose_q_curve_good_fit.rds")
+)
+
+# ----------------------------------------------------------------------------
 # 5. Forward-extrapolation scenarios (applied AFTER the last data point)
 # ----------------------------------------------------------------------------
-# All six scenarios share the fitted curve up to last_obs_day and start their
-# continuation from the fitted value there (q_end). They differ only afterwards:
+# The first six scenarios share the main fitted curve up to last_obs_day and
+# start their continuation from the fitted value there (q_end). They differ only
+# afterwards:
 #   1. linear_to_90  -- straight line from (last_obs_day, q_end) to
 #                        (LINEAR_TARGET_DAY, LINEAR_TARGET_Q); flat thereafter.
 #   1b. linear_to_95 -- the same ramp, but to LINEAR_TARGET_Q_95 by the SAME
@@ -171,8 +215,11 @@ print(p)   # also display
 #                        drops Q to CONFLICT_LOW_Q over CONFLICT_DROP_DAYS, holds
 #                        it for CONFLICT_LOW_DAYS, reverts to q_end over
 #                        CONFLICT_REVERT_DAYS; flat at q_end afterwards.
-# dose_q_curve.rds (read by 02) stays the logistic projection; these scenarios
-# are saved separately so they can be selected downstream if desired.
+# A seventh scenario, logistic_projection_good, is a SEPARATE optimistic logistic
+# fit (section 4b) with the upper asymptote pinned at ~95%: it tracks the data
+# in-window, then keeps climbing toward 95% instead of plateauing at q_end.
+# dose_q_curve.rds (read by 02) stays the (main) logistic projection; these
+# scenarios are saved separately so they can be selected downstream if desired.
 
 # Fitted value at the last data point -- the common start of every extrapolation.
 q_end <- q_curve$q_mean[match(last_obs_day, q_curve$relative_day)]
@@ -188,6 +235,12 @@ post         <- scen_days > last_obs_day                 # the extrapolation reg
 # saturated). This IS scenario 2 and the shared [0, last_obs_day] segment.
 fit_on <- clip01(approx(q_curve$relative_day, q_curve$q_mean,
                         xout = scen_days, rule = 2)$y)
+
+# The optimistic "good" fit (section 4b) on the same grid (its own logistic,
+# flat-held beyond its horizon via rule = 2). This IS the appended
+# `logistic_projection_good` scenario.
+fit_on_good <- clip01(approx(q_curve_good$relative_day, q_curve_good$q_mean,
+                             xout = scen_days, rule = 2)$y)
 
 # 1. Linear ramp to LINEAR_TARGET_Q by LINEAR_TARGET_DAY, flat thereafter.
 s_linear <- fit_on
@@ -225,6 +278,10 @@ if (slow_target_day > last_obs_day) {
 # 2. Logistic forward projection (the fit itself).
 s_logistic <- fit_on
 
+# 2b. Optimistic logistic projection -- the second ("good") fit, which keeps
+#     climbing toward 95% rather than plateauing at q_end.
+s_logistic_good <- fit_on_good
+
 # 3. Flat at q_end.
 s_flat <- fit_on
 s_flat[post] <- q_end
@@ -249,12 +306,14 @@ scenarios <- rbind(
   data.frame(relative_day = scen_days, q = clip01(s_linear_slow), scenario = "linear_to_95_dec"),
   data.frame(relative_day = scen_days, q = clip01(s_logistic),  scenario = "logistic"),
   data.frame(relative_day = scen_days, q = clip01(s_flat),      scenario = "flat"),
-  data.frame(relative_day = scen_days, q = clip01(s_conflict),  scenario = "conflict")
+  data.frame(relative_day = scen_days, q = clip01(s_conflict),  scenario = "conflict"),
+  data.frame(relative_day = scen_days, q = clip01(s_logistic_good),
+             scenario = "logistic_projection_good")
 )
 scenarios$date <- START_DATE + scenarios$relative_day
 
 scen_levels <- c("linear_to_90", "linear_to_95", "linear_to_95_dec",
-                 "logistic", "flat", "conflict")
+                 "logistic", "flat", "conflict", "logistic_projection_good")
 scen_labels <- c(linear_to_90 = sprintf("1. Linear to %d%% by day %d",
                                         round(100 * LINEAR_TARGET_Q), LINEAR_TARGET_DAY),
                  linear_to_95 = sprintf("2. Linear to %d%% by day %d",
@@ -264,7 +323,9 @@ scen_labels <- c(linear_to_90 = sprintf("1. Linear to %d%% by day %d",
                                         format(LINEAR_SLOW_TARGET_DATE, "%b %Y")),
                  logistic     = "4. Logistic projection (current)",
                  flat         = "5. Flat at last value",
-                 conflict     = sprintf("6. Conflict at day %d", CONFLICT_START_DAY))
+                 conflict     = sprintf("6. Conflict at day %d", CONFLICT_START_DAY),
+                 logistic_projection_good = sprintf("7. Logistic projection (good, to %d%%)",
+                                        round(100 * GOOD_UPPER_PRIOR_MEAN)))
 scenarios$scenario <- factor(scenarios$scenario, levels = scen_levels)
 
 saveRDS(scenarios, file.path(DIR_OUT, "dose_q_curve_extrapolation_scenarios.rds"))
