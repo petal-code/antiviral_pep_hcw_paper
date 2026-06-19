@@ -65,7 +65,7 @@ SCENARIO_TO_RUN <- "logistic_projection_good"
 # ============================================================================
 # 1. Configuration  <-- MUST match 05_projection_6_qcurves.R for mergeability
 # ============================================================================
-R0_GRID <- c(1.45, 1.50, 1.55, 1.60, 1.65)
+R0_GRID <- c(1.50, 1.55, 1.60)
 
 N_STOCH <- 330  # stochastic replicates per (R0, scenario)
 
@@ -230,6 +230,28 @@ rt_profiles <- do.call(rbind, lapply(R0_GRID, function(r0) {
 }))
 rt_profiles$date     <- day_to_date(rt_profiles$day)
 rt_profiles$r0_label <- sprintf("R0 = %.2f", rt_profiles$r0)
+
+p_rt <- ggplot(rt_profiles, aes(date, R_inst, colour = scenario,
+                                group = interaction(r0_label, scenario))) +
+  # Dashed black line at Rt = 1: above = epidemic growing, below = controlled.
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "black", linewidth = 0.5) +
+  pheic_vlines +
+  geom_line(linewidth = 0.75) +
+  facet_wrap(~ r0_label, ncol = 3) +
+  scale_colour_manual(values = scen_colours, labels = scen_labels, name = "Scenario") +
+  scale_x_date(date_breaks = "2 months", date_labels = "%b %Y") +
+  labs(
+    title    = "Analytic instantaneous Rt by R0 and NPI scenario",
+    subtitle = paste0(
+      "ETU=0.84, GenHosp=0.30, PPE=0.84, SafeFuneral=0.88\n",
+      "Black dashed = Rt 1 (above = growing, below = controlled). ",
+      "Grey dashed = PHEIC dates."
+    ),
+    x = "Date", y = expression(R[t] ~ "(instantaneous)")
+  ) +
+  theme_bw(base_size = 11) +
+  theme(axis.text.x   = element_text(angle = 45, hjust = 1, size = 7),
+        legend.position = "bottom")
 
 # ============================================================================
 # 7. Runner helpers (copied verbatim from 05 section 8)
