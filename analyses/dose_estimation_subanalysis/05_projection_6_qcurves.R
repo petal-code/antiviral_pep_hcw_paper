@@ -84,7 +84,7 @@ R0_GRID <- c(1.50, 1.55, 1.60)
 
 # --- Replicates --------------------------------------------------------------
 # Number of stochastic replicates per (R0, scenario) combination.
-N_STOCH <- 250L
+N_STOCH <- 10 # 250L
 
 # --- Efficacy parameters (PI-confirmed values, scalar = 0.6) -----------------
 # These are FIXED efficacies for each intervention type. They represent how
@@ -126,7 +126,7 @@ UNSAFE_FUNERAL_ETU <- 0.0  # ETU deaths are always managed safely (0% unsafe)
 FUNERAL_FRAC <- 0.25
 
 # Number of index cases to seed the epidemic with at t=0.
-SEEDING_CASES <- 3L
+SEEDING_CASES <- 5L
 
 # Hard cap on epidemic size per replicate (L = integer type, required by FIBER).
 # Set to 5000L for a quick test run; 60000L for the full production run.
@@ -143,7 +143,7 @@ MAX_RETRIES           <- 50L
 
 # --- Date / time parameters -------------------------------------------------
 # Day 0 of the epidemic (first known case cluster).
-EPIDEMIC_START_DATE <- as.Date("2026-02-27")
+EPIDEMIC_START_DATE <- as.Date("2026-02-17")
 
 # Calendar dates at which we read off cumulative case counts for the summary
 # table: "how big is the epidemic by Sep 1?" and "by Dec 31?"
@@ -352,8 +352,6 @@ p_inputs <- ggplot(npi_long, aes(date, value, colour = scenario)) +
   theme_bw(base_size = 10) +
   theme(axis.text.x   = element_text(angle = 45, hjust = 1, size = 6),
         legend.position = "bottom")
-ggsave(file.path(out_dir, "05_npi_inputs.png"), p_inputs,
-       width = 11, height = 8, dpi = 150)
 print(p_inputs)
 message("Saved 05_npi_inputs.png")
 
