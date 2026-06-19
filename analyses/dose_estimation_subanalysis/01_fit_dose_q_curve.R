@@ -48,7 +48,7 @@ set.seed(123)
 #   add a single anchoring zero at the start date (relative day 0), so the curve
 #   starts from 0% there. Default = 18 May 2026 (no added zero; relative days
 #   {0, 6, 13, 20, 27}).
-START_DATE   <- as.Date("2026-05-18")
+START_DATE   <- as.Date("2026-05-14")
 
 # How far PAST the last observation to project the curve forward (days). The
 # curve is reported on a daily grid from day 0 out to (last obs day + this).
@@ -70,7 +70,7 @@ N_CHAINS <- 4L; ITER_WARMUP <- 1500L; ITER_SAMPLING <- 1500L
 # curve AFTER the last data point, starting from the fitted value there (q_end).
 LINEAR_TARGET_Q      <- 0.90   # scenario 1: straight line up to this Q ...
 LINEAR_TARGET_DAY    <- 100L   #             ... reached by this day, flat after
-CONFLICT_START_DAY   <- 200L   # scenario 4: conflict begins here
+CONFLICT_START_DAY   <- 100L   # scenario 4: conflict begins here
 CONFLICT_DROP_DAYS   <- 25L    #   drop from q_end to CONFLICT_LOW_Q over this many days
 CONFLICT_LOW_DAYS    <- 50L    #   then hold at CONFLICT_LOW_Q this many days
 CONFLICT_REVERT_DAYS <- 25L    #   then revert to q_end over this many days
@@ -215,6 +215,7 @@ s_conflict[post] <- conflict_fun(scen_days[post])
 
 scenarios <- rbind(
   data.frame(relative_day = scen_days, q = clip01(s_linear),   scenario = "linear_to_90"),
+  data.frame(relative_day = scen_days, q = clip01(s_linear),   scenario = "linear_to_95"),
   data.frame(relative_day = scen_days, q = clip01(s_logistic), scenario = "logistic"),
   data.frame(relative_day = scen_days, q = clip01(s_flat),     scenario = "flat"),
   data.frame(relative_day = scen_days, q = clip01(s_conflict), scenario = "conflict")
