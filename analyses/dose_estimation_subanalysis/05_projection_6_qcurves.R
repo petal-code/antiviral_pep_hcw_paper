@@ -163,8 +163,10 @@ MCCABE_VALUES <- c(600, 1000)
 MATRIX_HORIZON <- 730L  # ~2 years
 
 # Days (relative to epidemic day 0) at which cumulative cases are recorded per
-# replicate. A 10-day grid is sufficient resolution for the trajectory plots.
-TIMEPOINTS <- sort(unique(c(seq(10L, 730L, by = 10L), 730L)))
+# replicate. A DAILY grid (matching 02) so the implied daily-incidence plot and
+# the comparison to daily data are crisp; cum_at is count(infections <= t) via
+# findInterval, so a daily grid is cheap.
+TIMEPOINTS <- 0:730L
 
 # Case-count thresholds for the time_to metric: "on what day did cumulative
 # infections first reach 100 cases? 500 cases? ..." This captures epidemic
@@ -525,7 +527,9 @@ run_one_takeoff <- function(args, base_seed, takeoff_n, max_retries, takeoff_day
 summarise_run <- function(inf_times, timepoints, amounts) {
   st <- sort(inf_times); n <- length(st)
   list(
-    cum_at  = vapply(timepoints, function(t) sum(st <= t), numeric(1)),
+    # count(infections <= t) via findInterval on the sorted times: O(n+m),
+    # which matters now that timepoints is a daily grid.
+    cum_at  = findInterval(timepoints, st),
     time_to = vapply(amounts,    function(a) if (n >= a) st[a] else NA_real_, numeric(1)),
     n_cases = n
   )
