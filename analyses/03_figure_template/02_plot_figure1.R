@@ -61,7 +61,7 @@ make_hcw_death_bar <- function(sc, show_errorbars = TRUE) {
   arms       <- c("baseline", "obv")
   sc_color   <- unname(SCENARIO_COLORS[sc])
   bar_colors <- setNames(c("grey50", sc_color), arms)
-  bar_labels <- c(baseline = "Without antiviral", obv = "With antiviral (80% efficacy, 100% coverage)")
+  bar_labels <- c(baseline = "Without antiviral", obv = "With antiviral (80% efficacy, 80% coverage)")
   x_max      <- x_max_weeks(sc)
   df <- bind_rows(
     get_ts(sc, "hcw_deaths_incidence", "baseline"),
@@ -85,7 +85,7 @@ make_ts <- function(sc) {
   sc_color     <- unname(SCENARIO_COLORS[sc])
   ts_colors    <- setNames(c("grey50", sc_color), arms)
   ts_linetypes <- c(baseline = "solid", obv = "dashed")
-  ts_labels    <- c(baseline = "Without antiviral", obv = "With antiviral (80% efficacy, 100% coverage)")
+  ts_labels    <- c(baseline = "Without antiviral", obv = "With antiviral (80% efficacy, 80% coverage)")
   x_max        <- x_max_weeks(sc)
   df <- bind_rows(
     get_ts(sc, "hcw_deaths", "baseline"),

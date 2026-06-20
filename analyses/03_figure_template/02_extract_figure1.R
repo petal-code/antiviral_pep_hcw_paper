@@ -6,7 +6,7 @@
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
 
-raw_ts <- extract_weekly_ts("full_obv80", bin_width = 7, n_workers = 10L)
+raw_ts <- extract_weekly_ts("cov80_obv80", bin_width = 7, n_workers = 10L)
 
 INCIDENCE_METRICS <- c("deaths", "infections", "hcw_deaths_incidence")
 # hcw_deaths is cumulative; all others are incidence
