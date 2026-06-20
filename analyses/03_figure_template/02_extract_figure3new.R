@@ -13,6 +13,7 @@
 # parsed from filenames (DRC_conflict) is normalised to "DRC" for downstream
 # grouping consistency.
 # =============================================================================
+dpcfolder <- "conflict_dpc_max5"
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
 library(tidyr)
 
@@ -205,15 +206,38 @@ message("Extracting weekly time series for figure3_new arms...")
 raw_ts_list <- lapply(ARM_NAMES_3NEW, function(arm_name) {
   message(sprintf("  Processing arm: %s", arm_name))
   df <- extract_weekly_ts_safe(
-    arm_dir   = file.path("conflict_dpc", arm_name),
+    arm_dir   = file.path(dpcfolder, arm_name),
     bin_width = 7,
     n_workers = 10L
   )
   if (is.null(df) || nrow(df) == 0) return(NULL)
-  df <- df[df$arm == "obv", ]
-  df$arm      <- arm_name
-  df$scenario <- "DRC"  # normalise: DRC_conflict -> DRC
-  df
+  
+  pieces <- list()
+  
+  obv_df <- df[df$arm == "obv", ]
+  if (nrow(obv_df) > 0) {
+    obv_df$arm      <- arm_name
+    obv_df$scenario <- "DRC"
+    pieces[[length(pieces) + 1]] <- obv_df
+  }
+  
+  # For with_conflict_* arms, use the baseline (tdf + prevented) from the
+  # SAME simulation run as the "No PEP" counterfactual, instead of a
+  # separately-simulated no_pep arc. This removes the noise-driven
+  # crossover where with_conflict > no_pep during the second surge,
+  # since both series now share the same underlying random realization.
+  if (arm_name %in% c("with_conflict_hi", "with_conflict_mid", "with_conflict_lo")) {
+    eff <- sub("^with_conflict_", "", arm_name)
+    baseline_df <- df[df$arm == "baseline", ]
+    if (nrow(baseline_df) > 0) {
+      baseline_df$arm      <- paste0("no_pep_", eff)
+      baseline_df$scenario <- "DRC"
+      pieces[[length(pieces) + 1]] <- baseline_df
+    }
+  }
+  
+  if (length(pieces) == 0) return(NULL)
+  do.call(rbind, pieces)
 })
 
 raw_ts_3new <- do.call(rbind, raw_ts_list[!sapply(raw_ts_list, is.null)])
@@ -265,7 +289,7 @@ message("Extracting particle-level run summaries for figure3_new arms...")
 
 run_df_3new <- do.call(rbind, lapply(ARM_NAMES_3NEW, function(arm_name) {
   df <- extract_run_summary(
-    arm_dir   = file.path("conflict_dpc", arm_name),
+    arm_dir   = file.path(dpcfolder, arm_name),
     arm_label = arm_name,
     n_workers = 10L
   )
@@ -286,7 +310,7 @@ message("Extracting PEP uptake and DPC summaries for figure3_new arms...")
 pep_uptake_3new <- do.call(rbind, lapply(ARM_NAMES_3NEW, function(arm_name) {
   if (arm_name == "no_pep") return(NULL)
   df <- extract_pep_uptake_summary(
-    arm_dir   = file.path("conflict_dpc", arm_name),
+    arm_dir   = file.path(dpcfolder, arm_name),
     arm_label = arm_name,
     n_workers = 10L
   )
@@ -432,7 +456,7 @@ extract_period_summary <- function(arm_dir,
 # Include no_pep arm: PEP-related columns will be 0 or NA
 period_summary_3new <- do.call(rbind, lapply(ARM_NAMES_3NEW, function(arm_name) {
   df <- extract_period_summary(
-    arm_dir   = file.path("conflict_dpc", arm_name),
+    arm_dir   = file.path(dpcfolder, arm_name),
     arm_label = arm_name,
     n_workers = 10L
   )

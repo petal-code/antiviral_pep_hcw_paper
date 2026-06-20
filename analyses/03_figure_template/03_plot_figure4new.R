@@ -95,9 +95,10 @@ make_panel_a <- function(sc) {
           legend.text       = element_text(size = 8))
 }
 
-make_panel_b <- function(sc) {
+make_panel_b <- function(sc, xlim_max = 3.3, x_breaks = 0:3,
+                         x_labels = c("0", "1×", "2×", "3×")) {
   df <- panel_b_raw %>%
-    filter(scenario == sc, dpc == 0, supply_ratio <= 3.3)
+    filter(scenario == sc, dpc == 0, supply_ratio <= xlim_max)
   
   wide <- df %>%
     select(supply_ratio, policy, pct_averted_med) %>%
@@ -118,8 +119,8 @@ make_panel_b <- function(sc) {
                                      A = "Policy A (broad)"),
                           name = NULL) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.02)),
-                       breaks = 0:3,
-                       labels = c("0", "1×", "2×", "3×"),
+                       breaks = x_breaks,
+                       labels = x_labels,
                        name   = "supply (× targeted demand)") +
     scale_y_continuous(expand = expansion(mult = c(0, 0.05)),
                        limits = c(0, NA),
@@ -220,57 +221,52 @@ message("Figure 4 Alt saved.")
 
 # =============================================================================
 # 3. Alt2 layout: 3-column sketch style
-#
-#   Col 1 (left)   : West Africa Archetype (top) / DRC Archetype (bottom)
-#                    shared "HCW deaths averted" y-label centred across both
-#                    no individual y-axis titles on the panels
-#   Col 2 (centre) : West Africa panel b — no title
-#   Col 3 (right)  : West Africa panel c — no title
-#   Legends: transparent background
 # =============================================================================
-XLIM_A["DRC"] <- 10000   # restore
-
+XLIM_A["DRC"] <- 2500   # Restore original limit
 wa_a_alt2 <- make_panel_a("WestAfrica") +
-  labs(title = "West Africa Archetype") +
-  theme(plot.title     = element_text(size = 9, face = "bold"),
-        axis.title.y   = element_blank(),
-        legend.position   = c(0.65, 0.25),
+  labs(title = "West Africa Archetype", tag = "a") +
+  theme(plot.title        = element_text(size = 9, face = "bold"),
+        axis.title.y      = element_blank(),
+        axis.title.x      = element_blank(), # Removed x-axis label for the top panel
+        legend.position   = c(0.65, 0.2),
         legend.background = element_blank(),
-        legend.key        = element_blank())
+        legend.key        = element_blank(),
+        plot.margin       = margin(t = 5, r = 5, b = -4, l = 5)) # Reduced bottom margin
 
 drc_a_alt2 <- make_panel_a("DRC") +
-  labs(title = "DRC Archetype") +
+  labs(title = "DRC Archetype", tag = "b") +
   theme(plot.title     = element_text(size = 9, face = "bold"),
         axis.title.y   = element_blank(),
-        legend.position = "none")
+        legend.position = "none",
+        plot.margin    = margin(t = -4, r = 5, b = 5, l = 5)) # Reduced top margin to narrow the gap
 
-wa_b_alt2 <- make_panel_b("WestAfrica") +
-  labs(title = NULL) +
+wa_b_alt2 <- make_panel_b("WestAfrica",
+                          xlim_max  = 2.5,
+                          x_breaks  = c(0, 1, 2, 2.5),
+                          x_labels  = c("0", "1×", "2×", "2.5×")) +
+  labs(title = NULL, tag = "c") +
   theme(legend.position   = c(0.65, 0.25),
         legend.background = element_blank(),
         legend.key        = element_blank(),
         legend.key.width  = unit(1.0, "cm"))
 
 wa_c_alt2 <- make_panel_c("WestAfrica") +
-  labs(title = NULL)
+  labs(title = NULL, tag = "d")
 
-# Shared y-axis label centred across the two left panels
+# Shared y-axis label
 y_label <- wrap_elements(
   textGrob("HCW deaths averted", rot = 90,
            gp = gpar(fontsize = 9))
 )
 
-# Wrap y_label so patchwork skips it for tagging
-fig4_alt2 <- (y_label | (wa_a_alt2 / drc_a_alt2) | wa_b_alt2 | wa_c_alt2) +
-  plot_layout(widths = c(0.04, 1, 1, 1)) +
-  plot_annotation(tag_levels = "a",
-                  tag_prefix = "",
-                  # skip the first element (y_label spacer) in tagging
-  ) &
+# Isolate the left column to lock the y-axis label centering and prevent flattening errors
+left_col <- wrap_plots(y_label, (wa_a_alt2 / drc_a_alt2), widths = c(0.04, 1))
+
+# Combine the isolated left column with panel B and panel C using your original structure
+fig4_alt2 <- (left_col | wa_b_alt2 | wa_c_alt2) +
+  plot_layout(widths = c(1.04, 1, 1)) &
   theme(plot.tag.position = "topleft")
 
-# patchwork tags the spacer too — override by manually setting tags
-fig4_alt2[[1]] <- fig4_alt2[[1]] + labs(tag = "")
-
-save_fig("figure_4_alt2", fig4_alt2, 14, 7)
+save_fig("figure_4_alt2", fig4_alt2, 10, 4)
 message("Figure 4 Alt2 saved.")
+

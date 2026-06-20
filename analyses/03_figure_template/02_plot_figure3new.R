@@ -48,7 +48,7 @@ sdb$value_tweaked[idx_325_400] <- rescale_sdb_segment(sdb$day[idx_325_400], 200,
 
 sdb$coverage_conflict <- sdb$value_tweaked * 80 / max(sdb$value_tweaked)
 # sdb$dpc_conflict      <- 1 + 9 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked))^2)
-sdb$dpc_conflict      <- 1 + 4 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked))^2)
+sdb$dpc_conflict      <- 1 + 4 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked)))
 
 sub      <- sdb[sdb$day < 200, ]
 peak_row <- sub[which.max(sub$coverage_conflict), ]
@@ -56,13 +56,16 @@ peak_day <- peak_row$day
 
 sdb$dpc_conflict[sdb$day <= peak_day] <- 1
 
-# Flat versions: unaffected dimension held constant at peak
+# Flat versions: unaffected dimension held constant at peak.
+# NOTE: kept here for reference / potential reuse elsewhere, but no longer
+# plotted in panel b -- panel b now only shows the conflict-scenario curves
+# that are actually used in panel c.
 sdb$coverage_flat <- sdb$coverage_conflict
 sdb$coverage_flat[sdb$day > peak_day] <- peak_row$coverage_conflict
 sdb$dpc_flat <- 1
 
 # Shared constants
-scale_factor <- 10 / 80
+scale_factor <- 5.5 / 80  # cap DPC secondary axis at 5.5 when coverage axis tops out at 80
 cov_color    <- "#E08214"
 dpc_color    <- "black"
 day_max_tv   <- max(ts_3new$week[ts_3new$scenario == "DRC"], na.rm = TRUE) * 7
@@ -85,9 +88,12 @@ COV_SCEN_COLORS <- c(
   "Both impacted"                  = "#d7191c"
 )
 
-# Arms for panel c (mid efficacy, scenario comparison)
+# Arms for panel c (mid efficacy, scenario comparison).
+# "No PEP" now points at no_pep_mid, the matched-seed counterfactual
+# (tdf + prevented from the with_conflict_mid runs themselves), rather
+# than the separately-simulated no_pep arc. See 02_extract_figure3new.R.
 ARM_LABELS_C <- c(
-  no_pep            = "No PEP",
+  no_pep_mid        = "No PEP",
   optimistic_mid    = "Ideal (100% coverage, 0 delay)",
   dpc_conflict_mid  = "DPC impacted",
   with_conflict_mid = "Both impacted"
@@ -99,11 +105,11 @@ ARM_COLORS_C <- c(
   "Both impacted"                   = "#d7191c"
 )
 
-# Arms for panel bottom (three arms only)
+# Arms for panel bottom (three arms only) -- same matched-seed no_pep swap
 ARM_LABELS_BOTTOM <- c(
-  no_pep            = "No PEP",
-  optimistic_mid    = "Ideal (100% coverage, 0 delay)",
-  with_conflict_mid = "Both impacted"
+  no_pep_mid         = "No PEP",
+  optimistic_mid     = "Ideal (100% coverage, 0 delay)",
+  with_conflict_mid  = "Both impacted"
 )
 ARM_COLORS_BOTTOM <- c(
   "No PEP"                          = "black",
@@ -112,6 +118,9 @@ ARM_COLORS_BOTTOM <- c(
 )
 
 # Arms for efficacy comparison panel (both impacted, all three efficacy levels)
+# NOTE: this panel still uses the single separately-simulated "no_pep" arc
+# as its reference, since there is no single matched-seed no_pep series that
+# applies across all three efficacy levels at once.
 ARM_LABELS_EFF <- c(
   no_pep            = "No PEP",
   with_conflict_hi  = "Optimistic efficacy",
@@ -185,42 +194,62 @@ period_3new <- period_raw %>%
     period         = factor(period, levels = c("early (day 0-200)", "late (day 201+)"))
   ) %>%
   filter(!is.na(cov_scen_label))
+
 # =============================================================================
 # Panel a: efficacy vs DPC
+# Both the hi and lo efficacy bounds are drawn as black dashed lines (instead
+# of green/red) to avoid the colors being mistaken for a meaningful encoding.
 # =============================================================================
 panel_a <- ggplot(curve_d50_dat, aes(x = dpc)) +
-  geom_line(aes(y = eighty_efficacy_hi), color = "#1a9641", linetype = "dashed",  linewidth = 1) +
-  geom_line(aes(y = efficacy),            color = "black",   linewidth = 1.2) +
-  geom_line(aes(y = eighty_efficacy_lo), color = "#d7191c", linetype = "dotted", linewidth = 1) +
+  geom_line(aes(y = eighty_efficacy_hi), color = "black", linetype = "dashed", linewidth = 1) +
+  geom_line(aes(y = efficacy),            color = "black", linewidth = 1.2) +
+  geom_line(aes(y = eighty_efficacy_lo), color = "black", linetype = "dashed", linewidth = 1) +
   scale_y_continuous(limits = c(0, NA), labels = scales::percent) +
-  labs(x = "Days post-exposure (DPC)", y = "Efficacy",
-       title = "Efficacy vs DPC") +
+  labs(x = "Days post-exposure (DPC)", y = "Efficacy") +
   theme_fig()
 
 # =============================================================================
 # Panel b: coverage & DPC over time
 # Conflict period shaded from day 110 to 300 (fixed)
+#
+# Only the DPC/coverage curves actually used by panel c's scenarios are
+# shown, and lines are colored to match panel c's scenario colors so the
+# two panels read together directly:
+#   - coverage_flat (coverage stays at its peak, unaffected by conflict)
+#     is the coverage curve used by the "DPC impacted" scenario -> orange
+#   - coverage_conflict (coverage declines during conflict) is the
+#     coverage curve used by the "Both impacted" scenario -> red
+#   - dpc_conflict (DPC curve under conflict) is shared identically by
+#     both the "DPC impacted" and "Both impacted" scenarios, so it's kept
+#     neutral black/dashed rather than tied to a single scenario color
+# dpc_flat (the near-flat DPC curve used by the "Ideal" scenario) is
+# intentionally NOT shown -- it's a flat horizontal line that adds no
+# information here.
+# DPC secondary axis capped at 5.5.
 # =============================================================================
 panel_b <- ggplot(sdb, aes(x = day)) +
   annotate("rect", xmin = 110, xmax = 300, ymin = -Inf, ymax = Inf,
            fill = "grey85", alpha = 0.6) +
   annotate("text", x = (110 + 300) / 2, y = 78,
            label = "conflict", size = 3.5, color = "grey30") +
-  geom_line(aes(y = coverage_conflict),           color = cov_color, linetype = "dashed", linewidth = 1.1) +
-  geom_line(aes(y = coverage_flat),               color = cov_color, linetype = "solid",  linewidth = 1.1) +
-  geom_line(aes(y = dpc_conflict / scale_factor), color = dpc_color, linetype = "dashed", linewidth = 0.9) +
-  geom_line(aes(y = dpc_flat     / scale_factor), color = dpc_color, linetype = "solid",  linewidth = 0.9) +
+  geom_line(aes(y = coverage_flat),
+            color = COV_SCEN_COLORS[["DPC impacted"]], linetype = "solid", linewidth = 1.1) +
+  geom_line(aes(y = coverage_conflict),
+            color = COV_SCEN_COLORS[["Both impacted"]], linetype = "solid", linewidth = 1.1) +
+  geom_line(aes(y = dpc_conflict / scale_factor),
+            color = "black", linetype = "dashed", linewidth = 0.9) +
   scale_y_continuous(
     name     = "Coverage (%)",
+    limits   = c(0, 80),
     sec.axis = sec_axis(~ . * scale_factor, name = "DPC (days)")
   ) +
-  labs(x = "Day", title = "Coverage & DPC over time") +
+  labs(x = "Day") +
   theme_fig() +
   theme(
     axis.title.y       = element_text(color = cov_color),
     axis.text.y        = element_text(color = cov_color),
-    axis.title.y.right = element_text(color = dpc_color),
-    axis.text.y.right  = element_text(color = dpc_color)
+    axis.title.y.right = element_text(color = "black"),
+    axis.text.y.right  = element_text(color = "black")
   )
 
 # =============================================================================
@@ -240,7 +269,7 @@ make_panel_c <- function(metric_name, y_label) {
     scale_color_manual(values = ARM_COLORS_C, name = NULL) +
     scale_fill_manual(values = ARM_COLORS_C, name = NULL) +
     scale_x_continuous(limits = c(0, 420), expand = c(0, 0)) +
-    labs(x = "Day", y = y_label, title = "DRC archetype (mid efficacy)") +
+    labs(x = "Day", y = y_label) +
     theme_fig()
 }
 
@@ -273,6 +302,7 @@ panel_c_eff_cumulative <- make_panel_c_eff("hcw_deaths",           "Mean cumulat
 
 # =============================================================================
 # Panel c (efficacy-faceted): one panel per efficacy level, scenarios as lines
+# Uses the matched-seed no_pep_{eff} counterfactual for each efficacy level.
 # =============================================================================
 make_panel_c_by_eff <- function(metric_name, y_label, eff, eff_title) {
   arm_map <- setNames(
@@ -280,7 +310,7 @@ make_panel_c_by_eff <- function(metric_name, y_label, eff, eff_title) {
       "Ideal (100% coverage, 0 delay)",
       "DPC impacted",
       "Both impacted"),
-    c("no_pep",
+    c(paste0("no_pep_",       eff),
       paste0("optimistic_",    eff),
       paste0("dpc_conflict_",  eff),
       paste0("with_conflict_", eff))
@@ -321,6 +351,10 @@ panel_c_lo_inc  <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly inci
 # Stack order bottom->top: Realised (green), Coverage loss (tomato), DPC loss (orange)
 # Loss sections alpha-ed to emphasise unrealised potential.
 # Realised shown as connected black squares (no errorbars).
+#
+# NOTE: this panel still uses pct_hcw_deaths_averted from particle_3new,
+# which is computed against the separately-simulated no_pep arc (it is
+# not affected by the matched-seed no_pep_{eff} swap used in panels b/c).
 # =============================================================================
 DECOMP_ARMS <- c(
   "optimistic_mid",    "optimistic_lo",    "optimistic_hi",
@@ -395,8 +429,7 @@ make_panel_d <- function(sc) {
     scale_fill_manual(values = DECOMP_COLORS, name = NULL) +
     scale_y_continuous(limits = c(0, 100),
                        labels = function(x) paste0(x, "%")) +
-    labs(x = "Antiviral efficacy", y = "HCW deaths averted (%)",
-         title = "Decomposition (DRC archetype)") +
+    labs(x = "Antiviral efficacy", y = "HCW deaths averted (%)") +
     theme_fig()
 }
 
@@ -596,6 +629,13 @@ save_fig("figure_3new_tv_params_and_deaths",
 
 save_fig("figure_3new_combined",
          (panel_a | panel_b) / (panel_c_cumulative | panel_d) +
+           plot_annotation(tag_levels = "a"),
+         11, 8)
+
+# Alternate combined version: panel c shows incident (rather than cumulative)
+# HCW deaths. Appended after the original combined figure.
+save_fig("figure_3new_combined_incident",
+         (panel_a | panel_b) / (panel_c_incident | panel_d) +
            plot_annotation(tag_levels = "a"),
          11, 8)
 
