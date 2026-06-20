@@ -199,11 +199,21 @@ period_3new <- period_raw %>%
 # Panel a: efficacy vs DPC
 # Both the hi and lo efficacy bounds are drawn as black dashed lines (instead
 # of green/red) to avoid the colors being mistaken for a meaningful encoding.
+# The region between them is shaded light grey, and each dashed line is
+# labeled directly (Optimistic / Pessimistic) near its right-hand end.
 # =============================================================================
 panel_a <- ggplot(curve_d50_dat, aes(x = dpc)) +
+  geom_ribbon(aes(ymin = eighty_efficacy_lo, ymax = eighty_efficacy_hi),
+              fill = "grey80", alpha = 0.4) +
   geom_line(aes(y = eighty_efficacy_hi), color = "black", linetype = "dashed", linewidth = 1) +
   geom_line(aes(y = efficacy),            color = "black", linewidth = 1.2) +
   geom_line(aes(y = eighty_efficacy_lo), color = "black", linetype = "dashed", linewidth = 1) +
+  # Fixed label positions matching the requested locations: "Optimistic" up and
+  # to the right along the upper dashed curve, "Pessimistic" lower-left along
+  # the lower dashed curve's early decline. Adjust x/y here if the underlying
+  # curve shape changes and the labels drift off the lines.
+  annotate("text", x = 6.6,   y = 0.75, label = "Optimistic",  hjust = 0, vjust = 0, size = 3.2, color = "black") +
+  annotate("text", x = 0.8, y = 0.35, label = "Pessimistic", hjust = 0, vjust = 0, size = 3.2, color = "black") +
   scale_y_continuous(limits = c(0, NA), labels = scales::percent) +
   labs(x = "Days post-exposure (DPC)", y = "Efficacy") +
   theme_fig()
@@ -341,16 +351,14 @@ panel_c_mid_inc <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly inci
 panel_c_lo_inc  <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly incident HCW deaths", "lo",  "pessimistic")
 
 # =============================================================================
-# Panel d: decomposition of HCW deaths averted % by efficacy arm
+# Panel d: decomposition of HCW deaths averted % by efficacy arm, shown as
+# a waterfall/bridge chart (full Ideal bar -> DPC loss step -> Coverage loss
+# step -> full Realised bar), per efficacy arm.
 #
 # Decomposition steps (computed at particle level before taking medians):
 #   realised = with_conflict                       (both coverage and DPC impacted)
 #   cov_loss = dpc_conflict - with_conflict        (additional loss from imperfect coverage)
 #   dpc_loss = optimistic   - dpc_conflict         (additional loss from DPC delay)
-#
-# Stack order bottom->top: Realised (green), Coverage loss (tomato), DPC loss (orange)
-# Loss sections alpha-ed to emphasise unrealised potential.
-# Realised shown as connected black squares (no errorbars).
 #
 # NOTE: this panel still uses pct_hcw_deaths_averted from particle_3new,
 # which is computed against the separately-simulated no_pep arc (it is
@@ -391,49 +399,126 @@ decomp_summary <- decomp_particle %>%
   )
 
 DECOMP_COLORS <- c(
-  "Realised"      = "#1a9641",
-  "Coverage loss" = scales::alpha("#FF6347", 0.45),
-  "DPC loss"      = scales::alpha("#fdae61", 0.45)
+  "Realised"      = COV_SCEN_COLORS[["Ideal (100% coverage, 0 delay)"]],
+  "Coverage loss" = COV_SCEN_COLORS[["Both impacted"]],
+  "DPC loss"      = COV_SCEN_COLORS[["DPC impacted"]]
 )
 
-decomp_long <- decomp_summary %>%
-  select(scenario, eff_arm_label, realised_med, cov_loss_med, dpc_loss_med) %>%
-  pivot_longer(
-    cols      = c(realised_med, cov_loss_med, dpc_loss_med),
-    names_to  = "component",
-    values_to = "value"
-  ) %>%
-  mutate(
-    component = factor(component,
-                       levels = c("realised_med", "cov_loss_med", "dpc_loss_med"),
-                       labels = c("Realised", "Coverage loss", "DPC loss"))
-  )
+# =============================================================================
+# Waterfall layout for panel d
+#
+# For each efficacy arm, four bars are drawn left to right:
+#   1. "Ideal"          full bar, 0 -> optimistic value             (green)
+#   2. "DPC loss"        floating bar, dpc_conflict -> optimistic    (orange)
+#   3. "Coverage loss"   floating bar, realised -> dpc_conflict      (red)
+#   4. "Realised"        full bar, 0 -> realised value               (green)
+# Dotted horizontal segments bridge the top/bottom edges between
+# consecutive bars, matching a standard waterfall/bridge chart. Bar borders
+# are a thin grey (rather than black) so the dotted bridge line -- drawn as
+# a separate, later layer -- reads clearly on top instead of disappearing
+# into a heavy bar outline. Bar spacing is wider than bar width so each
+# bridge segment has enough room between bars to actually be visible; each
+# segment runs from one bar's edge to the very edge of the next bar.
+# =============================================================================
+WF_BAR_WIDTH   <- 0.7
+WF_BAR_SPACING <- 1.4  # distance between consecutive bar centers within a group (> WF_BAR_WIDTH so the gap, and the bridge line in it, is visible)
+WF_GROUP_GAP   <- 1.2  # extra horizontal gap inserted between efficacy-arm groups
 
-realised_pts <- decomp_summary %>%
-  select(scenario, eff_arm_label, realised_med) %>%
-  arrange(eff_arm_label)
+build_waterfall_df <- function(summary_df, eff_arm_order = EFF_ARM_ORDER) {
+  summary_df <- summary_df %>%
+    mutate(
+      optimistic_med   = realised_med + cov_loss_med + dpc_loss_med,
+      dpc_conflict_med = realised_med + cov_loss_med
+    )
+  
+  bars <- list()
+  segs <- list()
+  group_centers <- numeric(0)
+  group_width   <- 3 * WF_BAR_SPACING
+  
+  for (i in seq_along(eff_arm_order)) {
+    ea  <- eff_arm_order[i]
+    row <- summary_df %>% filter(eff_arm == ea)
+    if (nrow(row) == 0) next
+    
+    base_x <- (i - 1) * (group_width + WF_GROUP_GAP)
+    x1 <- base_x; x2 <- base_x + WF_BAR_SPACING
+    x3 <- base_x + 2 * WF_BAR_SPACING; x4 <- base_x + 3 * WF_BAR_SPACING
+    group_centers <- c(group_centers, (x1 + x4) / 2)
+    
+    bars[[length(bars) + 1]] <- data.frame(
+      eff_arm = ea, stage = "Ideal",
+      xmin = x1 - WF_BAR_WIDTH / 2, xmax = x1 + WF_BAR_WIDTH / 2,
+      ymin = 0, ymax = row$optimistic_med,
+      fill_group = "Realised"
+    )
+    bars[[length(bars) + 1]] <- data.frame(
+      eff_arm = ea, stage = "DPC loss",
+      xmin = x2 - WF_BAR_WIDTH / 2, xmax = x2 + WF_BAR_WIDTH / 2,
+      ymin = row$dpc_conflict_med, ymax = row$optimistic_med,
+      fill_group = "DPC loss"
+    )
+    bars[[length(bars) + 1]] <- data.frame(
+      eff_arm = ea, stage = "Coverage loss",
+      xmin = x3 - WF_BAR_WIDTH / 2, xmax = x3 + WF_BAR_WIDTH / 2,
+      ymin = row$realised_med, ymax = row$dpc_conflict_med,
+      fill_group = "Coverage loss"
+    )
+    bars[[length(bars) + 1]] <- data.frame(
+      eff_arm = ea, stage = "Realised",
+      xmin = x4 - WF_BAR_WIDTH / 2, xmax = x4 + WF_BAR_WIDTH / 2,
+      ymin = 0, ymax = row$realised_med,
+      fill_group = "Realised"
+    )
+    
+    # each segment spans exactly from one bar's edge to the adjacent bar's edge
+    segs[[length(segs) + 1]] <- data.frame(
+      x = x1 + WF_BAR_WIDTH / 2, xend = x2 - WF_BAR_WIDTH / 2,
+      y = row$optimistic_med,   yend = row$optimistic_med
+    )
+    segs[[length(segs) + 1]] <- data.frame(
+      x = x2 + WF_BAR_WIDTH / 2, xend = x3 - WF_BAR_WIDTH / 2,
+      y = row$dpc_conflict_med, yend = row$dpc_conflict_med
+    )
+    segs[[length(segs) + 1]] <- data.frame(
+      x = x3 + WF_BAR_WIDTH / 2, xend = x4 - WF_BAR_WIDTH / 2,
+      y = row$realised_med,     yend = row$realised_med
+    )
+  }
+  
+  list(
+    bars          = do.call(rbind, bars),
+    segs          = do.call(rbind, segs),
+    group_centers = group_centers
+  )
+}
 
 make_panel_d <- function(sc) {
-  df  <- filter(decomp_long,  scenario == sc)
-  pts <- filter(realised_pts, scenario == sc)
-  ggplot(df, aes(x = eff_arm_label, y = value, fill = component)) +
-    geom_col(position = position_stack(reverse = TRUE), width = 0.6,
-             color = "black", linewidth = 0.3) +
-    geom_line(data = pts,
-              aes(x = eff_arm_label, y = realised_med, group = 1),
-              inherit.aes = FALSE, color = "black", linewidth = 0.7) +
-    geom_point(data = pts,
-               aes(x = eff_arm_label, y = realised_med),
-               inherit.aes = FALSE, color = "black", fill = "black",
-               shape = 22, size = 3) +
+  df <- filter(decomp_summary, scenario == sc)
+  wf <- build_waterfall_df(df)
+  
+  axis_labels_df <- data.frame(
+    x     = wf$group_centers,
+    label = EFF_ARM_LABELS[EFF_ARM_ORDER]
+  )
+  
+  ggplot() +
+    geom_rect(data = wf$bars,
+              aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill_group),
+              color = "grey70", linewidth = 0.3) +
+    geom_segment(data = wf$segs,
+                 aes(x = x, xend = xend, y = y, yend = yend),
+                 linetype = "dotted", color = "black", linewidth = 0.7) +
     scale_fill_manual(values = DECOMP_COLORS, name = NULL) +
-    scale_y_continuous(limits = c(0, 100),
-                       labels = function(x) paste0(x, "%")) +
+    scale_x_continuous(breaks = axis_labels_df$x, labels = axis_labels_df$label) +
+    scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%")) +
     labs(x = "Antiviral efficacy", y = "HCW deaths averted (%)") +
-    theme_fig()
+    theme_fig() +
+    theme(axis.ticks.x = element_blank())
 }
 
 panel_d <- make_panel_d("DRC")
+
 
 # =============================================================================
 # Panel e: PEP uptake % by coverage scenario x efficacy arm
@@ -659,3 +744,132 @@ panel_recip_averted_period <- make_period_boxplot(
 
 save_fig("figure_3new_recip_deaths_by_period",  panel_recip_deaths_period,  12, 6)
 save_fig("figure_3new_recip_averted_by_period", panel_recip_averted_period, 12, 6)
+
+
+
+# =============================================================================
+# 03_text_numbers_figure3new.R
+#
+# Pulls the specific summary numbers needed to fill in the XX placeholders
+# in the Figure 3 results paragraph:
+#
+#   1. Cumulative HCW deaths (mean, 95% CI) at the end of follow-up, mid
+#      efficacy, for three arms:
+#        - achievable-impact / Ideal      (optimistic_mid)
+#        - delay only, coverage preserved (dpc_conflict_mid)
+#        - delay + reduced coverage       (with_conflict_mid)
+#
+#   2. % of the achievable HCW deaths averted that was realised under
+#      conflict disruption (i.e. with_conflict's pct_hcw_deaths_averted as
+#      a fraction of optimistic's pct_hcw_deaths_averted), computed per
+#      particle and summarised as median + 95% CI, for each of the
+#      optimistic/central/pessimistic delay-efficacy assumptions.
+#
+# Reads from the CSVs already produced by 02_extract_figure3new.R. Prints a
+# flat list of the six numbers at the end, ready to copy/paste.
+# =============================================================================
+library(dplyr)
+library(here)
+
+ts_3new       <- read.csv(here("output_figgen", "figure_3new_weekly_ts.csv"))
+particle_3new <- read.csv(here("output_figgen", "figure_3new_particle_summary.csv"))
+
+EFF_ARM_LABELS <- c(hi = "Optimistic", mid = "Central", lo = "Pessimistic")
+EFF_ARM_ORDER  <- c("hi", "mid", "lo")
+
+fmt_n <- function(mean_val, lo, hi, digits = 1) {
+  sprintf("%s (%s\u2013%s)",
+          formatC(mean_val, format = "f", digits = digits),
+          formatC(lo,        format = "f", digits = digits),
+          formatC(hi,        format = "f", digits = digits))
+}
+
+fmt_pct <- function(med, lo, hi, digits = 1) {
+  sprintf("%s%% (%s\u2013%s%%)",
+          formatC(med, format = "f", digits = digits),
+          formatC(lo,  format = "f", digits = digits),
+          formatC(hi,  format = "f", digits = digits))
+}
+
+# =============================================================================
+# 1. Cumulative HCW deaths at end of follow-up, mid efficacy, three arms
+# =============================================================================
+final_week <- max(
+  ts_3new$week[ts_3new$scenario == "DRC" & ts_3new$metric == "hcw_deaths"],
+  na.rm = TRUE
+)
+
+cum_deaths <- ts_3new %>%
+  filter(scenario == "DRC", metric == "hcw_deaths", week == final_week,
+         arm %in% c("optimistic_mid", "dpc_conflict_mid", "with_conflict_mid")) %>%
+  select(arm, mean_val, ci_lo, ci_hi)
+
+deaths_ideal <- cum_deaths %>% filter(arm == "optimistic_mid")
+deaths_dpc   <- cum_deaths %>% filter(arm == "dpc_conflict_mid")
+deaths_both  <- cum_deaths %>% filter(arm == "with_conflict_mid")
+
+stopifnot(nrow(deaths_ideal) == 1, nrow(deaths_dpc) == 1, nrow(deaths_both) == 1)
+
+txt_deaths_ideal <- fmt_n(deaths_ideal$mean_val, deaths_ideal$ci_lo, deaths_ideal$ci_hi)
+txt_deaths_dpc   <- fmt_n(deaths_dpc$mean_val,   deaths_dpc$ci_lo,   deaths_dpc$ci_hi)
+txt_deaths_both  <- fmt_n(deaths_both$mean_val,  deaths_both$ci_lo,  deaths_both$ci_hi)
+
+
+# =============================================================================
+# 2. % of achievable HCW deaths averted realised under conflict disruption,
+#    by delay-efficacy assumption
+# =============================================================================
+realised_ratio <- particle_3new %>%
+  filter(arm %in% c(
+    "optimistic_hi", "optimistic_mid", "optimistic_lo",
+    "with_conflict_hi", "with_conflict_mid", "with_conflict_lo"
+  )) %>%
+  mutate(
+    eff_arm  = sub("^(optimistic|with_conflict)_", "", arm),
+    cov_scen = sub("_(mid|lo|hi)$", "", arm)
+  ) %>%
+  select(particle_id, eff_arm, cov_scen, pct_hcw_deaths_averted) %>%
+  tidyr::pivot_wider(names_from = cov_scen, values_from = pct_hcw_deaths_averted) %>%
+  mutate(
+    realised_pct_of_achievable = 100 * with_conflict / optimistic
+  ) %>%
+  filter(is.finite(realised_pct_of_achievable))
+
+realised_summary <- realised_ratio %>%
+  group_by(eff_arm) %>%
+  summarise(
+    median = median(realised_pct_of_achievable, na.rm = TRUE),
+    ci_lo  = quantile(realised_pct_of_achievable, 0.025, na.rm = TRUE),
+    ci_hi  = quantile(realised_pct_of_achievable, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(eff_arm_label = EFF_ARM_LABELS[eff_arm]) %>%
+  arrange(match(eff_arm, EFF_ARM_ORDER))
+
+
+txt_realised_hi  <- fmt_pct(
+  realised_summary$median[realised_summary$eff_arm == "hi"],
+  realised_summary$ci_lo[realised_summary$eff_arm == "hi"],
+  realised_summary$ci_hi[realised_summary$eff_arm == "hi"]
+)
+txt_realised_mid <- fmt_pct(
+  realised_summary$median[realised_summary$eff_arm == "mid"],
+  realised_summary$ci_lo[realised_summary$eff_arm == "mid"],
+  realised_summary$ci_hi[realised_summary$eff_arm == "mid"]
+)
+txt_realised_lo  <- fmt_pct(
+  realised_summary$median[realised_summary$eff_arm == "lo"],
+  realised_summary$ci_lo[realised_summary$eff_arm == "lo"],
+  realised_summary$ci_hi[realised_summary$eff_arm == "lo"]
+)
+
+# =============================================================================
+# 3. Final number list (copy/paste these)
+# =============================================================================
+cat("=== NUMBERS ===\n")
+cat("Cumulative HCW deaths, Ideal (achievable):       ", txt_deaths_ideal, "\n")
+cat("Cumulative HCW deaths, delay only:                ", txt_deaths_dpc, "\n")
+cat("Cumulative HCW deaths, delay + reduced coverage:  ", txt_deaths_both, "\n")
+cat("Realised % of achievable, Optimistic efficacy:    ", txt_realised_hi, "\n")
+cat("Realised % of achievable, Central efficacy:       ", txt_realised_mid, "\n")
+cat("Realised % of achievable, Pessimistic efficacy:   ", txt_realised_lo, "\n")
