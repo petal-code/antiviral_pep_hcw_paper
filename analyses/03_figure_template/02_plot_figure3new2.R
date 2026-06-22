@@ -750,7 +750,7 @@ save_fig("figure_3new_recip_averted_by_period", panel_recip_averted_period, 12, 
 # SI export: efficacy curve (old panel a) + coverage/DPC trajectory (old panel b)
 # =============================================================================
 save_fig("figure_3new_SIexport",
-         panel_a | panel_b +
+         (panel_a | panel_b) +
            plot_annotation(tag_levels = "a"),
          11, 4)
 
