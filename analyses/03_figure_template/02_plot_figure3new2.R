@@ -212,8 +212,8 @@ panel_a <- ggplot(curve_d50_dat, aes(x = dpc)) +
   # to the right along the upper dashed curve, "Pessimistic" lower-left along
   # the lower dashed curve's early decline. Adjust x/y here if the underlying
   # curve shape changes and the labels drift off the lines.
-  annotate("text", x = 6.6,   y = 0.75, label = "Optimistic",  hjust = 0, vjust = 0, size = 3.2, color = "black") +
-  annotate("text", x = 0.8, y = 0.35, label = "Pessimistic", hjust = 0, vjust = 0, size = 3.2, color = "black") +
+  annotate("text", x = 8,   y = 0.75, label = "Optimistic",  hjust = 0, vjust = 0, size = 3.2, color = "black") +
+  annotate("text", x = 1.5, y = 0.35, label = "Pessimistic", hjust = 0, vjust = 0, size = 3.2, color = "black") +
   scale_y_continuous(limits = c(0, NA), labels = scales::percent) +
   labs(x = "Days post-exposure (DPC)", y = "Efficacy") +
   theme_fig()
@@ -273,14 +273,15 @@ make_panel_c <- function(metric_name, y_label) {
       day       = week * 7,
       arm_label = factor(ARM_LABELS_C[arm], levels = ARM_LABELS_C)
     )
-  ggplot(df, aes(x = day, y = mean_val, color = arm_label, fill = arm_label)) +
-    geom_ribbon(aes(ymin = pmax(ci_lo, 0), ymax = ci_hi), alpha = 0.15, color = NA) +
+  ggplot(df, aes(x = day, y = q50, color = arm_label, fill = arm_label)) +
+    geom_ribbon(aes(ymin = pmax(q25, 0), ymax = q75), alpha = 0.15, color = NA) +
     geom_line(linewidth = 1) +
     scale_color_manual(values = ARM_COLORS_C, name = NULL) +
     scale_fill_manual(values = ARM_COLORS_C, name = NULL) +
     scale_x_continuous(limits = c(0, 420), expand = c(0, 0)) +
     labs(x = "Day", y = y_label) +
-    theme_fig()
+    theme_fig() +
+    theme(legend.position = c(0.3, 0.85))
 }
 
 panel_c_incident   <- make_panel_c("hcw_deaths_incidence", "Mean weekly incident HCW deaths")
@@ -296,8 +297,8 @@ make_panel_c_eff <- function(metric_name, y_label) {
       day       = week * 7,
       arm_label = factor(ARM_LABELS_EFF[arm], levels = ARM_LABELS_EFF)
     )
-  ggplot(df, aes(x = day, y = mean_val, color = arm_label, fill = arm_label)) +
-    geom_ribbon(aes(ymin = pmax(ci_lo, 0), ymax = ci_hi), alpha = 0.15, color = NA) +
+  ggplot(df, aes(x = day, y = q50, color = arm_label, fill = arm_label)) +
+    geom_ribbon(aes(ymin = pmax(q25, 0), ymax = q75), alpha = 0.15, color = NA) +
     geom_line(linewidth = 1) +
     scale_color_manual(values = ARM_COLORS_EFF, name = NULL) +
     scale_fill_manual(values = ARM_COLORS_EFF, name = NULL) +
@@ -331,8 +332,8 @@ make_panel_c_by_eff <- function(metric_name, y_label, eff, eff_title) {
       day       = week * 7,
       arm_label = factor(arm_map[arm], levels = arm_map)
     )
-  ggplot(df, aes(x = day, y = mean_val, color = arm_label, fill = arm_label)) +
-    geom_ribbon(aes(ymin = pmax(ci_lo, 0), ymax = ci_hi), alpha = 0.15, color = NA) +
+  ggplot(df, aes(x = day, y = q50, color = arm_label, fill = arm_label)) +
+    geom_ribbon(aes(ymin = pmax(q25, 0), ymax = q75), alpha = 0.15, color = NA) +
     geom_line(linewidth = 1) +
     scale_color_manual(values = EFF_SCENARIO_COLORS, name = NULL) +
     scale_fill_manual(values = EFF_SCENARIO_COLORS, name = NULL) +
@@ -674,8 +675,8 @@ panel_bottom <- ts_3new %>%
     day       = week * 7,
     arm_label = factor(ARM_LABELS_BOTTOM[arm], levels = ARM_LABELS_BOTTOM)
   ) %>%
-  ggplot(aes(x = day, y = mean_val, color = arm_label, fill = arm_label)) +
-  geom_ribbon(aes(ymin = pmax(ci_lo, 0), ymax = ci_hi), alpha = 0.15, color = NA) +
+  ggplot(aes(x = day, y = q50, color = arm_label, fill = arm_label)) +
+  geom_ribbon(aes(ymin = pmax(q25, 0), ymax = q75), alpha = 0.15, color = NA) +
   geom_line(linewidth = 1) +
   scale_color_manual(values = ARM_COLORS_BOTTOM, name = NULL) +
   scale_fill_manual(values = ARM_COLORS_BOTTOM, name = NULL) +
@@ -745,176 +746,183 @@ panel_recip_averted_period <- make_period_boxplot(
 save_fig("figure_3new_recip_deaths_by_period",  panel_recip_deaths_period,  12, 6)
 save_fig("figure_3new_recip_averted_by_period", panel_recip_averted_period, 12, 6)
 
-
+# =============================================================================
+# SI export: efficacy curve (old panel a) + coverage/DPC trajectory (old panel b)
+# =============================================================================
+save_fig("figure_3new_SIexport",
+         panel_a | panel_b +
+           plot_annotation(tag_levels = "a"),
+         11, 4)
 
 # =============================================================================
-# 03_text_numbers_figure3new.R
+# figure_3new_combined_final
 #
-# Pulls the specific summary numbers needed to fill in the XX placeholders
-# in the Figure 3 results paragraph:
+# Layout: (new_panel_a | new_panel_b) / new_panel_c
+#   widths  c(2, 1) -- panel a takes 2/3, panel b takes 1/3
+#   heights c(2, 1) -- top row takes 2/3, bottom row takes 1/3
 #
-#   1. Cumulative HCW deaths (mean, 95% CI) at the end of follow-up, mid
-#      efficacy, for three arms:
-#        - achievable-impact / Ideal      (optimistic_mid)
-#        - delay only, coverage preserved (dpc_conflict_mid)
-#        - delay + reduced coverage       (with_conflict_mid)
+# new_panel_a (= panel_c_cumulative): cumulative HCW deaths time series,
+#   central efficacy, four scenarios.
 #
-#   2. % of the achievable HCW deaths averted that was realised under
-#      conflict disruption (i.e. with_conflict's pct_hcw_deaths_averted as
-#      a fraction of optimistic's pct_hcw_deaths_averted), computed per
-#      particle and summarised as median + 95% CI, for each of the
-#      optimistic/central/pessimistic delay-efficacy assumptions.
+# new_panel_b: stacked bar chart, central efficacy, four scenarios.
+#   Each bar's total height = No PEP cumulative deaths (fixed denominator),
+#   so the grey top section = deaths averted, coloured bottom = deaths that
+#   still occurred. Scenarios left to right: No PEP, Both impacted,
+#   DPC impacted, Ideal.
 #
-#   3. Raw % HCW deaths averted under Ideal (no delay) and delay-only
-#      (coverage preserved) scenarios at mid (central) efficacy, plus the
-#      % of achievable impact retained when delay alone is introduced
-#      (dpc_conflict_mid's pct_hcw_deaths_averted as a fraction of
-#      optimistic_mid's, median + 95% CI across particles).
-#
-# Reads from the CSVs already produced by 02_extract_figure3new.R. Prints a
-# flat list of the numbers at the end, ready to copy/paste.
+# new_panel_c: % HCW deaths averted by efficacy assumption (Optimistic /
+#   Central / Pessimistic), three scenarios side by side per facet
+#   (Ideal / DPC impacted / Both impacted), bars = median,
+#   error bars = 2.5-97.5 percentile range.
 # =============================================================================
-library(dplyr)
-library(here)
 
-ts_3new       <- read.csv(here("output_figgen", "figure_3new_weekly_ts.csv"))
-particle_3new <- read.csv(here("output_figgen", "figure_3new_particle_summary.csv"))
-
-EFF_ARM_LABELS <- c(hi = "Optimistic", mid = "Central", lo = "Pessimistic")
-EFF_ARM_ORDER  <- c("hi", "mid", "lo")
-
-fmt_n <- function(mean_val, lo, hi, digits = 1) {
-  sprintf("%s (%s\u2013%s)",
-          formatC(mean_val, format = "f", digits = digits),
-          formatC(lo,        format = "f", digits = digits),
-          formatC(hi,        format = "f", digits = digits))
-}
-
-fmt_pct <- function(med, lo, hi, digits = 1) {
-  sprintf("%s%% (%s\u2013%s%%)",
-          formatC(med, format = "f", digits = digits),
-          formatC(lo,  format = "f", digits = digits),
-          formatC(hi,  format = "f", digits = digits))
-}
-
-# =============================================================================
-# 1. Cumulative HCW deaths at end of follow-up, mid efficacy, three arms
-# =============================================================================
-final_week <- max(
+# --- new_panel_b data: cumulative deaths at end of follow-up, mid efficacy ---
+final_week_b <- max(
   ts_3new$week[ts_3new$scenario == "DRC" & ts_3new$metric == "hcw_deaths"],
   na.rm = TRUE
 )
 
-cum_deaths <- ts_3new %>%
-  filter(scenario == "DRC", metric == "hcw_deaths", week == final_week,
-         arm %in% c("optimistic_mid", "dpc_conflict_mid", "with_conflict_mid")) %>%
-  select(arm, mean_val, ci_lo, ci_hi)
+PANEL_B_ARMS <- c(
+  no_pep_mid        = "No PEP",
+  with_conflict_mid = "Both impacted",
+  dpc_conflict_mid  = "DPC impacted",
+  optimistic_mid    = "Ideal"
+)
 
-deaths_ideal <- cum_deaths %>% filter(arm == "optimistic_mid")
-deaths_dpc   <- cum_deaths %>% filter(arm == "dpc_conflict_mid")
-deaths_both  <- cum_deaths %>% filter(arm == "with_conflict_mid")
+PANEL_B_COLORS_DIED <- c(
+  "No PEP"        = "grey60",
+  "Both impacted" = "#d7191c",
+  "DPC impacted"  = "#f58231",
+  "Ideal"         = "#1a9641"
+)
 
-stopifnot(nrow(deaths_ideal) == 1, nrow(deaths_dpc) == 1, nrow(deaths_both) == 1)
+cum_end <- ts_3new %>%
+  filter(scenario == "DRC", metric == "hcw_deaths", week == final_week_b,
+         arm %in% names(PANEL_B_ARMS)) %>%
+  mutate(arm_label = factor(PANEL_B_ARMS[arm], levels = PANEL_B_ARMS))
 
-txt_deaths_ideal <- fmt_n(deaths_ideal$mean_val, deaths_ideal$ci_lo, deaths_ideal$ci_hi)
-txt_deaths_dpc   <- fmt_n(deaths_dpc$mean_val,   deaths_dpc$ci_lo,   deaths_dpc$ci_hi)
-txt_deaths_both  <- fmt_n(deaths_both$mean_val,  deaths_both$ci_lo,  deaths_both$ci_hi)
+# No PEP mean deaths = fixed total bar height for all bars
+no_pep_total <- cum_end$q50[cum_end$arm == "no_pep_mid"]
 
-
-# =============================================================================
-# 2. % of achievable HCW deaths averted realised under conflict disruption,
-#    by delay-efficacy assumption
-# =============================================================================
-realised_ratio <- particle_3new %>%
-  filter(arm %in% c(
-    "optimistic_hi", "optimistic_mid", "optimistic_lo",
-    "with_conflict_hi", "with_conflict_mid", "with_conflict_lo"
-  )) %>%
+# Stack order: averted (grey) on bottom, died (scenario color) on top.
+# This makes the "floor" of the colored section a visual baseline for
+# comparing how much was averted across scenarios.
+panel_b_bars <- cum_end %>%
   mutate(
-    eff_arm  = sub("^(optimistic|with_conflict)_", "", arm),
-    cov_scen = sub("_(mid|lo|hi)$", "", arm)
+    died    = q50,
+    averted = no_pep_total - q50
   ) %>%
-  select(particle_id, eff_arm, cov_scen, pct_hcw_deaths_averted) %>%
-  tidyr::pivot_wider(names_from = cov_scen, values_from = pct_hcw_deaths_averted) %>%
+  select(arm_label, died, averted) %>%
+  tidyr::pivot_longer(cols = c(averted, died),
+                      names_to = "segment", values_to = "value") %>%
+  mutate(segment = factor(segment, levels = c("averted", "died")))
+
+# All averted segments and No PEP died segment use the same grey so the
+# "averted" region reads as one unified neutral backdrop across all bars.
+new_panel_b <- ggplot(panel_b_bars,
+                      aes(x = arm_label, y = value, fill = interaction(segment, arm_label))) +
+  geom_col(width = 1.0, color = "grey50", linewidth = 0.2) +
+  scale_fill_manual(
+    values = c(
+      "averted.No PEP"        = "grey75",
+      "averted.Both impacted" = "grey75",
+      "averted.DPC impacted"  = "grey75",
+      "averted.Ideal"         = "grey75",
+      "died.No PEP"           = "grey75",  # No PEP: same grey throughout
+      "died.Both impacted"    = "#d7191c",
+      "died.DPC impacted"     = "#f58231",
+      "died.Ideal"            = "#1a9641"
+    ),
+    guide = "none"
+  ) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(x = NULL, y = "Cumulative HCW deaths") +
+  theme_fig() +
+  theme(axis.text.x = element_text(angle = 25, hjust = 1))
+
+# --- new_panel_c: % averted across all three efficacy assumptions -----------
+PANEL_C_SCEN_ORDER  <- c("Ideal", "DPC impacted", "Both impacted")
+PANEL_C_SCEN_COLORS <- c(
+  "Ideal"         = "#1a9641",
+  "DPC impacted"  = "#f58231",
+  "Both impacted" = "#d7191c"
+)
+
+PANEL_C_ARM_MAP <- c(
+  optimistic_hi    = "Ideal",
+  optimistic_mid   = "Ideal",
+  optimistic_lo    = "Ideal",
+  dpc_conflict_hi  = "DPC impacted",
+  dpc_conflict_mid = "DPC impacted",
+  dpc_conflict_lo  = "DPC impacted",
+  with_conflict_hi = "Both impacted",
+  with_conflict_mid = "Both impacted",
+  with_conflict_lo = "Both impacted"
+)
+
+panel_c_averted <- particle_3new %>%
+  filter(arm %in% names(PANEL_C_ARM_MAP)) %>%
   mutate(
-    realised_pct_of_achievable = 100 * with_conflict / optimistic
+    scenario_label = factor(PANEL_C_ARM_MAP[arm], levels = PANEL_C_SCEN_ORDER),
+    eff_arm        = sub("^(optimistic|dpc_conflict|with_conflict)_", "", arm),
+    eff_arm_label  = factor(EFF_ARM_LABELS[eff_arm], levels = EFF_ARM_LABELS[EFF_ARM_ORDER])
   ) %>%
-  filter(is.finite(realised_pct_of_achievable))
-
-realised_summary <- realised_ratio %>%
-  group_by(eff_arm) %>%
-  summarise(
-    median = median(realised_pct_of_achievable, na.rm = TRUE),
-    ci_lo  = quantile(realised_pct_of_achievable, 0.025, na.rm = TRUE),
-    ci_hi  = quantile(realised_pct_of_achievable, 0.975, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(eff_arm_label = EFF_ARM_LABELS[eff_arm]) %>%
-  arrange(match(eff_arm, EFF_ARM_ORDER))
-
-
-txt_realised_hi  <- fmt_pct(
-  realised_summary$median[realised_summary$eff_arm == "hi"],
-  realised_summary$ci_lo[realised_summary$eff_arm == "hi"],
-  realised_summary$ci_hi[realised_summary$eff_arm == "hi"]
-)
-txt_realised_mid <- fmt_pct(
-  realised_summary$median[realised_summary$eff_arm == "mid"],
-  realised_summary$ci_lo[realised_summary$eff_arm == "mid"],
-  realised_summary$ci_hi[realised_summary$eff_arm == "mid"]
-)
-txt_realised_lo  <- fmt_pct(
-  realised_summary$median[realised_summary$eff_arm == "lo"],
-  realised_summary$ci_lo[realised_summary$eff_arm == "lo"],
-  realised_summary$ci_hi[realised_summary$eff_arm == "lo"]
-)
-
-# =============================================================================
-# 3. Raw % HCW deaths averted (Ideal vs delay-only, mid efficacy), and the
-#    % of achievable impact retained when delay alone is introduced
-#    (coverage preserved). Mirrors section 2's ratio logic, but for
-#    dpc_conflict_mid relative to optimistic_mid instead of with_conflict.
-# =============================================================================
-averted_raw_mid <- particle_3new %>%
-  filter(arm %in% c("optimistic_mid", "dpc_conflict_mid")) %>%
-  group_by(arm) %>%
+  group_by(eff_arm_label, scenario_label) %>%
   summarise(
     median = median(pct_hcw_deaths_averted, na.rm = TRUE),
-    ci_lo  = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
-    ci_hi  = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
+    lo     = quantile(pct_hcw_deaths_averted, 0.025, na.rm = TRUE),
+    hi     = quantile(pct_hcw_deaths_averted, 0.975, na.rm = TRUE),
     .groups = "drop"
   )
 
-avert_ideal_mid <- averted_raw_mid %>% filter(arm == "optimistic_mid")
-avert_dpc_mid   <- averted_raw_mid %>% filter(arm == "dpc_conflict_mid")
+new_panel_c <- ggplot(panel_c_averted,
+                      aes(x = scenario_label, y = median,
+                          fill = scenario_label, ymin = lo, ymax = hi)) +
+  geom_col(position = position_dodge(0.7), width = 0.6,
+           color = "grey70", linewidth = 0.3) +
+  geom_errorbar(position = position_dodge(0.7), width = 0.2, linewidth = 0.4) +
+  scale_fill_manual(values = PANEL_C_SCEN_COLORS, name = NULL) +
+  scale_y_continuous(limits = c(0, 100), labels = function(x) paste0(x, "%"),
+                     expand = c(0, 0)) +
+  facet_wrap(~ eff_arm_label, nrow = 1) +
+  labs(x = NULL, y = "HCW deaths averted (%)") +
+  theme_fig() +
+  theme(
+    legend.position  = "none",
+    axis.text.x      = element_text(angle = 25, hjust = 1),
+    strip.background = element_blank(),
+    strip.text       = element_text(size = 10, face = "plain")
+  )
 
-txt_avert_ideal_mid <- fmt_pct(avert_ideal_mid$median, avert_ideal_mid$ci_lo, avert_ideal_mid$ci_hi)
-txt_avert_dpc_mid   <- fmt_pct(avert_dpc_mid$median,   avert_dpc_mid$ci_lo,   avert_dpc_mid$ci_hi)
+# --- assemble and save ------------------------------------------------------
+# Shared y upper limit for panels a and b: take the max of No PEP q50
+# across all time points so both panels share the same scale.
+y_max_ab <- max(
+  ts_3new$q75[ts_3new$scenario == "DRC" &
+                ts_3new$metric   == "hcw_deaths" &
+                ts_3new$arm      == "no_pep_mid"],
+  na.rm = TRUE
+) * 1.0  # 5% headroom
 
-retained_dpc_mid <- particle_3new %>%
-  filter(arm %in% c("optimistic_mid", "dpc_conflict_mid")) %>%
-  mutate(cov_scen = sub("_mid$", "", arm)) %>%
-  select(particle_id, cov_scen, pct_hcw_deaths_averted) %>%
-  tidyr::pivot_wider(names_from = cov_scen, values_from = pct_hcw_deaths_averted) %>%
-  mutate(retained_pct = 100 * dpc_conflict / optimistic) %>%
-  filter(is.finite(retained_pct))
+# Rebuild panel a with matching y range, corrected x label, and tighter margin
+panel_a_final <- make_panel_c("hcw_deaths", "Mean cumulative HCW deaths") +
+  scale_y_continuous(limits = c(0, y_max_ab), expand = c(0, 0)) +
+  scale_x_continuous(limits = c(0, 600), expand = c(0, 0)) +
+  labs(x = "Days since outbreak start") +
+  theme(plot.margin = margin(5, 10, 2, 5))
 
-txt_retained_dpc_mid <- fmt_pct(
-  median(retained_dpc_mid$retained_pct, na.rm = TRUE),
-  quantile(retained_dpc_mid$retained_pct, 0.025, na.rm = TRUE),
-  quantile(retained_dpc_mid$retained_pct, 0.975, na.rm = TRUE)
-)
+# Rebuild panel b with the same y upper limit
+new_panel_b_final <- new_panel_b +
+  scale_y_continuous(limits = c(0, y_max_ab), expand = c(0, 0))
 
-# =============================================================================
-# 4. Final number list (copy/paste these)
-# =============================================================================
-cat("=== NUMBERS ===\n")
-cat("Cumulative HCW deaths, Ideal (achievable):       ", txt_deaths_ideal, "\n")
-cat("Cumulative HCW deaths, delay only:                ", txt_deaths_dpc, "\n")
-cat("Cumulative HCW deaths, delay + reduced coverage:  ", txt_deaths_both, "\n")
-cat("Realised % of achievable, Optimistic efficacy:    ", txt_realised_hi, "\n")
-cat("Realised % of achievable, Central efficacy:       ", txt_realised_mid, "\n")
-cat("Realised % of achievable, Pessimistic efficacy:   ", txt_realised_lo, "\n")
-cat("Raw % HCW deaths averted, Ideal (mid efficacy):   ", txt_avert_ideal_mid, "\n")
-cat("Raw % HCW deaths averted, delay only (mid):       ", txt_avert_dpc_mid, "\n")
-cat("% of achievable retained, delay only (mid):       ", txt_retained_dpc_mid, "\n")
+# Use wrap_plots with explicit area layout to enforce 2:1 width ratio between
+# panel a and panel b in the top row. The simple (a | b) / c patchwork
+# syntax ignores widths when the bottom panel spans both columns.
+# plot_annotation tag_levels applied after wrapping so labels a/b/c appear.
+top_row <- wrap_plots(panel_a_final, new_panel_b_final, widths = c(2, 1))
+
+final_fig <- wrap_plots(top_row, new_panel_c, ncol = 1, heights = c(2, 1)) +
+  plot_annotation(tag_levels = "a")
+
+save_fig("figure_3new_combined_final", final_fig, 14, 9)
+

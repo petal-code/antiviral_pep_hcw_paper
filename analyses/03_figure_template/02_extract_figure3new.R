@@ -247,7 +247,40 @@ raw_ts_3new <- do.call(rbind, raw_ts_list[!sapply(raw_ts_list, is.null)])
 # range, preventing the cumulative mean from dropping at the tail.
 global_max_week <- max(raw_ts_3new$week, na.rm = TRUE)
 
+# ts_quantiles_3new <- raw_ts_3new %>%
+#   group_by(scenario, arm, particle_id, week, metric) %>%
+#   summarise(value = mean(value), .groups = "drop") %>%
+#   # Pad each particle to global_max_week with 0 incidence
+#   group_by(scenario, arm, metric) %>%
+#   group_modify(~ {
+#     all_weeks <- seq(min(.x$week), global_max_week, by = 7)
+#     tidyr::complete(.x,
+#                     particle_id = unique(.x$particle_id),
+#                     week        = all_weeks,
+#                     fill        = list(value = 0))
+#   }) %>%
+#   ungroup() %>%
+#   arrange(scenario, arm, particle_id, metric, week) %>%
+#   # Apply cumsum for cumulative metric only; incidence stays as-is
+#   group_by(scenario, arm, particle_id, metric) %>%
+#   mutate(value = if (unique(metric) == "hcw_deaths") cumsum(value) else value) %>%
+#   ungroup() %>%
+#   group_by(scenario, arm, week, metric) %>%
+#   summarise(
+#     mean_val = mean(value, na.rm = TRUE),
+#     sd_val   = sd(value,  na.rm = TRUE),
+#     n_val    = sum(!is.na(value)),
+#     .groups  = "drop"
+#   ) %>%
+#   mutate(
+#     se_val = sd_val / sqrt(n_val),
+#     ci_lo  = mean_val - 1.96 * se_val,
+#     ci_hi  = mean_val + 1.96 * se_val,
+#     week   = week / 7  # convert day midpoints to weeks for plot script
+#   )
+
 ts_quantiles_3new <- raw_ts_3new %>%
+  # Step 1: mean over reps within each particle x arm x week x metric
   group_by(scenario, arm, particle_id, week, metric) %>%
   summarise(value = mean(value), .groups = "drop") %>%
   # Pad each particle to global_max_week with 0 incidence
@@ -261,23 +294,21 @@ ts_quantiles_3new <- raw_ts_3new %>%
   }) %>%
   ungroup() %>%
   arrange(scenario, arm, particle_id, metric, week) %>%
-  # Apply cumsum for cumulative metric only; incidence stays as-is
+  # Step 2: cumsum for cumulative metric only; incidence stays as-is
   group_by(scenario, arm, particle_id, metric) %>%
   mutate(value = if (unique(metric) == "hcw_deaths") cumsum(value) else value) %>%
   ungroup() %>%
+  # Step 3: quantiles across particles (matches Figure 1 method)
   group_by(scenario, arm, week, metric) %>%
   summarise(
-    mean_val = mean(value, na.rm = TRUE),
-    sd_val   = sd(value,  na.rm = TRUE),
-    n_val    = sum(!is.na(value)),
-    .groups  = "drop"
+    q025 = quantile(value, 0.025, na.rm = TRUE),
+    q25  = quantile(value, 0.25,  na.rm = TRUE),
+    q50  = quantile(value, 0.50,  na.rm = TRUE),
+    q75  = quantile(value, 0.75,  na.rm = TRUE),
+    q975 = quantile(value, 0.975, na.rm = TRUE),
+    .groups = "drop"
   ) %>%
-  mutate(
-    se_val = sd_val / sqrt(n_val),
-    ci_lo  = mean_val - 1.96 * se_val,
-    ci_hi  = mean_val + 1.96 * se_val,
-    week   = week / 7  # convert day midpoints to weeks for plot script
-  )
+  mutate(week = week / 7)  # convert day midpoints to weeks for plot script
 
 save_figure_data(ts_quantiles_3new, "figure_3new_weekly_ts.csv")
 message("Weekly time series saved.")
