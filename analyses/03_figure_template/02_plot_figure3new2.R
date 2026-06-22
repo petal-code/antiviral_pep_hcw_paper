@@ -924,5 +924,5 @@ top_row <- wrap_plots(panel_a_final, new_panel_b_final, widths = c(2, 1))
 final_fig <- wrap_plots(top_row, new_panel_c, ncol = 1, heights = c(2, 1)) +
   plot_annotation(tag_levels = "a")
 
-save_fig("figure_3new_combined_final", final_fig, 14, 9)
+save_fig("figure_3new_combined_final", final_fig, 10, 7)
 
