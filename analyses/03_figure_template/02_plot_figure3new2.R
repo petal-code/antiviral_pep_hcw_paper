@@ -266,26 +266,52 @@ panel_b <- ggplot(sdb, aes(x = day)) +
 # Panel c: HCW deaths time series (mid efficacy, scenario comparison)
 # x-axis fixed to 420 days to match panel b
 # =============================================================================
-make_panel_c <- function(metric_name, y_label) {
+make_panel_c <- function(metric_name, y_label, legend_layout = "top") {
   df <- ts_3new %>%
     filter(scenario == "DRC", arm %in% names(ARM_LABELS_C), metric == metric_name) %>%
     mutate(
       day       = week * 7,
       arm_label = factor(ARM_LABELS_C[arm], levels = ARM_LABELS_C)
     )
-  ggplot(df, aes(x = day, y = q50, color = arm_label, fill = arm_label)) +
+  p <- ggplot(df, aes(x = day, y = q50, color = arm_label, fill = arm_label)) +
     geom_ribbon(aes(ymin = pmax(q25, 0), ymax = q75), alpha = 0.15, color = NA) +
     geom_line(linewidth = 1) +
     scale_color_manual(values = ARM_COLORS_C, name = NULL) +
     scale_fill_manual(values = ARM_COLORS_C, name = NULL) +
     scale_x_continuous(limits = c(0, 420), expand = c(0, 0)) +
     labs(x = "Day", y = y_label) +
-    theme_fig() +
-    theme(legend.position = c(0.3, 0.85))
+    theme_fig()
+  
+  if (legend_layout == "inside_top") {
+    # incident: 1 row x 4 cols, at the top inside the plot
+    p <- p + theme(
+      legend.position       = c(0.5, 0.97),
+      legend.justification  = c(0.5, 1),
+      legend.direction      = "horizontal",
+      legend.background     = element_blank(),
+      legend.key            = element_blank(),
+      legend.text           = element_text(size = 8)
+    ) + guides(color = guide_legend(nrow = 1),
+               fill  = guide_legend(nrow = 1))
+  } else if (legend_layout == "inside_topleft") {
+    # cumulative: 4 rows x 1 col, at the top-left inside the plot
+    p <- p + theme(
+      legend.position       = c(0.02, 0.98),
+      legend.justification  = c(0, 1),
+      legend.direction      = "vertical",
+      legend.background     = element_blank(),
+      legend.key            = element_blank(),
+      legend.text           = element_text(size = 8)
+    ) + guides(color = guide_legend(ncol = 1),
+               fill  = guide_legend(ncol = 1))
+  }
+  p
 }
 
-panel_c_incident   <- make_panel_c("hcw_deaths_incidence", "Mean weekly incident HCW deaths")
-panel_c_cumulative <- make_panel_c("hcw_deaths",           "Mean cumulative HCW deaths")
+panel_c_incident   <- make_panel_c("hcw_deaths_incidence", "Mean weekly incident HCW deaths",
+                                   legend_layout = "inside_topleft")
+panel_c_cumulative <- make_panel_c("hcw_deaths", "Mean cumulative HCW deaths",
+                                   legend_layout = "inside_topleft")
 
 # =============================================================================
 # Panel c (efficacy variant): both impacted, all three efficacy levels
@@ -750,7 +776,7 @@ save_fig("figure_3new_recip_averted_by_period", panel_recip_averted_period, 12, 
 # SI export: efficacy curve (old panel a) + coverage/DPC trajectory (old panel b)
 # =============================================================================
 save_fig("figure_3new_SIexport",
-         (panel_a | panel_b) +
+         panel_a | panel_b +
            plot_annotation(tag_levels = "a"),
          11, 4)
 
@@ -897,15 +923,11 @@ new_panel_c <- ggplot(panel_c_averted,
 # --- assemble and save ------------------------------------------------------
 # Shared y upper limit for panels a and b: take the max of No PEP q50
 # across all time points so both panels share the same scale.
-y_max_ab <- max(
-  ts_3new$q75[ts_3new$scenario == "DRC" &
-                ts_3new$metric   == "hcw_deaths" &
-                ts_3new$arm      == "no_pep_mid"],
-  na.rm = TRUE
-) * 1.0  # 5% headroom
+y_max_ab <- 140
 
 # Rebuild panel a with matching y range, corrected x label, and tighter margin
-panel_a_final <- make_panel_c("hcw_deaths", "Mean cumulative HCW deaths") +
+panel_a_final <- make_panel_c("hcw_deaths", "Mean cumulative HCW deaths",
+                              legend_layout = "inside_topleft") +
   scale_y_continuous(limits = c(0, y_max_ab), expand = c(0, 0)) +
   scale_x_continuous(limits = c(0, 600), expand = c(0, 0)) +
   labs(x = "Days since outbreak start") +
@@ -924,5 +946,115 @@ top_row <- wrap_plots(panel_a_final, new_panel_b_final, widths = c(2, 1))
 final_fig <- wrap_plots(top_row, new_panel_c, ncol = 1, heights = c(2, 1)) +
   plot_annotation(tag_levels = "a")
 
-save_fig("figure_3new_combined_final", final_fig, 10, 7)
+save_fig("figure_3new_combined_final", final_fig, 14, 9)
 
+# =============================================================================
+# figure_3new_combined_final2 / figure_3new_combined_final2_incident
+#
+# Same layout as combined_final but panel b replaced with a waterfall chart
+# showing cumulative HCW deaths (not % averted). Each scenario is a floating
+# bar whose top = its own median deaths and whose bottom = the next scenario's
+# median deaths, so the bars descend from No PEP down to Ideal. Dotted bridge
+# segments connect consecutive bars at their shared boundary.
+#
+# _incident variant: panel a shows incident (weekly) HCW deaths instead of
+# cumulative.
+# =============================================================================
+
+# --- build waterfall data from cum_end (already computed above) --------------
+# Structure:
+#   Bar 1: No PEP        full bar, 0 -> no_pep value            (grey)
+#   Bar 2: Both impacted floating,  both -> no_pep              (red)
+#   Bar 3: DPC impacted  floating,  dpc  -> both                (orange)
+#   Bar 4: Ideal         floating,  ideal -> dpc                (green)
+#   Bar 5: Ideal remain  full bar,  0 -> ideal value            (grey)
+# Dotted bridge connects top of each bar to top of the next bar,
+# spanning from the left edge of the current bar to the right edge
+# of the next bar.
+
+WF2_ORDER  <- c("No PEP", "Both impacted", "DPC impacted", "Ideal")
+WF2_COLORS <- c(
+  "No PEP"        = "grey75",
+  "Both impacted" = "#d7191c",
+  "DPC impacted"  = "#f58231",
+  "Ideal"         = "#1a9641",
+  "Ideal remain"  = "grey75"
+)
+
+wf2_deaths <- cum_end %>%
+  mutate(arm_label = as.character(arm_label)) %>%
+  arrange(match(arm_label, WF2_ORDER))
+
+no_pep_val <- ts_3new$q50[ts_3new$scenario == "DRC" & ts_3new$metric == "hcw_deaths" &
+                            ts_3new$arm == "no_pep_mid"  & ts_3new$week == final_week_b]
+both_val   <- ts_3new$q50[ts_3new$scenario == "DRC" & ts_3new$metric == "hcw_deaths" &
+                            ts_3new$arm == "with_conflict_mid" & ts_3new$week == final_week_b]
+dpc_val    <- ts_3new$q50[ts_3new$scenario == "DRC" & ts_3new$metric == "hcw_deaths" &
+                            ts_3new$arm == "dpc_conflict_mid"  & ts_3new$week == final_week_b]
+ideal_val  <- ts_3new$q50[ts_3new$scenario == "DRC" & ts_3new$metric == "hcw_deaths" &
+                            ts_3new$arm == "optimistic_mid"    & ts_3new$week == final_week_b]
+
+message(sprintf("Waterfall vals: no_pep=%.1f both=%.1f dpc=%.1f ideal=%.1f",
+                no_pep_val, both_val, dpc_val, ideal_val))
+
+WF_BW <- 0.28  # half-width of each bar
+
+wf2_bars <- data.frame(
+  x         = 1:5,
+  ymin      = c(0,        both_val, dpc_val,  ideal_val, 0),
+  ymax      = c(no_pep_val, no_pep_val, both_val, dpc_val, ideal_val),
+  fill_group = c("No PEP", "Both impacted", "DPC impacted", "Ideal", "Ideal remain")
+)
+
+# Bridge segments: connect at the TOP of the NEXT bar
+# y = ymax of bar i+1 = ymin of current bar i (they share the same level)
+wf2_segs <- data.frame(
+  x    = wf2_bars$x[-nrow(wf2_bars)] - WF_BW,
+  xend = wf2_bars$x[-1]              + WF_BW,
+  y    = wf2_bars$ymax[-1]   # ymax of the NEXT bar
+)
+
+wf2_xlabels <- data.frame(
+  x     = 1:5,
+  label = c("No PEP", "Both\nimpacted", "DPC\nimpacted", "Ideal", "")
+)
+
+new_panel_b2 <- ggplot() +
+  geom_rect(data = wf2_bars,
+            aes(xmin = x - WF_BW, xmax = x + WF_BW,
+                ymin = ymin, ymax = ymax,
+                fill = fill_group),
+            color = "grey60", linewidth = 0.25) +
+  geom_segment(data = wf2_segs,
+               aes(x = x, xend = xend, y = y, yend = y),
+               linetype = "dotted", color = "black", linewidth = 0.9) +
+  scale_fill_manual(values = WF2_COLORS, guide = "none") +
+  scale_x_continuous(breaks = wf2_xlabels$x, labels = wf2_xlabels$label) +
+  scale_y_continuous(limits = c(0, y_max_ab), expand = c(0, 0)) +
+  labs(x = NULL, y = "Cumulative HCW deaths") +
+  theme_fig() +
+  theme(axis.text.x = element_text(angle = 25, hjust = 1),
+        axis.ticks.x = element_blank())
+
+# --- assemble final2 (cumulative panel a) ------------------------------------
+top_row2 <- wrap_plots(panel_a_final, new_panel_b2, widths = c(2, 1))
+
+final_fig2 <- wrap_plots(top_row2, new_panel_c, ncol = 1, heights = c(2, 1)) +
+  plot_annotation(tag_levels = "a")
+
+save_fig("figure_3new_combined_final2", final_fig2, 14, 9)
+
+# --- incident variant: swap panel a for incident time series -----------------
+panel_a_incident_final <- make_panel_c("hcw_deaths_incidence",
+                                       "Mean weekly incident HCW deaths",
+                                       legend_layout = "inside_topleft") +
+  scale_x_continuous(limits = c(0, 600), expand = c(0, 0)) +
+  labs(x = "Days since outbreak start") +
+  theme(plot.margin = margin(5, 10, 2, 5))
+
+top_row2_inc <- wrap_plots(panel_a_incident_final, new_panel_b2, widths = c(2, 1))
+
+final_fig2_inc <- wrap_plots(top_row2_inc, new_panel_c, ncol = 1, heights = c(2, 1)) +
+  plot_annotation(tag_levels = "a")
+
+save_fig("figure_3new_combined_final2_incident", final_fig2_inc, 14, 9)
