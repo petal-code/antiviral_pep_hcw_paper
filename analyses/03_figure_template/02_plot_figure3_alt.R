@@ -52,7 +52,7 @@ make_weekly_lines <- function(sc, panel_title) {
   xm <- x_max_weeks(sc)
   df <- weekly_80 %>% filter(scenario==sc, week<=xm) %>% mutate(line_group = factor(line_group, levels = LINE_LEVELS))
   ggplot(df, aes(week, q50, color=line_group, fill=line_group)) +
-    geom_ribbon(aes(ymin=q025, ymax=q975), alpha=0.15, color=NA) + geom_line(linewidth=1) +
+    geom_ribbon(aes(ymin=q25, ymax=q75), alpha=0.15, color=NA) + geom_line(linewidth=1) +
     scale_color_manual(values=LINE_COLORS, breaks=LINE_LEVELS, labels=LINE_LABELS, name=NULL) +
     scale_fill_manual(values=LINE_COLORS, breaks=LINE_LEVELS, labels=LINE_LABELS, name=NULL) +
     scale_x_continuous(limits=c(0,xm), breaks=seq(0,xm,13)) +

@@ -4,15 +4,9 @@
 # Output: output_figgen/figure_3_run_summary.csv
 #
 # Also extracts weekly incident HCW deaths at 80% antiviral efficacy, for
-# baseline (no antiviral) and each coverage scenario (full/ramp_high/ramp_low).
-#
-# Weekly incidence is now summarised using the two-step particle-quantile
-# method (matching Figure 1 and Figure 3new):
-#   Step 1: mean over reps within each particle
-#   Step 2: quantiles across particles (q025/q25/q50/q75/q975)
-# The old mean +/- 1.96*SE approach pooled particle x rep directly,
-# producing near-invisible ribbons due to overly small SE.
-#
+# baseline (no antiviral) and each coverage scenario (full/ramp_high/ramp_low),
+# pre-aggregated to mean and 95% CI across particle x rep (same convention as
+# figure 1's weekly ts CSV).
 # Output: output_figgen/figure_3_weekly_hcw_deaths_80.csv
 # =============================================================================
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
@@ -35,6 +29,7 @@ save_figure_data(run_df, "figure_3_run_summary.csv")
 # Weekly incident HCW deaths at 80% efficacy
 # -----------------------------------------------------------------------
 EFF80 <- "obv_80"
+
 message("Extracting weekly HCW deaths incidence at 80% efficacy...")
 weekly_80_list <- lapply(COVERAGE_LEVELS, function(cov) {
   arm_dir <- sprintf("%s_obv%02d", cov, round(OBV_EFFICACY_VALUES[[EFF80]] * 100))
@@ -51,29 +46,29 @@ weekly_80_raw <- do.call(rbind, weekly_80_list)
 weekly_80_clean <- weekly_80_raw %>%
   filter(
     (arm == "obv") |
-      (arm == "baseline" & coverage_name == "ramp_low")
+      (arm == "baseline" & coverage_name == "full")
   ) %>%
   mutate(line_group = ifelse(arm == "baseline", "baseline", coverage_name))
 
-# Two-step aggregation matching Figure 1 / Figure 3new convention:
-#   Step 1: mean over reps within each particle (reduces 200x10 to 200)
-#   Step 2: quantiles across the 200 particles
-# Incident values do NOT receive cumsum (unlike hcw_deaths cumulative metric).
+# Aggregate to mean and 95% CI across particle x rep
 weekly_80_q <- weekly_80_clean %>%
   mutate(week = week / 7) %>%
-  # Step 1: rep average within each particle
-  group_by(scenario, line_group, particle_id, week) %>%
-  summarise(value = mean(value), .groups = "drop") %>%
-  # Step 2: quantiles across particles
   group_by(scenario, line_group, week) %>%
   summarise(
-    q025 = quantile(value, 0.025, na.rm = TRUE),
-    q25  = quantile(value, 0.25,  na.rm = TRUE),
-    q50  = quantile(value, 0.50,  na.rm = TRUE),
-    q75  = quantile(value, 0.75,  na.rm = TRUE),
-    q975 = quantile(value, 0.975, na.rm = TRUE),
+    mean_val = mean(value),
+    sd_val   = sd(value),
+    n        = n(),
     .groups = "drop"
+  ) %>%
+  mutate(
+    se_val = sd_val / sqrt(n),
+    q025   = mean_val - 1.96 * se_val,
+    q975   = mean_val + 1.96 * se_val,
+    q25    = mean_val - se_val,
+    q75    = mean_val + se_val,
+    q50    = mean_val
   )
 
 save_figure_data(weekly_80_q, "figure_3_weekly_hcw_deaths_80.csv")
+
 message("Figure 3 data extraction complete.")
