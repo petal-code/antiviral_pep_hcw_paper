@@ -78,14 +78,14 @@ EFF_ARM_ORDER  <- c("hi", "mid", "lo")
 
 COV_SCEN_LABELS <- c(
   optimistic    = "Ideal (100% coverage, 0 delay)",
-  dpc_conflict  = "DPC impacted",
-  with_conflict = "Both impacted"
+  dpc_conflict  = "Delayed dosing",
+  with_conflict = "Delayed coverage + dosing"
 )
 COV_SCEN_ORDER  <- c("optimistic", "dpc_conflict", "with_conflict")
 COV_SCEN_COLORS <- c(
   "Ideal (100% coverage, 0 delay)" = "#1a9641",
-  "DPC impacted"                   = "#f58231",
-  "Both impacted"                  = "#d7191c"
+  "Delayed dosing"                   = "#f58231",
+  "Delayed coverage + dosing"                  = "#d7191c"
 )
 
 
@@ -96,26 +96,26 @@ COV_SCEN_COLORS <- c(
 ARM_LABELS_C <- c(
   no_pep_mid        = "No PEP",
   optimistic_mid    = "Ideal (100% coverage, 0 delay)",
-  dpc_conflict_mid  = "DPC impacted",
-  with_conflict_mid = "Both impacted"
+  dpc_conflict_mid  = "Delayed dosing",
+  with_conflict_mid = "Delayed coverage + dosing"
 )
 ARM_COLORS_C <- c(
   "No PEP"                          = "black",
   "Ideal (100% coverage, 0 delay)"  = "#1a9641",
-  "DPC impacted"                    = "#f58231",
-  "Both impacted"                   = "#d7191c"
+  "Delayed dosing"                    = "#f58231",
+  "Delayed coverage + dosing"                   = "#d7191c"
 )
 
 # Arms for panel bottom (three arms only) -- same matched-seed no_pep swap
 ARM_LABELS_BOTTOM <- c(
   no_pep_mid         = "No PEP",
   optimistic_mid     = "Ideal (100% coverage, 0 delay)",
-  with_conflict_mid  = "Both impacted"
+  with_conflict_mid  = "Delayed coverage + dosing"
 )
 ARM_COLORS_BOTTOM <- c(
   "No PEP"                          = "black",
   "Ideal (100% coverage, 0 delay)"  = "#1a9641",
-  "Both impacted"                   = "#d7191c"
+  "Delayed coverage + dosing"                   = "#d7191c"
 )
 
 # Arms for efficacy comparison panel (both impacted, all three efficacy levels)
@@ -139,8 +139,8 @@ ARM_COLORS_EFF <- c(
 EFF_SCENARIO_COLORS <- c(
   "No PEP"                          = "black",
   "Ideal (100% coverage, 0 delay)"  = "#1a9641",
-  "DPC impacted"                    = "#f58231",
-  "Both impacted"                   = "#d7191c"
+  "Delayed dosing"                    = "#f58231",
+  "Delayed coverage + dosing"                   = "#d7191c"
 )
 
 # Period alpha levels for early/late boxplot distinction
@@ -227,11 +227,11 @@ panel_a <- ggplot(curve_d50_dat, aes(x = dpc)) +
 # shown, and lines are colored to match panel c's scenario colors so the
 # two panels read together directly:
 #   - coverage_flat (coverage stays at its peak, unaffected by conflict)
-#     is the coverage curve used by the "DPC impacted" scenario -> orange
+#     is the coverage curve used by the "Delayed dosing" scenario -> orange
 #   - coverage_conflict (coverage declines during conflict) is the
-#     coverage curve used by the "Both impacted" scenario -> red
+#     coverage curve used by the "Delayed coverage + dosing" scenario -> red
 #   - dpc_conflict (DPC curve under conflict) is shared identically by
-#     both the "DPC impacted" and "Both impacted" scenarios, so it's kept
+#     both the "Delayed dosing" and "Delayed coverage + dosing" scenarios, so it's kept
 #     neutral black/dashed rather than tied to a single scenario color
 # dpc_flat (the near-flat DPC curve used by the "Ideal" scenario) is
 # intentionally NOT shown -- it's a flat horizontal line that adds no
@@ -244,9 +244,9 @@ panel_b <- ggplot(sdb, aes(x = day)) +
   annotate("text", x = (110 + 300) / 2, y = 78,
            label = "conflict", size = 3.5, color = "grey30") +
   geom_line(aes(y = coverage_flat),
-            color = COV_SCEN_COLORS[["DPC impacted"]], linetype = "solid", linewidth = 1.1) +
+            color = COV_SCEN_COLORS[["Delayed dosing"]], linetype = "solid", linewidth = 1.1) +
   geom_line(aes(y = coverage_conflict),
-            color = COV_SCEN_COLORS[["Both impacted"]], linetype = "solid", linewidth = 1.1) +
+            color = COV_SCEN_COLORS[["Delayed coverage + dosing"]], linetype = "solid", linewidth = 1.1) +
   geom_line(aes(y = dpc_conflict / scale_factor),
             color = "black", linetype = "dashed", linewidth = 0.9) +
   scale_y_continuous(
@@ -346,8 +346,8 @@ make_panel_c_by_eff <- function(metric_name, y_label, eff, eff_title, show_legen
   arm_map <- setNames(
     c("No PEP",
       "Ideal (100% coverage, 0 delay)",
-      "DPC impacted",
-      "Both impacted"),
+      "Delayed dosing",
+      "Delayed coverage + dosing"),
     c(paste0("no_pep_",       eff),
       paste0("optimistic_",    eff),
       paste0("dpc_conflict_",  eff),
@@ -389,14 +389,6 @@ panel_c_mid_cum <- make_panel_c_by_eff("hcw_deaths", "Mean cumulative HCW deaths
 panel_c_lo_cum  <- make_panel_c_by_eff("hcw_deaths", "Mean cumulative HCW deaths", "lo",  "pessimistic")
 
 panel_c_hi_inc  <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly incident HCW deaths", "hi",  "optimistic",  show_legend = TRUE)
-panel_c_mid_inc <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly incident HCW deaths", "mid", "central")
-panel_c_lo_inc  <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly incident HCW deaths", "lo",  "pessimistic")
-
-panel_c_hi_cum  <- make_panel_c_by_eff("hcw_deaths", "Mean cumulative HCW deaths", "hi",  "optimistic")
-panel_c_mid_cum <- make_panel_c_by_eff("hcw_deaths", "Mean cumulative HCW deaths", "mid", "central")
-panel_c_lo_cum  <- make_panel_c_by_eff("hcw_deaths", "Mean cumulative HCW deaths", "lo",  "pessimistic")
-
-panel_c_hi_inc  <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly incident HCW deaths", "hi",  "optimistic",  show_legend = TRUE)
 panel_c_mid_inc <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly incident HCW deaths", "mid", "central",     show_legend = FALSE)
 panel_c_lo_inc  <- make_panel_c_by_eff("hcw_deaths_incidence", "Mean weekly incident HCW deaths", "lo",  "pessimistic", show_legend = FALSE)
 
@@ -404,6 +396,7 @@ save_fig("figure_3new_panel_c_by_eff_incident",
          (panel_c_hi_inc / panel_c_mid_inc / panel_c_lo_inc) +
            plot_annotation(tag_levels = "a"),
          6, 9)
+
 # =============================================================================
 # Panel d: decomposition of HCW deaths averted % by efficacy arm, shown as
 # a waterfall/bridge chart (full Ideal bar -> DPC loss step -> Coverage loss
@@ -454,8 +447,8 @@ decomp_summary <- decomp_particle %>%
 
 DECOMP_COLORS <- c(
   "Realised"      = COV_SCEN_COLORS[["Ideal (100% coverage, 0 delay)"]],
-  "Coverage loss" = COV_SCEN_COLORS[["Both impacted"]],
-  "DPC loss"      = COV_SCEN_COLORS[["DPC impacted"]]
+  "Coverage loss" = COV_SCEN_COLORS[["Delayed coverage + dosing"]],
+  "DPC loss"      = COV_SCEN_COLORS[["Delayed dosing"]]
 )
 
 # =============================================================================
@@ -753,8 +746,6 @@ save_fig("figure_3new_panel_c_eff_cumulative",   panel_c_eff_cumulative, 6, 4)
 
 save_fig("figure_3new_panel_c_by_eff_cumulative",
          panel_c_hi_cum | panel_c_mid_cum | panel_c_lo_cum, 15, 4)
-save_fig("figure_3new_panel_c_by_eff_incident",
-         panel_c_hi_inc | panel_c_mid_inc | panel_c_lo_inc, 15, 4)
 
 save_fig("figure_3new_dpc_by_period",     panel_dpc_period,     12, 6)
 save_fig("figure_3new_deaths_by_period",  panel_deaths_period,  12, 6)
@@ -803,33 +794,13 @@ save_fig("figure_3new_recip_averted_by_period", panel_recip_averted_period, 12, 
 # SI export: efficacy curve (old panel a) + coverage/DPC trajectory (old panel b)
 # =============================================================================
 save_fig("figure_3new_SIexport",
-         panel_a | panel_b +
+         (panel_a | panel_b) +
            plot_annotation(tag_levels = "a"),
          11, 4)
 
 # =============================================================================
 # figure_3new_combined_final
-#
-# Layout: (new_panel_a | new_panel_b) / new_panel_c
-#   widths  c(2, 1) -- panel a takes 2/3, panel b takes 1/3
-#   heights c(2, 1) -- top row takes 2/3, bottom row takes 1/3
-#
-# new_panel_a (= panel_c_cumulative): cumulative HCW deaths time series,
-#   central efficacy, four scenarios.
-#
-# new_panel_b: stacked bar chart, central efficacy, four scenarios.
-#   Each bar's total height = No PEP cumulative deaths (fixed denominator),
-#   so the grey top section = deaths averted, coloured bottom = deaths that
-#   still occurred. Scenarios left to right: No PEP, Both impacted,
-#   DPC impacted, Ideal.
-#
-# new_panel_c: % HCW deaths averted by efficacy assumption (Optimistic /
-#   Central / Pessimistic), three scenarios side by side per facet
-#   (Ideal / DPC impacted / Both impacted), bars = median,
-#   error bars = 2.5-97.5 percentile range.
 # =============================================================================
-
-# --- new_panel_b data: cumulative deaths at end of follow-up, mid efficacy ---
 final_week_b <- max(
   ts_3new$week[ts_3new$scenario == "DRC" & ts_3new$metric == "hcw_deaths"],
   na.rm = TRUE
@@ -837,15 +808,15 @@ final_week_b <- max(
 
 PANEL_B_ARMS <- c(
   no_pep_mid        = "No PEP",
-  with_conflict_mid = "Both impacted",
-  dpc_conflict_mid  = "DPC impacted",
+  with_conflict_mid = "Delayed coverage + dosing",
+  dpc_conflict_mid  = "Delayed dosing",
   optimistic_mid    = "Ideal"
 )
 
 PANEL_B_COLORS_DIED <- c(
   "No PEP"        = "grey60",
-  "Both impacted" = "#d7191c",
-  "DPC impacted"  = "#f58231",
+  "Delayed coverage + dosing" = "#d7191c",
+  "Delayed dosing"  = "#f58231",
   "Ideal"         = "#1a9641"
 )
 
@@ -854,12 +825,8 @@ cum_end <- ts_3new %>%
          arm %in% names(PANEL_B_ARMS)) %>%
   mutate(arm_label = factor(PANEL_B_ARMS[arm], levels = PANEL_B_ARMS))
 
-# No PEP mean deaths = fixed total bar height for all bars
 no_pep_total <- cum_end$q50[cum_end$arm == "no_pep_mid"]
 
-# Stack order: averted (grey) on bottom, died (scenario color) on top.
-# This makes the "floor" of the colored section a visual baseline for
-# comparing how much was averted across scenarios.
 panel_b_bars <- cum_end %>%
   mutate(
     died    = q50,
@@ -870,20 +837,18 @@ panel_b_bars <- cum_end %>%
                       names_to = "segment", values_to = "value") %>%
   mutate(segment = factor(segment, levels = c("averted", "died")))
 
-# All averted segments and No PEP died segment use the same grey so the
-# "averted" region reads as one unified neutral backdrop across all bars.
 new_panel_b <- ggplot(panel_b_bars,
                       aes(x = arm_label, y = value, fill = interaction(segment, arm_label))) +
   geom_col(width = 1.0, color = "grey50", linewidth = 0.2) +
   scale_fill_manual(
     values = c(
       "averted.No PEP"        = "grey75",
-      "averted.Both impacted" = "grey75",
-      "averted.DPC impacted"  = "grey75",
+      "averted.Delayed coverage + dosing" = "grey75",
+      "averted.Delayed dosing"  = "grey75",
       "averted.Ideal"         = "grey75",
-      "died.No PEP"           = "grey75",  # No PEP: same grey throughout
-      "died.Both impacted"    = "#d7191c",
-      "died.DPC impacted"     = "#f58231",
+      "died.No PEP"           = "grey75",
+      "died.Delayed coverage + dosing"    = "#d7191c",
+      "died.Delayed dosing"     = "#f58231",
       "died.Ideal"            = "#1a9641"
     ),
     guide = "none"
@@ -893,24 +858,23 @@ new_panel_b <- ggplot(panel_b_bars,
   theme_fig() +
   theme(axis.text.x = element_text(angle = 25, hjust = 1))
 
-# --- new_panel_c: % averted across all three efficacy assumptions -----------
-PANEL_C_SCEN_ORDER  <- c("Ideal", "DPC impacted", "Both impacted")
+PANEL_C_SCEN_ORDER  <- c("Ideal", "Delayed dosing", "Delayed coverage + dosing")
 PANEL_C_SCEN_COLORS <- c(
   "Ideal"         = "#1a9641",
-  "DPC impacted"  = "#f58231",
-  "Both impacted" = "#d7191c"
+  "Delayed dosing"  = "#f58231",
+  "Delayed coverage + dosing" = "#d7191c"
 )
 
 PANEL_C_ARM_MAP <- c(
   optimistic_hi    = "Ideal",
   optimistic_mid   = "Ideal",
   optimistic_lo    = "Ideal",
-  dpc_conflict_hi  = "DPC impacted",
-  dpc_conflict_mid = "DPC impacted",
-  dpc_conflict_lo  = "DPC impacted",
-  with_conflict_hi = "Both impacted",
-  with_conflict_mid = "Both impacted",
-  with_conflict_lo = "Both impacted"
+  dpc_conflict_hi  = "Delayed dosing",
+  dpc_conflict_mid = "Delayed dosing",
+  dpc_conflict_lo  = "Delayed dosing",
+  with_conflict_hi = "Delayed coverage + dosing",
+  with_conflict_mid = "Delayed coverage + dosing",
+  with_conflict_lo = "Delayed coverage + dosing"
 )
 
 panel_c_averted <- particle_3new %>%
@@ -947,12 +911,8 @@ new_panel_c <- ggplot(panel_c_averted,
     strip.text       = element_text(size = 10, face = "plain")
   )
 
-# --- assemble and save ------------------------------------------------------
-# Shared y upper limit for panels a and b: take the max of No PEP q50
-# across all time points so both panels share the same scale.
 y_max_ab <- 140
 
-# Rebuild panel a with matching y range, corrected x label, and tighter margin
 panel_a_final <- make_panel_c("hcw_deaths", "Mean cumulative HCW deaths",
                               legend_layout = "inside_topleft") +
   scale_y_continuous(limits = c(0, y_max_ab), expand = c(0, 0)) +
@@ -960,14 +920,9 @@ panel_a_final <- make_panel_c("hcw_deaths", "Mean cumulative HCW deaths",
   labs(x = "Days since outbreak start") +
   theme(plot.margin = margin(5, 10, 2, 5))
 
-# Rebuild panel b with the same y upper limit
 new_panel_b_final <- new_panel_b +
   scale_y_continuous(limits = c(0, y_max_ab), expand = c(0, 0))
 
-# Use wrap_plots with explicit area layout to enforce 2:1 width ratio between
-# panel a and panel b in the top row. The simple (a | b) / c patchwork
-# syntax ignores widths when the bottom panel spans both columns.
-# plot_annotation tag_levels applied after wrapping so labels a/b/c appear.
 top_row <- wrap_plots(panel_a_final, new_panel_b_final, widths = c(2, 1))
 
 final_fig <- wrap_plots(top_row, new_panel_c, ncol = 1, heights = c(2, 1)) +
@@ -977,40 +932,15 @@ save_fig("figure_3new_combined_final", final_fig, 14, 9)
 
 # =============================================================================
 # figure_3new_combined_final2 / figure_3new_combined_final2_incident
-#
-# Same layout as combined_final but panel b replaced with a waterfall chart
-# showing cumulative HCW deaths (not % averted). Each scenario is a floating
-# bar whose top = its own median deaths and whose bottom = the next scenario's
-# median deaths, so the bars descend from No PEP down to Ideal. Dotted bridge
-# segments connect consecutive bars at their shared boundary.
-#
-# _incident variant: panel a shows incident (weekly) HCW deaths instead of
-# cumulative.
 # =============================================================================
-
-# --- build waterfall data from cum_end (already computed above) --------------
-# Structure:
-#   Bar 1: No PEP        full bar, 0 -> no_pep value            (grey)
-#   Bar 2: Both impacted floating,  both -> no_pep              (red)
-#   Bar 3: DPC impacted  floating,  dpc  -> both                (orange)
-#   Bar 4: Ideal         floating,  ideal -> dpc                (green)
-#   Bar 5: Ideal remain  full bar,  0 -> ideal value            (grey)
-# Dotted bridge connects top of each bar to top of the next bar,
-# spanning from the left edge of the current bar to the right edge
-# of the next bar.
-
-WF2_ORDER  <- c("No PEP", "Both impacted", "DPC impacted", "Ideal")
+WF2_ORDER  <- c("No PEP", "Delayed coverage + dosing", "Delayed dosing", "Ideal")
 WF2_COLORS <- c(
   "No PEP"        = "grey75",
-  "Both impacted" = "#d7191c",
-  "DPC impacted"  = "#f58231",
+  "Delayed coverage + dosing" = "#d7191c",
+  "Delayed dosing"  = "#f58231",
   "Ideal"         = "#1a9641",
-  "Ideal remain"  = "#8DCA9F"
+  "Ideal remain"  = "grey75"
 )
-
-wf2_deaths <- cum_end %>%
-  mutate(arm_label = as.character(arm_label)) %>%
-  arrange(match(arm_label, WF2_ORDER))
 
 no_pep_val <- ts_3new$q50[ts_3new$scenario == "DRC" & ts_3new$metric == "hcw_deaths" &
                             ts_3new$arm == "no_pep_mid"  & ts_3new$week == final_week_b]
@@ -1030,15 +960,14 @@ wf2_bars <- data.frame(
   x         = 1:5,
   ymin      = c(0,        both_val, dpc_val,  ideal_val, 0),
   ymax      = c(no_pep_val, no_pep_val, both_val, dpc_val, ideal_val),
-  fill_group = c("No PEP", "Both impacted", "DPC impacted", "Ideal", "Ideal remain")
+  fill_group = c("No PEP", "Delayed coverage + dosing", "Delayed dosing", "Ideal", "Ideal remain")
 )
 
 # Bridge segments: connect at the TOP of the NEXT bar
-# y = ymax of bar i+1 = ymin of current bar i (they share the same level)
 wf2_segs <- data.frame(
   x    = wf2_bars$x[-nrow(wf2_bars)] - WF_BW,
   xend = wf2_bars$x[-1]              + WF_BW,
-  y    = wf2_bars$ymax[-1]   # ymax of the NEXT bar
+  y    = wf2_bars$ymax[-1]
 )
 
 wf2_xlabels <- data.frame(
@@ -1063,7 +992,6 @@ new_panel_b2 <- ggplot() +
   theme(axis.text.x = element_text(angle = 25, hjust = 1),
         axis.ticks.x = element_blank())
 
-# --- assemble final2 (cumulative panel a) ------------------------------------
 top_row2 <- wrap_plots(panel_a_final, new_panel_b2, widths = c(2, 1))
 
 final_fig2 <- wrap_plots(top_row2, new_panel_c, ncol = 1, heights = c(2, 1)) +
@@ -1071,7 +999,6 @@ final_fig2 <- wrap_plots(top_row2, new_panel_c, ncol = 1, heights = c(2, 1)) +
 
 save_fig("figure_3new_combined_final2", final_fig2, 10, 7)
 
-# --- incident variant: swap panel a for incident time series -----------------
 panel_a_incident_final <- make_panel_c("hcw_deaths_incidence",
                                        "Mean weekly incident HCW deaths",
                                        legend_layout = "inside_topleft") +
@@ -1085,3 +1012,76 @@ final_fig2_inc <- wrap_plots(top_row2_inc, new_panel_c, ncol = 1, heights = c(2,
   plot_annotation(tag_levels = "a")
 
 save_fig("figure_3new_combined_final2_incident", final_fig2_inc, 10, 7)
+
+# =============================================================================
+# figure_3new_combined_final3 / figure_3new_combined_final3_incident
+#
+# Reverse-direction waterfall: bars ascend left to right (Ideal -> DPC ->
+# Both -> No antiviral), showing how deaths INCREASE as delivery worsens.
+#   Bar 1: Ideal        full bar, 0 -> ideal_val              (green, hatched)
+#   Bar 2: Delayed dosing   floating, ideal_val -> dpc_val    (orange, hatched)
+#   Bar 3: Delayed coverage + dosing floating, dpc_val -> both_val  (red, hatched)
+#   Bar 4: No antiviral full bar, 0 -> no_pep_val             (grey, hatched)
+# Dotted bridge connects the TOP of each bar to the TOP of the next bar,
+# spanning left edge of current to right edge of next.
+# =============================================================================
+
+wf3_bars <- data.frame(
+  x         = 1:5,
+  ymin      = c(0,         ideal_val, dpc_val,   both_val,    0),
+  ymax      = c(ideal_val, dpc_val,   both_val,  no_pep_val,  no_pep_val),
+  fill_group = c("Ideal", "Delayed dosing", "Delayed coverage + dosing", "No antiviral float", "No antiviral full")
+)
+
+WF3_COLORS <- c(
+  "Ideal"                      = "#1a9641",
+  "Delayed dosing"             = "#f58231",
+  "Delayed coverage + dosing"  = "#d7191c",
+  "No antiviral float"         = "grey60",
+  "No antiviral full"          = "grey75"
+)
+
+# Bridge: top of bar i to top of bar i+1
+wf3_segs <- data.frame(
+  x    = wf3_bars$x[-nrow(wf3_bars)] - WF_BW,
+  xend = wf3_bars$x[-1]              + WF_BW,
+  y    = wf3_bars$ymax[-nrow(wf3_bars)]
+)
+
+wf3_xlabels <- data.frame(
+  x     = 1:5,
+  label = c("Ideal", "Delayed\ndosing", "Delayed\ncoverage\n+ dosing", "No\nantiviral", "")
+)
+
+new_panel_b3 <- ggplot() +
+  geom_rect(data = wf3_bars,
+            aes(xmin = x - WF_BW, xmax = x + WF_BW,
+                ymin = ymin, ymax = ymax,
+                fill = fill_group),
+            color = "grey50", linewidth = 0.25,
+            # diagonal hatching via pattern -- fall back to solid if not available
+  ) +
+  geom_segment(data = wf3_segs,
+               aes(x = x, xend = xend, y = y, yend = y),
+               linetype = "dotted", color = "black", linewidth = 0.9) +
+  scale_fill_manual(values = WF3_COLORS, guide = "none") +
+  scale_x_continuous(breaks = wf3_xlabels$x, labels = wf3_xlabels$label) +
+  scale_y_continuous(limits = c(0, y_max_ab), expand = c(0, 0)) +
+  labs(x = NULL, y = "Cumulative HCW deaths") +
+  theme_fig() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
+        axis.ticks.x = element_blank())
+
+top_row3 <- wrap_plots(panel_a_final, new_panel_b3, widths = c(2, 1))
+
+final_fig3 <- wrap_plots(top_row3, new_panel_c, ncol = 1, heights = c(2, 1)) +
+  plot_annotation(tag_levels = "a")
+
+save_fig("figure_3new_combined_final3", final_fig3, 10, 7)
+
+top_row3_inc <- wrap_plots(panel_a_incident_final, new_panel_b3, widths = c(2, 1))
+
+final_fig3_inc <- wrap_plots(top_row3_inc, new_panel_c, ncol = 1, heights = c(2, 1)) +
+  plot_annotation(tag_levels = "a")
+
+save_fig("figure_3new_combined_final3_incident", final_fig3_inc, 10, 7)
