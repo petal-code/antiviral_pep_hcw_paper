@@ -213,8 +213,8 @@ panel_a <- ggplot(curve_d50_dat, aes(x = dpc)) +
   # to the right along the upper dashed curve, "Pessimistic" lower-left along
   # the lower dashed curve's early decline. Adjust x/y here if the underlying
   # curve shape changes and the labels drift off the lines.
-  annotate("text", x = 8,   y = 0.75, label = "Optimistic",  hjust = 0, vjust = 0, size = 3.2, color = "black") +
-  annotate("text", x = 1.5, y = 0.35, label = "Pessimistic", hjust = 0, vjust = 0, size = 3.2, color = "black") +
+  annotate("text", x = 6.2,   y = 0.75, label = "Optimistic",  hjust = 0, vjust = 0, size = 3.2, color = "black") +
+  annotate("text", x = 0.5, y = 0.35, label = "Pessimistic", hjust = 0, vjust = 0, size = 3.2, color = "black") +
   scale_y_continuous(limits = c(0, NA), labels = scales::percent) +
   labs(x = "Days post-exposure (DPC)", y = "Efficacy") +
   theme_fig()
