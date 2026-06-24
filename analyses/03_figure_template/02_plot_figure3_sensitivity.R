@@ -7,7 +7,7 @@ source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to
 OUT_DIR <- here("figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-sens_raw <- read.csv(here("output_figgen", "figure_3_sens_run_summary.csv"),
+sens_raw <- read.csv(here("output_figgen", "figure_3_sens_run_summary2.csv"),
                      stringsAsFactors = FALSE)
 save_fig <- function(filename_base, plot, width, height) {
   ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
