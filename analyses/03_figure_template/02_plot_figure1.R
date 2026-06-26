@@ -113,6 +113,8 @@ make_header <- function(label) {
 save_fig <- function(filename_base, plot, width, height) {
   ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
          plot, width = width, height = height, dpi = 400, units = "in")
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".tiff")),
+         plot, width = width, height = height, dpi = 400, units = "in")
   ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),
          plot, width = width, height = height, units = "in")
 }

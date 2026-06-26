@@ -24,6 +24,8 @@ SC_ORDER  <- c("WestAfrica", "DRC")
 SC_LABELS <- c(WestAfrica = "West Africa (Worst)", DRC = "DRC (Middle, PlusPlus)")
 
 save_fig <- function(filename_base, plot, width, height) {
+  ggsave(file.path(OUT_DIR, paste0(filename_base, ".tiff")),
+         plot, width = width, height = height, dpi = 400, units = "in")
   ggsave(file.path(OUT_DIR, paste0(filename_base, ".png")),
          plot, width = width, height = height, dpi = 400, units = "in")
   ggsave(file.path(OUT_DIR, paste0(filename_base, ".pdf")),

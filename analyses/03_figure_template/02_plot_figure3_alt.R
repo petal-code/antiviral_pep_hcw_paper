@@ -175,6 +175,9 @@ ggsave(plot = fig_v3,
        filename = file.path(OUT_DIR, "figure_3_redesign_bars.pdf"),
        width = 8.25, height = 6.5)
 
+ggsave(plot = fig_v3,
+       filename = file.path(OUT_DIR, "figure_3_redesign_bars.tiff"), dpi = 400,
+       width = 8.25, height = 6.5)
 # =============================================================================
 # Numbers for the Figure 3 text (80% efficacy, by coverage scenario)
 # =============================================================================

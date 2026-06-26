@@ -1085,3 +1085,71 @@ final_fig3_inc <- wrap_plots(top_row3_inc, new_panel_c, ncol = 1, heights = c(2,
   plot_annotation(tag_levels = "a")
 
 save_fig("figure_3new_combined_final3_incident", final_fig3_inc, 10, 7)
+
+# --- final3_edit: add 95% CrI whiskers on each waterfall bar ----------------
+# Pull q25/q75 for each arm at final_week_b
+wf3_ci <- ts_3new %>%
+  filter(scenario == "DRC", metric == "hcw_deaths", week == final_week_b,
+         arm %in% c("optimistic_mid", "dpc_conflict_mid",
+                    "with_conflict_mid", "no_pep_mid")) %>%
+  mutate(scenario_label = c(
+    optimistic_mid    = "Ideal",
+    dpc_conflict_mid  = "Delayed dosing",
+    with_conflict_mid = "Delayed coverage + dosing",
+    no_pep_mid        = "No antiviral float"
+  )[arm]) %>%
+  select(scenario_label, q25, q75)
+
+# Each whisker is drawn at the TOP of its bar (ymax), spanning q25 to q75
+# relative to q50. We shift the CI so it sits at the bar top:
+#   whisker_center = ymax of that bar
+#   whisker_lo     = ymax - (q50 - q25)
+#   whisker_hi     = ymax + (q75 - q50)   [capped at y_max_ab]
+wf3_whiskers <- wf3_bars %>%
+  filter(fill_group != "No antiviral full") %>%
+  left_join(
+    ts_3new %>%
+      filter(scenario == "DRC", metric == "hcw_deaths", week == final_week_b,
+             arm %in% c("optimistic_mid", "dpc_conflict_mid",
+                        "with_conflict_mid", "no_pep_mid")) %>%
+      mutate(fill_group = c(
+        optimistic_mid    = "Ideal",
+        dpc_conflict_mid  = "Delayed dosing",
+        with_conflict_mid = "Delayed coverage + dosing",
+        no_pep_mid        = "No antiviral float"
+      )[arm]) %>%
+      select(fill_group, q50, q25, q75),
+    by = "fill_group"
+  ) %>%
+  mutate(
+    w_center = ymax,
+    w_lo     = ymax - (q50 - q25),
+    w_hi     = pmin(ymax + (q75 - q50), y_max_ab)
+  )
+
+new_panel_b3_edit <- ggplot() +
+  geom_rect(data = wf3_bars,
+            aes(xmin = x - WF_BW, xmax = x + WF_BW,
+                ymin = ymin, ymax = ymax,
+                fill = fill_group),
+            color = "grey50", linewidth = 0.25) +
+  geom_segment(data = wf3_segs,
+               aes(x = x, xend = xend, y = y, yend = y),
+               linetype = "dotted", color = "black", linewidth = 0.9) +
+  geom_errorbar(data = wf3_whiskers,
+                aes(x = x, ymin = w_lo, ymax = w_hi),
+                width = WF_BW * 0.8, color = "black", linewidth = 0.6) +
+  scale_fill_manual(values = WF3_COLORS, guide = "none") +
+  scale_x_continuous(breaks = wf3_xlabels$x, labels = wf3_xlabels$label) +
+  scale_y_continuous(limits = c(0, y_max_ab), expand = c(0, 0)) +
+  labs(x = NULL, y = "Cumulative HCW deaths") +
+  theme_fig() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5),
+        axis.ticks.x = element_blank())
+
+top_row3_edit_inc <- wrap_plots(panel_a_incident_final, new_panel_b3_edit, widths = c(2, 1))
+
+final_fig3_edit_inc <- wrap_plots(top_row3_edit_inc, new_panel_c, ncol = 1, heights = c(2, 1)) +
+  plot_annotation(tag_levels = "a")
+
+save_fig("figure_3new_combined_final3_edit_incident", final_fig3_edit_inc, 10, 7)
