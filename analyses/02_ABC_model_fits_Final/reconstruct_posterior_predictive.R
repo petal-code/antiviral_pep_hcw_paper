@@ -22,8 +22,8 @@
 #         - small number of bins; flat prior behind, posterior in front.
 #         - plus a parameter-estimate table (weighted median + 95% CrI),
 #           which answers "what were the fitted estimates" (incl. R0).
-#   (4) Parameter correlation -> plot_pairs()
-#         - posterior pairs plot + weighted correlation matrix.
+#   (4) Parameter correlation -> gg_pairs_lower()
+#         - lower-triangle-only ggplot pairs plot + weighted correlation matrix.
 #
 # NOTE: written against the data structures in outputs/02_ABC_model_fits_Final/.
 #       Not executed in-repo (no R here) -- run and report any errors to iterate.
@@ -58,6 +58,9 @@ NAME_FULL    <- c(WestAfrica = "West Africa", DRC = "DRC")
 
 N_POST          <- 10000L   # posterior-predictive / posterior resample size
 PP_SEED         <- 1L
+PP_DROP_STATS   <- "takeoff" # stats to exclude from the posterior-predictive plots/table
+                             #   (takeoff is a 0/1 indicator -> degenerate as a PP check;
+                             #    still used in the fit, just not shown here)
 PRIOR_POST_BINS <- 8L       # "small number of bins" for the prior-vs-posterior plots
 PAIRS_N         <- 2000L    # points drawn in the pairs plot
 SAVE_PLOTS      <- FALSE     # TRUE = write one file per fit to OUT_DIR
@@ -159,9 +162,10 @@ gg_pp_hist <- function(fit, stats, fill_col, ncol = 2L) {
     theme_bw(base_size = 10)
 }
 
-# combined A | B posterior-predictive figure for one fit (ALL stats incl hcw_fraction)
+# combined A | B posterior-predictive figure for one fit. Includes hcw_fraction
+# but EXCLUDES PP_DROP_STATS (takeoff) from both the ratio and the histograms.
 pp_figure <- function(fit) {
-  stats <- fit$stat_names                                   # keep every stat
+  stats <- setdiff(fit$stat_names, PP_DROP_STATS)
   cowplot::plot_grid(
     gg_fit_ratio(fit, stats, fit$col),
     gg_pp_hist(fit, stats, fit$col, ncol = 2L),
@@ -170,7 +174,7 @@ pp_figure <- function(fit) {
 
 # quantitative goodness-of-fit / coverage table (comment 6, "anything else")
 gof_table <- function(fit) {
-  do.call(rbind, lapply(fit$stat_names, function(s) {
+  do.call(rbind, lapply(setdiff(fit$stat_names, PP_DROP_STATS), function(s) {
     x   <- fit$post[[s]]; obs <- fit$observed[[s]]
     q   <- quantile(x, c(0.025, 0.5, 0.975), names = FALSE)
     ppp <- mean(x >= obs)                                   # posterior-predictive p-value
@@ -227,21 +231,44 @@ param_estimate_table <- function(fit) {
 # =============================================================================
 # (4) parameter correlation ---------------------------------------------------
 # =============================================================================
-# prints a pairs plot (GGally if available, else base pairs) and RETURNS the
-# exact weighted correlation matrix (from cov.wt, no resampling needed).
-plot_pairs <- function(fit) {
-  dp <- fit$post_param[sample(nrow(fit$post_param), min(PAIRS_N, nrow(fit$post_param))), ,
-                       drop = FALSE]
-  cormat <- cov.wt(fit$param[fit$fit_params], wt = fit$weights, cor = TRUE)$cor
-  if (requireNamespace("GGally", quietly = TRUE)) {
-    print(GGally::ggpairs(dp, columns = seq_along(fit$fit_params),
-                          title = paste0("Posterior parameter pairs: ", fit$name)) +
-            theme_bw(base_size = 8))
-  } else {
-    message("  (GGally not installed -- using base pairs(); install.packages('GGally') for nicer output)")
-    pairs(dp, pch = ".", col = fit$col, main = paste0("Posterior parameter pairs: ", fit$name))
+# LOWER-TRIANGLE-ONLY pairs plot, built from ggplot panels arranged with cowplot
+# (no GGally, no duplicated upper triangle). Diagonal = variable name; lower
+# cells = posterior scatter with the weighted correlation printed; upper = blank.
+# Returns list(plot, cor) where cor is the exact weighted correlation matrix.
+gg_pairs_lower <- function(fit) {
+  ps <- fit$fit_params; np <- length(ps)
+  dp <- fit$post_param[sample(nrow(fit$post_param), min(PAIRS_N, nrow(fit$post_param))),
+                       ps, drop = FALSE]
+  cormat <- cov.wt(fit$param[ps], wt = fit$weights, cor = TRUE)$cor   # exact weighted cor
+  labs <- unname(PARAM_PRETTY[ps]); labs[is.na(labs)] <- ps[is.na(labs)]
+
+  cells <- vector("list", np * np)
+  for (i in seq_len(np)) for (j in seq_len(np)) {
+    idx <- (i - 1) * np + j
+    if (j < i) {                                            # lower triangle: x = param j, y = param i
+      d <- data.frame(x = dp[[ps[j]]], y = dp[[ps[i]]])
+      cells[[idx]] <- ggplot(d, aes(x, y)) +
+        geom_point(alpha = 0.15, size = 0.5, colour = fit$col) +
+        annotate("text", x = Inf, y = Inf, label = sprintf("r = %.2f", cormat[i, j]),
+                 hjust = 1.1, vjust = 1.4, size = 2.6, colour = "grey20") +
+        labs(x = if (i == np) labs[j] else NULL,           # x label only on bottom row
+             y = if (j == 1)  labs[i] else NULL) +          # y label only on first column
+        theme_bw(base_size = 8) +
+        theme(axis.title = element_text(size = 7),
+              axis.text  = element_text(size = 5.5))
+    } else if (i == j) {                                    # diagonal: variable name
+      cells[[idx]] <- ggplot() + theme_void() +
+        annotate("text", x = 0, y = 0, label = labs[i], fontface = "bold", size = 3)
+    } else {
+      cells[[idx]] <- NULL                                  # upper triangle: blank (no duplication)
+    }
   }
-  cormat
+  plot <- cowplot::plot_grid(plotlist = cells, ncol = np, align = "hv")
+  title <- cowplot::ggdraw() +
+    cowplot::draw_label(paste0("Posterior parameter pairs: ", fit$name),
+                        fontface = "bold", x = 0.01, hjust = 0, size = 11)
+  list(plot = cowplot::plot_grid(title, plot, ncol = 1, rel_heights = c(0.06, 1)),
+       cor = cormat)
 }
 
 # =============================================================================
@@ -258,16 +285,20 @@ for (key in names(FITS)) {
   pp  <- pp_figure(fit)          # (6) posterior-predictive checks
   pvp <- gg_prior_post(fit)      # (2) prior vs posterior
 
+  prs <- gg_pairs_lower(fit)     # (4) lower-triangle pairs plot + weighted cor matrix
+
   print(pp)
   print(pvp)
-  cor_all[[key]] <- plot_pairs(fit)   # (4) pairs plot -> prints; returns weighted cor matrix
+  print(prs$plot)
+  cor_all[[key]] <- prs$cor
 
   gof_all[[key]] <- gof_table(fit)
   est_all[[key]] <- param_estimate_table(fit)
 
   if (SAVE_PLOTS) {
-    ggsave(file.path(OUT_DIR, sprintf("pp_checks_%s.pdf", key)),        pp,  width = 10, height = 5.5)
-    ggsave(file.path(OUT_DIR, sprintf("prior_vs_posterior_%s.pdf", key)), pvp, width = 12, height = 3.2)
+    ggsave(file.path(OUT_DIR, sprintf("pp_checks_%s.pdf", key)),          pp,       width = 10, height = 5.5)
+    ggsave(file.path(OUT_DIR, sprintf("prior_vs_posterior_%s.pdf", key)), pvp,      width = 12, height = 3.2)
+    ggsave(file.path(OUT_DIR, sprintf("param_pairs_%s.pdf", key)),        prs$plot, width = 7,  height = 7)
   }
 }
 
