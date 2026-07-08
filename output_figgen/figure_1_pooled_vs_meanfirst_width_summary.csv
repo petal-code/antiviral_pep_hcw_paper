@@ -1,0 +1,9 @@
+"scenario","metric","mean_ci95_ratio","mean_iqr_ratio"
+"DRC","deaths",0.363123377019993,Inf
+"DRC","hcw_deaths",Inf,Inf
+"DRC","hcw_deaths_incidence",Inf,Inf
+"DRC","infections",0.363166128285834,Inf
+"WestAfrica","deaths",0.458912533223096,Inf
+"WestAfrica","hcw_deaths",Inf,Inf
+"WestAfrica","hcw_deaths_incidence",Inf,Inf
+"WestAfrica","infections",0.468860172863158,0.502837728301291

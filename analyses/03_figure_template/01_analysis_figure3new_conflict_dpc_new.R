@@ -60,7 +60,6 @@ sdb$value_tweaked <- sdb_tweaked
 
 # ---- Coverage and DPC curves derived from tweaked sdb ----
 sdb$coverage_conflict <- sdb$value_tweaked * 80 / max(sdb$value_tweaked)
-# sdb$dpc_conflict      <- 1 + 9 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked))^2)
 sdb$dpc_conflict      <- 1 + 6 * (1 - (sdb$value_tweaked / max(sdb$value_tweaked)))
 OUT_BASE <- here("outputs", "simulation", "conflict_dpc_max7")
 # Find peak coverage day restricted to day < 200

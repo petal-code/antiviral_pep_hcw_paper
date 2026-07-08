@@ -1,0 +1,81 @@
+# =============================================================================
+# 02_extract_figure3.R
+# Extract and save run summaries for Figure 3.
+# Output: output_figgen/figure_3_run_summary.csv
+#
+# Also extracts weekly incident HCW deaths at 80% antiviral efficacy, for
+# baseline (no antiviral) and each coverage scenario (full/ramp_high/ramp_low).
+#
+# Weekly incidence is summarised by pooling directly across (particle, rep)
+# pairs and taking quantiles (q025/q25/q50/q75/q975), matching Figure 1. An
+# earlier "mean over reps within each particle, then quantile across
+# particles" approach compressed replicate-level stochastic variance out of
+# the reported interval and has been removed. An even earlier mean +/-
+# 1.96*SE approach pooled particle x rep directly but produced near-invisible
+# ribbons due to overly small SE (the SE formula, not the pooling itself,
+# was the issue there).
+#
+# Output: output_figgen/figure_3_weekly_hcw_deaths_80.csv
+# =============================================================================
+source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
+FIG3_EFFICACY_LEVELS <- c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
+
+# -----------------------------------------------------------------------
+# Run summary (deaths averted / days lost averted boxplots)
+# -----------------------------------------------------------------------
+message("Extracting run summaries for figure 3...")
+run_df <- do.call(rbind, lapply(COVERAGE_LEVELS, function(cov) {
+  do.call(rbind, lapply(FIG3_EFFICACY_LEVELS, function(eff_name) {
+    arm_dir   <- sprintf("%s_obv%02d", cov, round(OBV_EFFICACY_VALUES[[eff_name]] * 100))
+    arm_label <- sprintf("%s__%s", cov, eff_name)
+    extract_run_summary(arm_dir, arm_label = arm_label, n_workers = 14L, obv_return = FALSE)
+  }))
+}))
+save_figure_data(run_df, "figure_3_run_summary.csv")
+
+# -----------------------------------------------------------------------
+# Weekly incident HCW deaths at 80% efficacy
+# -----------------------------------------------------------------------
+EFF80 <- "obv_80"
+message("Extracting weekly HCW deaths incidence at 80% efficacy...")
+weekly_80_list <- lapply(COVERAGE_LEVELS, function(cov) {
+  arm_dir <- sprintf("%s_obv%02d", cov, round(OBV_EFFICACY_VALUES[[EFF80]] * 100))
+  df <- extract_weekly_ts(arm_dir, n_workers = 14L)
+  df <- df[df$metric == "hcw_deaths_incidence", ]
+  df$coverage_name <- cov
+  df
+})
+weekly_80_raw <- do.call(rbind, weekly_80_list)
+
+# Baseline (no antiviral) is identical regardless of which arm it came from,
+# since OBV doesn't affect transmission dynamics. Keep baseline only from the
+# "full" arm and label it separately from the OBV arms.
+weekly_80_clean <- weekly_80_raw %>%
+  filter(
+    (arm == "obv") |
+      (arm == "baseline" & coverage_name == "ramp_low")
+  ) %>%
+  mutate(line_group = ifelse(arm == "baseline", "baseline", coverage_name))
+
+# Pooled aggregation (variance-compression fix, matches Figure 1):
+#   quantiles are taken directly across all (particle_id, rep) pairs -- i.e.
+#   every stochastic replicate is treated as its own observation. This
+#   preserves replicate-level (stochastic) uncertainty alongside
+#   particle-level (posterior-draw / parameter) uncertainty in the reported
+#   interval, instead of averaging reps away before quantiles (which
+#   compresses the interval).
+# Incident values do NOT receive cumsum (unlike hcw_deaths cumulative metric).
+weekly_80_q <- weekly_80_clean %>%
+  mutate(week = week / 7) %>%
+  group_by(scenario, line_group, week) %>%
+  summarise(
+    q025 = quantile(value, 0.025, na.rm = TRUE),
+    q25  = quantile(value, 0.25,  na.rm = TRUE),
+    q50  = quantile(value, 0.50,  na.rm = TRUE),
+    q75  = quantile(value, 0.75,  na.rm = TRUE),
+    q975 = quantile(value, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+save_figure_data(weekly_80_q, "figure_3_weekly_hcw_deaths_80.csv")
+message("Figure 3 data extraction complete.")

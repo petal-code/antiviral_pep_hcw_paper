@@ -1,71 +1,273 @@
 # =============================================================================
 # 02_extract_figure3.R
-# Extract and save run summaries for Figure 3.
-# Output: output_figgen/figure_3_run_summary.csv
+# Extract weekly HCW death time series, particle-level summaries, and
+# PEP uptake/DPC summaries for the four coverage/DPC scenarios x three
+# efficacy arms (figure 3).
 #
-# Also extracts weekly incident HCW deaths at 80% antiviral efficacy, for
-# baseline (no antiviral) and each coverage scenario (full/ramp_high/ramp_low).
+# Outputs:
+#   figure_3_weekly_ts.csv             : weekly mean +/- 95% CI HCW deaths
+#   figure_3_particle_summary.csv      : particle-level deaths averted % per arm
+#   figure_3_pep_uptake_summary.csv    : % HCW receiving PEP and DPC distribution per run
 #
-# Weekly incidence is now summarised using the two-step particle-quantile
-# method (matching Figure 1 and Figure 3new):
-#   Step 1: mean over reps within each particle
-#   Step 2: quantiles across particles (q025/q25/q50/q75/q975)
-# The old mean +/- 1.96*SE approach pooled particle x rep directly,
-# producing near-invisible ribbons due to overly small SE.
-#
-# Output: output_figgen/figure_3_weekly_hcw_deaths_80.csv
+# All arms are run under the DRC_conflict trajectory. The scenario column
+# parsed from filenames (DRC_conflict) is normalised to "DRC" for downstream
+# grouping consistency.
 # =============================================================================
+dpcfolder <- "conflict_dpc_max5"
 source(here::here("analyses", "03_figure_template", "helper_functions_figure_1to4.R"))
-FIG3_EFFICACY_LEVELS <- c("obv_50", "obv_60", "obv_70", "obv_80", "obv_90")
+library(tidyr)
 
-# -----------------------------------------------------------------------
-# Run summary (deaths averted / days lost averted boxplots)
-# -----------------------------------------------------------------------
-message("Extracting run summaries for figure 3...")
-run_df <- do.call(rbind, lapply(COVERAGE_LEVELS, function(cov) {
-  do.call(rbind, lapply(FIG3_EFFICACY_LEVELS, function(eff_name) {
-    arm_dir   <- sprintf("%s_obv%02d", cov, round(OBV_EFFICACY_VALUES[[eff_name]] * 100))
-    arm_label <- sprintf("%s__%s", cov, eff_name)
-    extract_run_summary(arm_dir, arm_label = arm_label, n_workers = 14L, obv_return = FALSE)
-  }))
-}))
-save_figure_data(run_df, "figure_3_run_summary.csv")
+FIG3_ARM_NAMES <- c(
+  "with_conflict_mid", "with_conflict_lo", "with_conflict_hi",
+  "cov_conflict_mid",  "cov_conflict_lo",  "cov_conflict_hi",
+  "dpc_conflict_mid",  "dpc_conflict_lo",  "dpc_conflict_hi",
+  "optimistic_mid",    "optimistic_lo",    "optimistic_hi",
+  "no_pep"
+)
 
-# -----------------------------------------------------------------------
-# Weekly incident HCW deaths at 80% efficacy
-# -----------------------------------------------------------------------
-EFF80 <- "obv_80"
-message("Extracting weekly HCW deaths incidence at 80% efficacy...")
-weekly_80_list <- lapply(COVERAGE_LEVELS, function(cov) {
-  arm_dir <- sprintf("%s_obv%02d", cov, round(OBV_EFFICACY_VALUES[[EFF80]] * 100))
-  df <- extract_weekly_ts(arm_dir, n_workers = 14L)
-  df <- df[df$metric == "hcw_deaths_incidence", ]
-  df$coverage_name <- cov
-  df
+# =============================================================================
+# extract_weekly_ts_safe
+#
+# Parallel-safe replacement for extract_weekly_ts. Skips files where
+# max(time_outcome_absolute) is non-finite rather than erroring out.
+# =============================================================================
+extract_weekly_ts_safe <- function(arm_dir, bin_width = 7,
+                                   n_workers = 10L,
+                                   base_dir = here("outputs", "simulation")) {
+  library(future)
+  library(future.apply)
+  
+  dir_path <- file.path(base_dir, arm_dir)
+  files    <- list.files(dir_path, pattern = "\\.rds$", full.names = TRUE)
+  if (length(files) == 0) stop("No RDS files found in: ", dir_path)
+  message(sprintf("Extracting weekly ts from %d files in arm '%s'...",
+                  length(files), arm_dir))
+  
+  plan(multisession, workers = min(n_workers, future::availableCores()))
+  on.exit(plan(sequential), add = TRUE)
+  
+  results <- future_lapply(seq_along(files), function(i) {
+    if (i %% 100 == 0) message(sprintf("  file %d / %d", i, length(files)))
+    f <- files[[i]]
+    
+    tryCatch({
+      x <- readRDS(f)
+      
+      fname <- tools::file_path_sans_ext(basename(f))
+      parts <- regmatches(fname, regexec("^(.+)_p(\\d+)_r(\\d+)$", fname))[[1]]
+      sc    <- if (length(parts) == 4) parts[2] else NA_character_
+      pid   <- if (length(parts) == 4) as.integer(parts[3]) else NA_integer_
+      rep   <- if (length(parts) == 4) as.integer(parts[4]) else NA_integer_
+      
+      tdf       <- x$tdf
+      prevented <- x$prevented_completed
+      
+      if (!is.null(prevented) && nrow(prevented) > 0) {
+        missing_cols <- setdiff(names(tdf), names(prevented))
+        for (col in missing_cols) prevented[[col]] <- NA
+        prevented  <- prevented[, names(tdf), drop = FALSE]
+        cases_base <- rbind(tdf, prevented)
+      } else {
+        cases_base <- tdf
+      }
+      
+      cap <- max(tdf$time_outcome_absolute, na.rm = TRUE)
+      if (!is.finite(cap)) {
+        message(sprintf("  SKIP (non-finite cap): %s", basename(f)))
+        return(NULL)
+      }
+      
+      cap    <- ceiling(cap / bin_width) * bin_width
+      breaks <- seq(0, cap, by = bin_width)
+      mids   <- head(breaks, -1) + bin_width / 2
+      
+      .extract <- function(cases, arm_label) {
+        is_hcw <- !is.na(cases$class) & cases$class == "HCW"
+        died   <- !is.na(cases$outcome) & cases$outcome
+        metrics <- list(
+          deaths               = cases$time_outcome_absolute[died],
+          infections           = cases$time_infection_absolute,
+          hcw_deaths_incidence = cases$time_outcome_absolute[died & is_hcw],
+          hcw_deaths           = cases$time_outcome_absolute[died & is_hcw]
+        )
+        do.call(rbind, lapply(names(metrics), function(m) {
+          vals   <- metrics[[m]]
+          vals   <- vals[!is.na(vals) & vals <= cap]
+          counts <- hist(vals, breaks = breaks, plot = FALSE)$counts
+          data.frame(
+            scenario = sc, particle_id = pid, rep = rep,
+            arm = arm_label, week = mids, metric = m,
+            value = counts, stringsAsFactors = FALSE
+          )
+        }))
+      }
+      
+      rbind(.extract(cases_base, "baseline"), .extract(tdf, "obv"))
+      
+    }, error = function(e) {
+      message(sprintf("  ERROR in file %s: %s", basename(f), conditionMessage(e)))
+      NULL
+    })
+  }, future.packages = c("here"), future.seed = TRUE)
+  
+  results <- results[!sapply(results, is.null)]
+  if (length(results) == 0) return(NULL)
+  do.call(rbind, results)
+}
+
+# =============================================================================
+# extract_pep_uptake_summary
+#
+# For each run, among HCW exposures eligible for antiviral PEP:
+#   - % who received PEP (tdf recipients + all prevented cases)
+#   - DPC distribution among infected HCW in tdf who received PEP
+# =============================================================================
+extract_pep_uptake_summary <- function(arm_dir,
+                                       arm_label = arm_dir,
+                                       n_workers = 10L,
+                                       base_dir  = here("outputs", "simulation")) {
+  library(future)
+  library(future.apply)
+  
+  dir_path <- file.path(base_dir, arm_dir)
+  files    <- list.files(dir_path, pattern = "\\.rds$", full.names = TRUE)
+  if (length(files) == 0) stop("No RDS files found in: ", dir_path)
+  message(sprintf("Extracting PEP uptake summaries from %d files in arm '%s'...",
+                  length(files), arm_dir))
+  
+  plan(multisession, workers = min(n_workers, future::availableCores()))
+  on.exit(plan(sequential), add = TRUE)
+  
+  results <- future_lapply(seq_along(files), function(i) {
+    f <- files[[i]]
+    
+    tryCatch({
+      x <- readRDS(f)
+      
+      fname <- tools::file_path_sans_ext(basename(f))
+      parts <- regmatches(fname, regexec("^(.+)_p(\\d+)_r(\\d+)$", fname))[[1]]
+      sc    <- if (length(parts) == 4) parts[2] else NA_character_
+      pid   <- if (length(parts) == 4) as.integer(parts[3]) else NA_integer_
+      rep   <- if (length(parts) == 4) as.integer(parts[4]) else NA_integer_
+      
+      tdf       <- x$tdf
+      prevented <- x$prevented_completed
+      
+      hcw_tdf <- tdf[!is.na(tdf$class) & tdf$class == "HCW", ]
+      
+      # Use data.frame() instead of prevented[FALSE, ] to avoid length-0
+      # vector vs scalar mismatch in subsequent data.frame() calls
+      hcw_prevented <- if (!is.null(prevented) && nrow(prevented) > 0) {
+        prevented[!is.na(prevented$class) & prevented$class == "HCW", ]
+      } else {
+        data.frame()
+      }
+      
+      eligible_tdf   <- hcw_tdf[!is.na(hcw_tdf$obv_pep_eligible) & hcw_tdf$obv_pep_eligible, ]
+      n_eligible     <- nrow(eligible_tdf) + nrow(hcw_prevented)
+      n_received_tdf <- sum(!is.na(eligible_tdf$obv_pep_received) & eligible_tdf$obv_pep_received)
+      n_received     <- n_received_tdf + nrow(hcw_prevented)
+      pct_received   <- ifelse(n_eligible > 0, 100 * n_received / n_eligible, NA_real_)
+      
+      dpc_vals <- eligible_tdf$obv_pep_dpc[
+        !is.na(eligible_tdf$obv_pep_received) & eligible_tdf$obv_pep_received
+      ]
+      dpc_vals <- dpc_vals[!is.na(dpc_vals)]
+      
+      data.frame(
+        scenario     = sc,
+        particle_id  = pid,
+        rep          = rep,
+        arm          = arm_label,
+        n_eligible   = n_eligible,
+        n_received   = n_received,
+        pct_received = pct_received,
+        dpc_mean     = if (length(dpc_vals) > 0) mean(dpc_vals)   else NA_real_,
+        dpc_median   = if (length(dpc_vals) > 0) median(dpc_vals) else NA_real_,
+        dpc_min      = if (length(dpc_vals) > 0) min(dpc_vals)    else NA_real_,
+        dpc_max      = if (length(dpc_vals) > 0) max(dpc_vals)    else NA_real_,
+        stringsAsFactors = FALSE
+      )
+    }, error = function(e) {
+      message(sprintf("ERROR in file: %s -- %s", f, conditionMessage(e)))
+      NULL
+    })
+  }, future.packages = c("here"), future.seed = TRUE)
+  
+  results <- results[!sapply(results, is.null)]
+  do.call(rbind, results)
+}
+
+# =============================================================================
+# 1. Weekly time series (incident + cumulative HCW deaths)
+# =============================================================================
+message("Extracting weekly time series for figure 3 arms...")
+
+raw_ts_list <- lapply(FIG3_ARM_NAMES, function(arm_name) {
+  message(sprintf("  Processing arm: %s", arm_name))
+  df <- extract_weekly_ts_safe(
+    arm_dir   = file.path(dpcfolder, arm_name),
+    bin_width = 7,
+    n_workers = 10L
+  )
+  if (is.null(df) || nrow(df) == 0) return(NULL)
+  
+  pieces <- list()
+  
+  obv_df <- df[df$arm == "obv", ]
+  if (nrow(obv_df) > 0) {
+    obv_df$arm      <- arm_name
+    obv_df$scenario <- "DRC"
+    pieces[[length(pieces) + 1]] <- obv_df
+  }
+  
+  # For with_conflict_* arms, use the baseline (tdf + prevented) from the
+  # SAME simulation run as the "No PEP" counterfactual, instead of a
+  # separately-simulated no_pep arc. This removes the noise-driven
+  # crossover where with_conflict > no_pep during the second surge,
+  # since both series now share the same underlying random realization.
+  if (arm_name %in% c("with_conflict_hi", "with_conflict_mid", "with_conflict_lo")) {
+    eff <- sub("^with_conflict_", "", arm_name)
+    baseline_df <- df[df$arm == "baseline", ]
+    if (nrow(baseline_df) > 0) {
+      baseline_df$arm      <- paste0("no_pep_", eff)
+      baseline_df$scenario <- "DRC"
+      pieces[[length(pieces) + 1]] <- baseline_df
+    }
+  }
+  
+  if (length(pieces) == 0) return(NULL)
+  do.call(rbind, pieces)
 })
-weekly_80_raw <- do.call(rbind, weekly_80_list)
 
-# Baseline (no antiviral) is identical regardless of which arm it came from,
-# since OBV doesn't affect transmission dynamics. Keep baseline only from the
-# "full" arm and label it separately from the OBV arms.
-weekly_80_clean <- weekly_80_raw %>%
-  filter(
-    (arm == "obv") |
-      (arm == "baseline" & coverage_name == "ramp_low")
-  ) %>%
-  mutate(line_group = ifelse(arm == "baseline", "baseline", coverage_name))
+raw_ts_3 <- do.call(rbind, raw_ts_list[!sapply(raw_ts_list, is.null)])
 
-# Two-step aggregation matching Figure 1 / Figure 3new convention:
-#   Step 1: mean over reps within each particle (reduces 200x10 to 200)
-#   Step 2: quantiles across the 200 particles
-# Incident values do NOT receive cumsum (unlike hcw_deaths cumulative metric).
-weekly_80_q <- weekly_80_clean %>%
-  mutate(week = week / 7) %>%
-  # Step 1: rep average within each particle
-  group_by(scenario, line_group, particle_id, week) %>%
+# Determine the global maximum week across ALL arms and ALL particles.
+# Padding to global max ensures n_val stays constant across the full time
+# range, preventing the cumulative mean from dropping at the tail.
+global_max_week <- max(raw_ts_3$week, na.rm = TRUE)
+
+ts_quantiles_3 <- raw_ts_3 %>%
+  # Step 1: mean over reps within each particle x arm x week x metric
+  group_by(scenario, arm, particle_id, week, metric) %>%
   summarise(value = mean(value), .groups = "drop") %>%
-  # Step 2: quantiles across particles
-  group_by(scenario, line_group, week) %>%
+  # Pad each particle to global_max_week with 0 incidence
+  group_by(scenario, arm, metric) %>%
+  group_modify(~ {
+    all_weeks <- seq(min(.x$week), global_max_week, by = 7)
+    tidyr::complete(.x,
+                    particle_id = unique(.x$particle_id),
+                    week        = all_weeks,
+                    fill        = list(value = 0))
+  }) %>%
+  ungroup() %>%
+  arrange(scenario, arm, particle_id, metric, week) %>%
+  # Step 2: cumsum for cumulative metric only; incidence stays as-is
+  group_by(scenario, arm, particle_id, metric) %>%
+  mutate(value = if (unique(metric) == "hcw_deaths") cumsum(value) else value) %>%
+  ungroup() %>%
+  # Step 3: quantiles across particles (matches Figure 1 method)
+  group_by(scenario, arm, week, metric) %>%
   summarise(
     q025 = quantile(value, 0.025, na.rm = TRUE),
     q25  = quantile(value, 0.25,  na.rm = TRUE),
@@ -73,7 +275,193 @@ weekly_80_q <- weekly_80_clean %>%
     q75  = quantile(value, 0.75,  na.rm = TRUE),
     q975 = quantile(value, 0.975, na.rm = TRUE),
     .groups = "drop"
-  )
+  ) %>%
+  mutate(week = week / 7)  # convert day midpoints to weeks for plot script
 
-save_figure_data(weekly_80_q, "figure_3_weekly_hcw_deaths_80.csv")
-message("Figure 3 data extraction complete.")
+save_figure_data(ts_quantiles_3, "figure_3_weekly_ts.csv")
+message("Weekly time series saved.")
+
+# =============================================================================
+# 2. Particle-level run summary (deaths averted % per arm)
+# =============================================================================
+message("Extracting particle-level run summaries for figure 3 arms...")
+
+run_df_3 <- do.call(rbind, lapply(FIG3_ARM_NAMES, function(arm_name) {
+  df <- extract_run_summary(
+    arm_dir   = file.path(dpcfolder, arm_name),
+    arm_label = arm_name,
+    n_workers = 10L
+  )
+  df$scenario <- "DRC"  # normalise: DRC_conflict -> DRC
+  df
+}))
+
+# Use conflict-dpc variant: all arms share no_pep as common denominator
+particle_df_3 <- make_particle_df(run_df_3)
+save_figure_data(particle_df_3, "figure_3_particle_summary.csv")
+message("Particle-level summary saved.")
+
+# =============================================================================
+# 3. PEP uptake and DPC distribution summary (excludes no_pep arm)
+# =============================================================================
+message("Extracting PEP uptake and DPC summaries for figure 3 arms...")
+
+pep_uptake_3 <- do.call(rbind, lapply(FIG3_ARM_NAMES, function(arm_name) {
+  if (arm_name == "no_pep") return(NULL)
+  df <- extract_pep_uptake_summary(
+    arm_dir   = file.path(dpcfolder, arm_name),
+    arm_label = arm_name,
+    n_workers = 10L
+  )
+  df$scenario <- "DRC"  # normalise: DRC_conflict -> DRC
+  df
+}))
+
+save_figure_data(pep_uptake_3, "figure_3_pep_uptake_summary.csv")
+message("PEP uptake summary saved.")
+
+message("Figure 3 extraction complete.")
+
+# =============================================================================
+# 4. Period-stratified summaries (early: day 0-200, late: day 201+)
+# DPC distribution and HCW deaths by period, efficacy arm, and scenario.
+# pct_averted            : prevented / counterfactual (all HCW)
+# pct_averted_recipients : prevented / (prevented + PEP recipients who died)
+# =============================================================================
+message("Extracting period-stratified summaries for figure 3 arms...")
+
+extract_period_summary <- function(arm_dir,
+                                   arm_label = arm_dir,
+                                   n_workers = 10L,
+                                   base_dir  = here("outputs", "simulation")) {
+  library(future)
+  library(future.apply)
+  
+  dir_path <- file.path(base_dir, arm_dir)
+  files    <- list.files(dir_path, pattern = "\\.rds$", full.names = TRUE)
+  if (length(files) == 0) stop("No RDS files found in: ", dir_path)
+  
+  plan(multisession, workers = min(n_workers, future::availableCores()))
+  on.exit(plan(sequential), add = TRUE)
+  
+  results <- future_lapply(seq_along(files), function(i) {
+    f <- files[[i]]
+    tryCatch({
+      x <- readRDS(f)
+      
+      fname <- tools::file_path_sans_ext(basename(f))
+      parts <- regmatches(fname, regexec("^(.+)_p(\\d+)_r(\\d+)$", fname))[[1]]
+      sc    <- if (length(parts) == 4) parts[2] else NA_character_
+      pid   <- if (length(parts) == 4) as.integer(parts[3]) else NA_integer_
+      rep   <- if (length(parts) == 4) as.integer(parts[4]) else NA_integer_
+      
+      tdf       <- x$tdf
+      prevented <- x$prevented_completed
+      
+      is_hcw_tdf <- !is.na(tdf$class) & tdf$class == "HCW"
+      died_tdf   <- !is.na(tdf$outcome) & tdf$outcome
+      pep_recv   <- !is.na(tdf$obv_pep_received) & tdf$obv_pep_received
+      
+      # Period classification based on time of death
+      early_tdf <- !is.na(tdf$time_outcome_absolute) & tdf$time_outcome_absolute <= 200
+      late_tdf  <- !is.na(tdf$time_outcome_absolute) & tdf$time_outcome_absolute > 200
+      
+      # HCW deaths in tdf by period (all HCW)
+      n_hcw_deaths_early <- sum(died_tdf & is_hcw_tdf & early_tdf)
+      n_hcw_deaths_late  <- sum(died_tdf & is_hcw_tdf & late_tdf)
+      
+      # PEP recipients who died in tdf by period
+      pep_died_early <- sum(is_hcw_tdf & pep_recv & early_tdf & died_tdf)
+      pep_died_late  <- sum(is_hcw_tdf & pep_recv & late_tdf  & died_tdf)
+      
+      # prevented_completed: HCW who would have died without PEP
+      if (!is.null(prevented) && nrow(prevented) > 0) {
+        is_hcw_prev <- !is.na(prevented$class) & prevented$class == "HCW"
+        early_prev  <- !is.na(prevented$time_outcome_absolute) &
+          prevented$time_outcome_absolute <= 200
+        late_prev   <- !is.na(prevented$time_outcome_absolute) &
+          prevented$time_outcome_absolute > 200
+        n_prev_early <- sum(is_hcw_prev & early_prev)
+        n_prev_late  <- sum(is_hcw_prev & late_prev)
+      } else {
+        n_prev_early <- 0L
+        n_prev_late  <- 0L
+      }
+      
+      # Counterfactual (all HCW): tdf deaths + prevented
+      n_cf_early <- n_hcw_deaths_early + n_prev_early
+      n_cf_late  <- n_hcw_deaths_late  + n_prev_late
+      
+      # Counterfactual (PEP recipients only): PEP recipients who died + prevented
+      n_recip_cf_early <- pep_died_early + n_prev_early
+      n_recip_cf_late  <- pep_died_late  + n_prev_late
+      
+      # DPC distribution among PEP recipients by period
+      dpc_early <- tdf$obv_pep_dpc[is_hcw_tdf & pep_recv & early_tdf]
+      dpc_late  <- tdf$obv_pep_dpc[is_hcw_tdf & pep_recv & late_tdf]
+      dpc_early <- dpc_early[!is.na(dpc_early)]
+      dpc_late  <- dpc_late[!is.na(dpc_late)]
+      
+      rbind(
+        data.frame(
+          scenario               = sc, particle_id = pid, rep = rep,
+          arm                    = arm_label, period = "early (day 0-200)",
+          n_hcw_deaths           = n_hcw_deaths_early,
+          n_pep_died             = pep_died_early,
+          n_prevented            = n_prev_early,
+          n_counterfactual       = n_cf_early,
+          pct_averted            = ifelse(n_cf_early > 0,
+                                          100 * n_prev_early / n_cf_early,
+                                          NA_real_),
+          n_recip_counterfactual = n_recip_cf_early,
+          pct_averted_recipients = ifelse(n_recip_cf_early > 0,
+                                          100 * n_prev_early / n_recip_cf_early,
+                                          NA_real_),
+          dpc_mean               = if (length(dpc_early) > 0) mean(dpc_early)   else NA_real_,
+          dpc_median             = if (length(dpc_early) > 0) median(dpc_early) else NA_real_,
+          n_pep_recipients       = length(dpc_early),
+          stringsAsFactors       = FALSE
+        ),
+        data.frame(
+          scenario               = sc, particle_id = pid, rep = rep,
+          arm                    = arm_label, period = "late (day 201+)",
+          n_hcw_deaths           = n_hcw_deaths_late,
+          n_pep_died             = pep_died_late,
+          n_prevented            = n_prev_late,
+          n_counterfactual       = n_cf_late,
+          pct_averted            = ifelse(n_cf_late > 0,
+                                          100 * n_prev_late / n_cf_late,
+                                          NA_real_),
+          n_recip_counterfactual = n_recip_cf_late,
+          pct_averted_recipients = ifelse(n_recip_cf_late > 0,
+                                          100 * n_prev_late / n_recip_cf_late,
+                                          NA_real_),
+          dpc_mean               = if (length(dpc_late) > 0) mean(dpc_late)   else NA_real_,
+          dpc_median             = if (length(dpc_late) > 0) median(dpc_late) else NA_real_,
+          n_pep_recipients       = length(dpc_late),
+          stringsAsFactors       = FALSE
+        )
+      )
+    }, error = function(e) {
+      message(sprintf("ERROR in file: %s -- %s", f, conditionMessage(e)))
+      NULL
+    })
+  }, future.packages = c("here"), future.seed = TRUE)
+  
+  results <- results[!sapply(results, is.null)]
+  do.call(rbind, results)
+}
+
+# Include no_pep arm: PEP-related columns will be 0 or NA
+period_summary_3 <- do.call(rbind, lapply(FIG3_ARM_NAMES, function(arm_name) {
+  df <- extract_period_summary(
+    arm_dir   = file.path(dpcfolder, arm_name),
+    arm_label = arm_name,
+    n_workers = 10L
+  )
+  df$scenario <- "DRC"
+  df
+}))
+
+save_figure_data(period_summary_3, "figure_3_period_summary.csv")
+message("Period-stratified summary saved.")

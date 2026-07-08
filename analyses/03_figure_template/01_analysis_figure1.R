@@ -5,10 +5,10 @@
 # Each arm is saved to a separate subdirectory under outputs/simulation/.
 #
 # Arms:
-#   100% coverage, 80% efficacy  -- Figure 1
+#   80% coverage, 80% efficacy  -- Figure 1
 #
 # Coverage splines:
-#   full      : 100% throughout
+#   cov80     : 80% throughout
 #
 # Each RDS file contains the full fiber output (out$tdf + out$prevented_completed
 # + out$sim_info). "Without OBV" is reconstructed post-hoc by combining
@@ -34,7 +34,7 @@ sys.source(here("functions", "abc_calibration_functions_decoupled.R"), envir = e
 # =============================================================================
 # Configuration
 # =============================================================================
-N_WORKERS    <- 50L
+N_WORKERS    <- 100L
 N_PARTICLES  <- 200
 N_REPS       <- 10
 SEEDING_CASES <- 25L
@@ -53,19 +53,19 @@ PARTICLES_PER_WORKER <- N_PARTICLES %/% N_WORKERS
 # =============================================================================
 # Coverage curve functions (days as input)
 COVERAGE_FNS <- list(
-  full      = function(t) rep(1.0, length(t))
+  cov80     = function(t) rep(0.8, length(t))
 )
 
 # =============================================================================
 # Arm definitions
 #
-# full_obv80     (1 arm) : 100% coverage, 80% efficacy  -- Figure 1
+# cov80_obv80    (1 arm) : 80% coverage, 80% efficacy  -- Figure 1
 # =============================================================================
 FULL_EFFICACIES  <- c(0.80)
 
 ARMS <- do.call(rbind, lapply(FULL_EFFICACIES, function(eff) {
-  data.frame(arm_name  = sprintf("full_obv%02d", round(eff * 100)),
-             coverage  = "full", efficacy = eff, const_cov = NA_real_,
+  data.frame(arm_name  = sprintf("cov80_obv%02d", round(eff * 100)),
+             coverage  = "cov80", efficacy = eff, const_cov = NA_real_,
              stringsAsFactors = FALSE)
 }))
 
@@ -158,6 +158,8 @@ scenario_setups <- lapply(names(SCENARIOS), function(sc_name) {
   )
 })
 names(scenario_setups) <- names(SCENARIOS)
+print(object.size(scenario_setups), units = "auto")
+
 
 # =============================================================================
 # Build job list
@@ -194,6 +196,7 @@ future_lapply(jobs, function(job) {
         arm_name <- arm$arm_name
         
         cov_fn <- COVERAGE_FNS[[arm$coverage]]
+        stopifnot(!is.null(cov_fn))  # arm$coverage must match a COVERAGE_FNS key
         
         for (r in seq_len(N_REPS)) {
           fname    <- sprintf("%s_p%03d_r%02d.rds", sc_name, p, r)
