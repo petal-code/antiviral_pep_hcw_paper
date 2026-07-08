@@ -56,7 +56,7 @@ FITS <- list(
 COUNTRY_COLS <- c(WestAfrica = "#d95f02", DRC = "#1b9e77")   # match repo archetype palette
 NAME_FULL    <- c(WestAfrica = "West Africa", DRC = "DRC")
 
-N_POST          <- 10000L   # posterior-predictive / posterior resample size
+N_POST          <- 100000L   # posterior-predictive / posterior resample size
 PP_SEED         <- 1L
 PP_DROP_STATS   <- "takeoff" # stats to exclude from the posterior-predictive plots/table
                              #   (takeoff is a 0/1 indicator -> degenerate as a PP check;
