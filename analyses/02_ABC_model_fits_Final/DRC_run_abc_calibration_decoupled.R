@@ -56,12 +56,13 @@ SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed_PlusPlus"
 #                AND re-times it (nb_simul = 118 = one full wave; DRC is fast, mins).
 #   check      : moderate; a rough posterior to sanity-check shapes/targets.
 #   production : the real fit (n_reps=40 from the noise check; stop on plateau).
-RUN_PROFILE <- "quickcheck"
+RUN_PROFILE <- "production"
 .PROFILES <- list(
   smoke      = list(n_reps =  5L, nb_simul =  60L, tolerance_target = 5.00, n_traj =  20L),
   quickcheck = list(n_reps =  8L, nb_simul = 118L, tolerance_target = 1.20, n_traj =  30L),
   check      = list(n_reps = 30L, nb_simul = 590L, tolerance_target = 0.5, n_traj = 200L),
-  production = list(n_reps = 40L, nb_simul = 708L, tolerance_target = 1.1, n_traj = 200L)
+  # Option B (NS6): 50 reps x 590 particles. DRC is ~9x cheaper/run than WA (~10 h).
+  production = list(n_reps = 50L, nb_simul = 590L, tolerance_target = 0.65, n_traj = 200L)
 )
 stopifnot(RUN_PROFILE %in% names(.PROFILES))
 .prof <- .PROFILES[[RUN_PROFILE]]
