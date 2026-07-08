@@ -27,13 +27,23 @@ get_ts <- function(sc, metric_name, arm_name) {
 # Panel functions ----
 make_death_bar <- function(sc) {
   x_max <- x_max_weeks(sc)
-  df    <- get_ts(sc, "deaths", "baseline")
-  ggplot(df, aes(x = week, y = q50)) +
-    geom_ribbon(aes(ymin = q25, ymax = q75), fill = "grey50", alpha = 0.25, color = NA) +
-    geom_line(color = "grey50", linewidth = 1) +
+  df    <- get_ts(sc, "deaths", "baseline") %>%
+    mutate(arm_label = "Without antiviral")
+  ggplot(df, aes(x = week, y = q50, color = arm_label, fill = arm_label)) +
+    geom_ribbon(aes(ymin = q25, ymax = q75), alpha = 0.25, color = NA) +
+    geom_line(linewidth = 1) +
+    scale_color_manual(values = c("Without antiviral" = "grey50"), name = NULL) +
+    scale_fill_manual(values = c("Without antiviral" = "grey50"), name = NULL) +
     scale_x_continuous(limits = c(0, x_max), breaks = seq(0, x_max, 5)) +
     labs(x = "Weeks since outbreak start", y = "Incident deaths (all)") +
-    theme_fig()
+    theme_fig() +
+    theme(
+      legend.position       = c(0.98, 0.98),
+      legend.justification  = c(1, 1),
+      legend.background     = element_blank(),
+      legend.key            = element_blank(),
+      legend.text           = element_text(size = 8)
+    )
 }
 
 make_ts <- function(sc) {
