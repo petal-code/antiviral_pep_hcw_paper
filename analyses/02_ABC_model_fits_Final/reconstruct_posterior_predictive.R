@@ -102,7 +102,7 @@ load_fit <- function(key) {
 
   stats <- as.data.frame(res$stats);  colnames(stats) <- stat_names
   param <- as.data.frame(res$param);  colnames(param) <- fit_params
-  weights <- res$weights
+  weights <- as.numeric(res$weights)          # res$weights can be an n x 1 matrix -> flatten
 
   # ONE weighted resample -> aligned posterior stats + params (same particles)
   set.seed(PP_SEED)
@@ -196,13 +196,13 @@ gg_prior_post <- function(fit, n_bins = PRIOR_POST_BINS) {
     post_draws  <- pmin(pmax(fit$post_param[[pname]], a), b)
     prc <- hist(prior_draws, breaks = breaks, plot = FALSE, include.lowest = TRUE)$counts
     poc <- hist(post_draws,  breaks = breaks, plot = FALSE, include.lowest = TRUE)$counts
-    base <- data.frame(parameter = PARAM_PRETTY[pname] %||% pname,
+    base <- data.frame(parameter = unname(PARAM_PRETTY[pname] %||% pname),
                        xmin = head(breaks, -1), xmax = tail(breaks, -1))
     recs[[length(recs) + 1]] <- cbind(base, source = "Prior",     count = prc)
     recs[[length(recs) + 1]] <- cbind(base, source = "Posterior", count = poc)
   }
   d <- do.call(rbind, recs)
-  d$parameter <- factor(d$parameter, levels = PARAM_PRETTY[fit$fit_params])
+  d$parameter <- factor(d$parameter, levels = unname(PARAM_PRETTY[fit$fit_params]))
   d$source    <- factor(d$source, levels = c("Prior", "Posterior"))   # Prior drawn first = behind
   ggplot(d, aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = count, fill = source)) +
     geom_rect(alpha = 0.6, colour = NA) +
