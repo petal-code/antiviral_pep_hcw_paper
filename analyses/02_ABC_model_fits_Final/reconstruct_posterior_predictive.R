@@ -191,8 +191,11 @@ gg_prior_post <- function(fit, n_bins = PRIOR_POST_BINS) {
     breaks <- seq(a, b, length.out = n_bins + 1)            # breaks aligned to prior bounds -> flat prior
     prior_draws <- sim_prior_row(fit$priors[pj, ], nrow(fit$post_param))
     post_draws  <- pmin(pmax(fit$post_param[[pname]], a), b)
-    prc <- hist(prior_draws, breaks = breaks, plot = FALSE, include.lowest = TRUE)$counts
-    poc <- hist(post_draws,  breaks = breaks, plot = FALSE, include.lowest = TRUE)$counts
+    # divide bin counts by the number of draws -> probability mass per bin
+    # (each distribution sums to 1 across its bins; prior & posterior use the
+    # same n draws so the two are directly comparable).
+    prc <- hist(prior_draws, breaks = breaks, plot = FALSE, include.lowest = TRUE)$counts / length(prior_draws)
+    poc <- hist(post_draws,  breaks = breaks, plot = FALSE, include.lowest = TRUE)$counts / length(post_draws)
     base <- data.frame(parameter = unname(PARAM_PRETTY[pname] %||% pname),
                        xmin = head(breaks, -1), xmax = tail(breaks, -1))
     recs[[length(recs) + 1]] <- cbind(base, source = "Prior",     count = prc)
@@ -205,7 +208,7 @@ gg_prior_post <- function(fit, n_bins = PRIOR_POST_BINS) {
     geom_rect(alpha = 0.6, colour = NA) +
     facet_wrap(~ parameter, scales = "free", nrow = 1) +
     scale_fill_manual(values = c(Prior = "grey70", Posterior = fit$col)) +
-    labs(x = "Parameter value", y = "Frequency",
+    labs(x = "Parameter value", y = "Probability mass",
          fill = NULL) +                                     # no title; legend handled by driver
     theme_bw(base_size = 10)
 }
