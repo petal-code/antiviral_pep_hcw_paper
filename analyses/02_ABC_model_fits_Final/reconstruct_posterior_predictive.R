@@ -256,12 +256,9 @@ gg_pairs_lower <- function(fit) {
         theme_bw(base_size = 8) +
         theme(axis.title = element_text(size = 7),
               axis.text  = element_text(size = 5.5))
-    } else if (i == j) {                                    # diagonal: variable name
-      cells[[idx]] <- ggplot() + theme_void() +
-        annotate("text", x = 0, y = 0, label = labs[i], fontface = "bold", size = 3)
     } else {
-      cells[[idx]] <- NULL                                  # upper triangle: blank (no duplication)
-    }
+      cells[[idx]] <- NULL                                  # diagonal + upper triangle: blank
+    }                                                       # (names handled by the outer axis labels)
   }
   plot <- cowplot::plot_grid(plotlist = cells, ncol = np, align = "hv")
   title <- cowplot::ggdraw() +
