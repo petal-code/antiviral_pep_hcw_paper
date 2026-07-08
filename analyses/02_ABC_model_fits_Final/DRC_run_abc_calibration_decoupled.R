@@ -50,13 +50,16 @@ R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
 SCENARIO_CSV   <- here::here("data-processed", "final_six_scenario_values_original_approach.csv")
 SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed_PlusPlus"
 
-# ---- RUN PROFILE: "smoke" | "check" | "production" --------------------------
+# ---- RUN PROFILE: "smoke" | "quickcheck" | "check" | "production" -----------
 #   smoke      : minutes; confirms the pipeline runs end-to-end (NOT a real fit).
+#   quickcheck : <1.5 h on ~118-120 cores; validates a new fiber build end-to-end
+#                AND re-times it (nb_simul = 118 = one full wave; DRC is fast, mins).
 #   check      : moderate; a rough posterior to sanity-check shapes/targets.
 #   production : the real fit (n_reps=40 from the noise check; stop on plateau).
-RUN_PROFILE <- "check"
+RUN_PROFILE <- "quickcheck"
 .PROFILES <- list(
   smoke      = list(n_reps =  5L, nb_simul =  60L, tolerance_target = 5.00, n_traj =  20L),
+  quickcheck = list(n_reps =  8L, nb_simul = 118L, tolerance_target = 1.20, n_traj =  30L),
   check      = list(n_reps = 30L, nb_simul = 590L, tolerance_target = 0.5, n_traj = 200L),
   production = list(n_reps = 40L, nb_simul = 708L, tolerance_target = 1.1, n_traj = 200L)
 )
