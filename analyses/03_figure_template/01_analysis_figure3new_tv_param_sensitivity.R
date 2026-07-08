@@ -18,12 +18,12 @@
 #   prop_etu                  : higher = better  (ETU treatment proportion)
 #
 # Four conditions, moving ALL FIVE parameters together in the same direction:
-#   goodgood : strongest good-direction perturbation (50%)
-#   good     : mild good-direction perturbation      (25%)
-#   bad      : mild bad-direction perturbation        (25%)
-#   badbad   : strongest bad-direction perturbation   (50%)
+#   goodgood : strongest good-direction perturbation (20%)
+#   good     : mild good-direction perturbation      (10%)
+#   bad      : mild bad-direction perturbation        (10%)
+#   badbad   : strongest bad-direction perturbation   (20%)
 #
-# Multiplier is 1.25/1.5 for an increase, 0.75/0.5 for a decrease, chosen
+# Multiplier is 1.1/1.2 for an increase, 0.9/0.8 for a decrease, chosen
 # per-parameter so it points in the "good" or "bad" direction as above.
 # Probability-valued parameters (prob_hosp, prob_unsafe_funeral_comm,
 # prob_unsafe_funeral_hosp, prop_etu) are capped at 1 after scaling;
@@ -154,8 +154,8 @@ CONDITIONS <- list(
 )
 
 get_multiplier <- function(direction, type, tier) {
-  increase <- if (tier == 2) 1.5 else 1.25
-  decrease <- if (tier == 2) 0.5 else 0.75
+  increase <- if (tier == 2) 1.2 else 1.1
+  decrease <- if (tier == 2) 0.8 else 0.9
   if (direction == "good_high") {
     if (type == "good") increase else decrease
   } else {
