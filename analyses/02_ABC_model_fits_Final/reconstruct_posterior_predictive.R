@@ -39,17 +39,17 @@ suppressPackageStartupMessages({
 OUT_SUB <- c("outputs", "02_ABC_model_fits_Final")
 FITS <- list(
   WestAfrica_NS4 = list(
-    archetype = "WestAfrica", label = "NS4 (base 4)",
+    archetype = "WestAfrica", label = "", #"NS4 (base 4)",
     rds = "fiber_ABC_SMC_Worst_WestAfrica_Decoupled_20260608_162044_check_NP5_NS4_NBREPS_30_NBSIMUL_472.rds"),
-  WestAfrica_NS5 = list(
-    archetype = "WestAfrica", label = "NS5 (base 4 + takeoff)",
-    rds = "fiber_ABC_SMC_Worst_WestAfrica_Decoupled_20260609_094145_check_NP5_NS5_NBREPS_30_NBSIMUL_472.rds"),
+  # WestAfrica_NS5 = list(
+  #   archetype = "WestAfrica", label = "NS5 (base 4 + takeoff)",
+  #   rds = "fiber_ABC_SMC_Worst_WestAfrica_Decoupled_20260609_094145_check_NP5_NS5_NBREPS_30_NBSIMUL_472.rds"),
   DRC_NS4 = list(
-    archetype = "DRC", label = "NS4 (base 4)",
-    rds = "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260607_215621_check_NP5_NS4_NBREPS_30_NBSIMUL_590.rds"),
-  DRC_NS5 = list(
-    archetype = "DRC", label = "NS5 (base 4 + takeoff)",
-    rds = "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260609_201905_check_NP5_NS5_NBREPS_30_NBSIMUL_590.rds")
+    archetype = "DRC", label = "", #"NS4 (base 4)",
+    rds = "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260607_215621_check_NP5_NS4_NBREPS_30_NBSIMUL_590.rds")#,
+  # DRC_NS5 = list(
+  #   archetype = "DRC", label = "NS5 (base 4 + takeoff)",
+  #   rds = "fiber_ABC_SMC_Middle_DRC_ConflictSmoothed_PlusPlus_Decoupled_20260609_201905_check_NP5_NS5_NBREPS_30_NBSIMUL_590.rds")
 )
 
 # ---- knobs ------------------------------------------------------------------
