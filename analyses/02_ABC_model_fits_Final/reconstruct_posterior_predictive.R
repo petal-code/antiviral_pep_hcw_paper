@@ -162,15 +162,8 @@ gg_pp_hist <- function(fit, stats, fill_col, ncol = 2L) {
     theme_bw(base_size = 10)
 }
 
-# combined A | B posterior-predictive figure for one fit. Includes hcw_fraction
-# but EXCLUDES PP_DROP_STATS (takeoff) from both the ratio and the histograms.
-pp_figure <- function(fit) {
-  stats <- setdiff(fit$stat_names, PP_DROP_STATS)
-  cowplot::plot_grid(
-    gg_fit_ratio(fit, stats, fit$col),
-    gg_pp_hist(fit, stats, fit$col, ncol = 2L),
-    labels = c("A", "B"), rel_widths = c(0.8, 1.2), nrow = 1)
-}
+# NB: the combined posterior-predictive figure is assembled in the driver
+# (pp_row), which excludes PP_DROP_STATS (takeoff) but keeps hcw_fraction.
 
 # quantitative goodness-of-fit / coverage table (comment 6, "anything else")
 gof_table <- function(fit) {
@@ -213,9 +206,8 @@ gg_prior_post <- function(fit, n_bins = PRIOR_POST_BINS) {
     facet_wrap(~ parameter, scales = "free", nrow = 1) +
     scale_fill_manual(values = c(Prior = "grey70", Posterior = fit$col)) +
     labs(x = "Parameter value", y = paste0("Count (of ", nrow(fit$post_param), " draws)"),
-         fill = NULL, title = paste0("Prior vs posterior: ", fit$name)) +
-    theme_bw(base_size = 10) +
-    theme(legend.position = "top")
+         fill = NULL) +                                     # no title; legend handled by driver
+    theme_bw(base_size = 10)
 }
 
 # weighted median + 95% CrI per parameter (answers "fitted estimates", incl R0)
@@ -242,61 +234,86 @@ gg_pairs_lower <- function(fit) {
   cormat <- cov.wt(fit$param[ps], wt = fit$weights, cor = TRUE)$cor   # exact weighted cor
   labs <- unname(PARAM_PRETTY[ps]); labs[is.na(labs)] <- ps[is.na(labs)]
 
-  cells <- vector("list", np * np)
-  for (i in seq_len(np)) for (j in seq_len(np)) {
-    idx <- (i - 1) * np + j
-    if (j < i) {                                            # lower triangle: x = param j, y = param i
+  # reduced (np-1) x (np-1) grid: rows = params 2..np (y), cols = params 1..np-1 (x).
+  # dropping the fully-empty top row and right column makes the populated triangle
+  # fill the whole plotting space (bottom row + left column reach every edge).
+  nr <- np - 1L
+  cells <- vector("list", nr * nr)
+  for (r in seq_len(nr)) for (cc in seq_len(nr)) {
+    i <- r + 1L; j <- cc                                    # y-param i, x-param j
+    idx <- (r - 1L) * nr + cc
+    if (cc <= r) {                                          # lower triangle (j < i): scatter
       d <- data.frame(x = dp[[ps[j]]], y = dp[[ps[i]]])
       cells[[idx]] <- ggplot(d, aes(x, y)) +
         geom_point(alpha = 0.15, size = 0.5, colour = fit$col) +
         annotate("text", x = Inf, y = Inf, label = sprintf("r = %.2f", cormat[i, j]),
                  hjust = 1.1, vjust = 1.4, size = 2.6, colour = "grey20") +
-        labs(x = if (i == np) labs[j] else NULL,           # x label only on bottom row
-             y = if (j == 1)  labs[i] else NULL) +          # y label only on first column
+        labs(x = if (i == np) labs[j] else NULL,           # x labels only on bottom row
+             y = if (j == 1)  labs[i] else NULL) +          # y labels only on first column
         theme_bw(base_size = 8) +
         theme(axis.title = element_text(size = 7),
               axis.text  = element_text(size = 5.5))
     } else {
-      cells[[idx]] <- NULL                                  # diagonal + upper triangle: blank
-    }                                                       # (names handled by the outer axis labels)
+      cells[[idx]] <- NULL                                  # upper triangle: blank
+    }
   }
-  plot <- cowplot::plot_grid(plotlist = cells, ncol = np, align = "hv")
-  title <- cowplot::ggdraw() +
-    cowplot::draw_label(paste0("Posterior parameter pairs: ", fit$name),
-                        fontface = "bold", x = 0.01, hjust = 0, size = 11)
-  list(plot = cowplot::plot_grid(title, plot, ncol = 1, rel_heights = c(0.06, 1)),
-       cor = cormat)
+  list(plot = cowplot::plot_grid(plotlist = cells, ncol = nr, align = "hv"),
+       cor  = cormat)                                       # no title (per-fit title added by driver if needed)
 }
 
 # =============================================================================
-# DRIVER -- separate plots + tables for every fit ----------------------------
+# DRIVER -- combined West Africa (A) / DRC (B) figures + tables ---------------
+#   - posterior-predictive checks : A,B (West Africa) over C,D (DRC)
+#   - prior vs posterior          : A (West Africa) over B (DRC), shared legend
+#   - parameter pairs             : A (West Africa) over B (DRC)
+# Picks one fit per archetype from the (uncommented) FITS list.
 # =============================================================================
 if (SAVE_PLOTS) dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
-gof_all <- list(); est_all <- list(); cor_all <- list()
+# load all (uncommented) fits; pick one per archetype -> A = West Africa, B = DRC
+fits <- lapply(names(FITS), load_fit); names(fits) <- names(FITS)
+by_arch <- function(a) { for (f in fits) if (f$archetype == a) return(f); NULL }
+wa  <- by_arch("WestAfrica")
+drc <- by_arch("DRC")
+stopifnot(!is.null(wa), !is.null(drc))
 
-for (key in names(FITS)) {
-  message("==== ", key, " ====")
-  fit <- load_fit(key)
+# ---- (6) combined posterior-predictive checks: A,B (West Africa) / C,D (DRC) --
+pp_row <- function(fit, labels) {
+  stats <- setdiff(fit$stat_names, PP_DROP_STATS)
+  cowplot::plot_grid(gg_fit_ratio(fit, stats, fit$col),
+                     gg_pp_hist(fit, stats, fit$col, ncol = 2L),
+                     labels = labels, rel_widths = c(0.8, 1.2), nrow = 1)
+}
+combined_pp <- cowplot::plot_grid(pp_row(wa,  c("A", "B")),
+                                  pp_row(drc, c("C", "D")), ncol = 1)
+print(combined_pp)
 
-  pp  <- pp_figure(fit)          # (6) posterior-predictive checks
-  pvp <- gg_prior_post(fit)      # (2) prior vs posterior
+# ---- (2) combined prior vs posterior: A (West Africa) / B (DRC), shared legend right
+pvp_wa  <- gg_prior_post(wa)
+pvp_drc <- gg_prior_post(drc)
+pvp_leg  <- cowplot::get_legend(pvp_wa + theme(legend.position = "right"))
+pvp_body <- cowplot::plot_grid(pvp_wa  + theme(legend.position = "none"),
+                               pvp_drc + theme(legend.position = "none"),
+                               ncol = 1, labels = c("A", "B"))
+combined_pvp <- cowplot::plot_grid(pvp_body, pvp_leg, ncol = 2, rel_widths = c(1, 0.13))
+print(combined_pvp)
 
-  prs <- gg_pairs_lower(fit)     # (4) lower-triangle pairs plot + weighted cor matrix
+# ---- (4) combined pairs: A (West Africa) / B (DRC) stacked --------------------
+prs_wa  <- gg_pairs_lower(wa)
+prs_drc <- gg_pairs_lower(drc)
+combined_pairs <- cowplot::plot_grid(prs_wa$plot, prs_drc$plot, ncol = 1,
+                                     labels = c("A", "B"))
+print(combined_pairs)
 
-  print(pp)
-  print(pvp)
-  print(prs$plot)
-  cor_all[[key]] <- prs$cor
+# ---- tables over all active fits --------------------------------------------
+gof_all <- lapply(fits, gof_table)
+est_all <- lapply(fits, param_estimate_table)
+cor_all <- list(WestAfrica = prs_wa$cor, DRC = prs_drc$cor)
 
-  gof_all[[key]] <- gof_table(fit)
-  est_all[[key]] <- param_estimate_table(fit)
-
-  if (SAVE_PLOTS) {
-    ggsave(file.path(OUT_DIR, sprintf("pp_checks_%s.pdf", key)),          pp,       width = 10, height = 5.5)
-    ggsave(file.path(OUT_DIR, sprintf("prior_vs_posterior_%s.pdf", key)), pvp,      width = 12, height = 3.2)
-    ggsave(file.path(OUT_DIR, sprintf("param_pairs_%s.pdf", key)),        prs$plot, width = 7,  height = 7)
-  }
+if (SAVE_PLOTS) {
+  ggsave(file.path(OUT_DIR, "pp_checks_WA_DRC.pdf"),          combined_pp,    width = 10, height = 8)
+  ggsave(file.path(OUT_DIR, "prior_vs_posterior_WA_DRC.pdf"), combined_pvp,   width = 12, height = 6)
+  ggsave(file.path(OUT_DIR, "param_pairs_WA_DRC.pdf"),        combined_pairs, width = 7,  height = 12)
 }
 
 # ---- combined tables (printed; optionally written) --------------------------
