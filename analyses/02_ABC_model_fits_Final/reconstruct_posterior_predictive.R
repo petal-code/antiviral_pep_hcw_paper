@@ -205,7 +205,7 @@ gg_prior_post <- function(fit, n_bins = PRIOR_POST_BINS) {
     geom_rect(alpha = 0.6, colour = NA) +
     facet_wrap(~ parameter, scales = "free", nrow = 1) +
     scale_fill_manual(values = c(Prior = "grey70", Posterior = fit$col)) +
-    labs(x = "Parameter value", y = paste0("Count (of ", nrow(fit$post_param), " draws)"),
+    labs(x = "Parameter value", y = "Frequency",
          fill = NULL) +                                     # no title; legend handled by driver
     theme_bw(base_size = 10)
 }
