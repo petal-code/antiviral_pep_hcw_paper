@@ -154,7 +154,7 @@ gg_fit_ratio <- function(fit, stats, col, smooth = 1.5, ridge_height = 0.85) {
     geom_pointrange(data = rdf, aes(x = med, y = y, xmin = lo, xmax = hi),
                     colour = col, linewidth = 0.9, size = 0.5) +
     scale_y_continuous(breaks = unname(ypos[stats]), labels = labs,
-                       expand = expansion(add = c(0.3, 0.15))) +   # ribbon already spans ridge_height; small top margin only
+                       expand = expansion(add = c(0.15, 0.04))) +  # near-flush top (ribbon already spans ridge_height)
     labs(x = "Simulated / Observed", y = NULL) +
     theme_bw(base_size = 10)
 }
