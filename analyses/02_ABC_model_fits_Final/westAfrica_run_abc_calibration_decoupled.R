@@ -50,15 +50,21 @@ R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
 SCENARIO_CSV   <- here::here("data-processed", "final_six_scenario_values_original_approach.csv")
 SCENARIO_ID    <- "Worst_WestAfrica"
 
-# ---- RUN PROFILE: "smoke" | "check" | "production" --------------------------
+# ---- RUN PROFILE: "smoke" | "quickcheck" | "check" | "production" -----------
 #   smoke      : minutes; confirms the pipeline runs end-to-end (NOT a real fit).
+#   quickcheck : <1.5 h on ~118-120 cores; validates a new fiber build end-to-end
+#                AND re-times it (nb_simul = 118 = one full wave; WA ~1 h, DRC mins).
 #   check      : ~1 hr-ish; a rough posterior to sanity-check shapes/targets.
 #   production : the real fit (n_reps=40 from the noise check; stop on plateau).
-RUN_PROFILE <- "check"
+RUN_PROFILE <- "production"
 .PROFILES <- list(
   smoke      = list(n_reps =  5L, nb_simul =  60L, tolerance_target = 5.00, n_traj =  20L),
+  quickcheck = list(n_reps =  8L, nb_simul = 118L, tolerance_target = 1.20, n_traj =  30L),
   check      = list(n_reps = 30L, nb_simul = 472L, tolerance_target = 1, n_traj = 200L),
-  production = list(n_reps = 40L, nb_simul = 944L, tolerance_target = 0.35, n_traj = 200L)
+  # Option B (NS4): 50 reps x 590 particles (5 waves on 118 cores). NS4 needs
+  # fewer SMC steps than NS6, so WA is ~1-1.3 days. tol 0.40 sits above the WA
+  # 50-rep noise floor so the SMC terminates cleanly (watch for a plateau).
+  production = list(n_reps = 50L, nb_simul = 590L, tolerance_target = 0.40, n_traj = 200L)
 )
 stopifnot(RUN_PROFILE %in% names(.PROFILES))
 .prof <- .PROFILES[[RUN_PROFILE]]
@@ -84,18 +90,17 @@ FIXED_PARAMS <- list(
 # ---- WHICH SUMMARIES TO FIT -------------------------------------------------
 # Any subset of DECOUPLED_AVAILABLE_SUMMARIES; comment a line out of BOTH this
 # vector and OBSERVED_NAMED to drop a summary from the fit.
-SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height", "d_p05_p95")
+SUMMARY_STATS <- c("log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height")   # NS4 (base 4)
 
 # Observed targets, ON THE FITTED SCALE (log the counts), keyed BY NAME.
 #   raw WA targets: n_deaths = 11325, n_hcw_deaths = 513, peak_height = 599.
 OBSERVED_NAMED <- c(
-  takeoff          = 1.0,           # the real outbreak took off (>= TAKEOFF_DEATH_THRESHOLD deaths)
+  # takeoff        = 1.0,           # dropped for NS4 (base-4 fit; matches the plotting/reviewer work)
   log_n_deaths     = log(11325),
   log_n_hcw_deaths = log(513),
   hcw_fraction     = 513 / 11325,   # = 0.0453
-  d_p05_p95        = 274, # linear interpolation from ## info from here: https://en.wikipedia.org/wiki/West_African_Ebola_virus_epidemic_timeline_of_reported_cases_and_deaths 
-                          # gives the period 23rd July 2014 - 23 April 2015
-  log_peak_height  = log(599) ## info from here: https://en.wikipedia.org/wiki/West_African_Ebola_virus_epidemic_timeline_of_reported_cases_and_deaths 
+  # d_p05_p95      = 274,           # dropped for NS4 (duration excluded; it drives the tolerance floor up)
+  log_peak_height  = log(599)       ## peak from the WA epidemic timeline (Wikipedia)
 )
 
 HCW_BASE_PROB    <- 0.25            # prob_hcw_cond_*_hospital = min(base * hcw_risk_scalar, 1)

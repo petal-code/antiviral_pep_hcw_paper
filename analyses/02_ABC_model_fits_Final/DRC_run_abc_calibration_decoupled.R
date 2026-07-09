@@ -50,15 +50,21 @@ R0_PATH        <- file.path(FUNCTIONS_DIR, "calculate_model_approx_r0.R")
 SCENARIO_CSV   <- here::here("data-processed", "final_six_scenario_values_original_approach.csv")
 SCENARIO_ID    <- "Middle_DRC_ConflictSmoothed_PlusPlus"
 
-# ---- RUN PROFILE: "smoke" | "check" | "production" --------------------------
+# ---- RUN PROFILE: "smoke" | "quickcheck" | "check" | "production" -----------
 #   smoke      : minutes; confirms the pipeline runs end-to-end (NOT a real fit).
+#   quickcheck : <1.5 h on ~118-120 cores; validates a new fiber build end-to-end
+#                AND re-times it (nb_simul = 118 = one full wave; DRC is fast, mins).
 #   check      : moderate; a rough posterior to sanity-check shapes/targets.
 #   production : the real fit (n_reps=40 from the noise check; stop on plateau).
-RUN_PROFILE <- "check"
+RUN_PROFILE <- "production"
 .PROFILES <- list(
   smoke      = list(n_reps =  5L, nb_simul =  60L, tolerance_target = 5.00, n_traj =  20L),
+  quickcheck = list(n_reps =  8L, nb_simul = 118L, tolerance_target = 1.20, n_traj =  30L),
   check      = list(n_reps = 30L, nb_simul = 590L, tolerance_target = 0.5, n_traj = 200L),
-  production = list(n_reps = 40L, nb_simul = 708L, tolerance_target = 1.1, n_traj = 200L)
+  # Option B (NS4): 50 reps x 590 particles. DRC is ~9x cheaper/run than WA, so
+  # hours not days. tol 0.30 sits just above the DRC 50-rep noise floor (NS4 hit
+  # 0.32 at 30 reps and was still dropping); watch for a plateau.
+  production = list(n_reps = 50L, nb_simul = 590L, tolerance_target = 0.30, n_traj = 200L)
 )
 stopifnot(RUN_PROFILE %in% names(.PROFILES))
 .prof <- .PROFILES[[RUN_PROFILE]]
@@ -81,16 +87,16 @@ FIXED_PARAMS <- list(
 # ---- WHICH SUMMARIES TO FIT -------------------------------------------------
 # Any subset of DECOUPLED_AVAILABLE_SUMMARIES; comment a line out of BOTH this
 # vector and OBSERVED_NAMED to drop a summary from the fit.
-SUMMARY_STATS <- c("takeoff", "log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height", "d_p05_p95")
+SUMMARY_STATS <- c("log_n_deaths", "log_n_hcw_deaths", "hcw_fraction", "log_peak_height")   # NS4 (base 4)
 
 # Observed targets, ON THE FITTED SCALE (log the counts), keyed BY NAME.
 #   raw DRC targets: n_deaths = 2299, n_hcw_deaths = 79, peak_height = 95.
 OBSERVED_NAMED <- c(
-  takeoff          = 1.0,           # the real outbreak took off (>= TAKEOFF_DEATH_THRESHOLD deaths)
+  # takeoff        = 1.0,           # dropped for NS4 (base-4 fit; matches the plotting/reviewer work)
   log_n_deaths     = log(2299),
   log_n_hcw_deaths = log(79),       # https://afenet-journal.org/10-37432-jieph-d-25-00072/
   hcw_fraction     = 79 / 2299,     # = 0.0344
-  d_p05_p95        = 378,           # https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic - 4th Oct 2018 - 17 Oct 2019
+  # d_p05_p95      = 378,           # dropped for NS4 (duration excluded; it drives the tolerance floor up)
   log_peak_height  = log(95)        # see https://en.wikipedia.org/wiki/Kivu_Ebola_epidemic
 )
 
@@ -317,7 +323,9 @@ if (all(c("ppe_efficacy", "hcw_risk_scalar") %in% PARAM_NAMES)) {
 # -----------------------------------------------------------------------------
 # 9. PROGRESS / RECONSTRUCTION FROM DISK
 # -----------------------------------------------------------------------------
-ABC_OUTPUT_DIR <- "C:/Users/PETAL_WS_1/Documents/obv_hcw_paper/analyses/02_ABC_model_fits_Final/abc_outputs/Middle_DRC_ConflictSmoothed_PlusPlus_20260611_211042_Decoupled_check_NP5_NS6_NBREPS_30_NBSIMUL_590"
+# NB: use the ABC_OUTPUT_DIR from section 6 (this run). A previously hardcoded
+# absolute path here pointed at an old run on a different machine, which made
+# the post-fit progress/reconstruction report "No steps completed yet".
 abc_progress(ABC_OUTPUT_DIR, tolerance_target = ABC_SETTINGS$tolerance_target,
              param_names = PARAM_NAMES, stat_names = prep$summary_stats)
 print(abc_compare_steps(ABC_OUTPUT_DIR, param_names = PARAM_NAMES, stat_names = prep$summary_stats))
