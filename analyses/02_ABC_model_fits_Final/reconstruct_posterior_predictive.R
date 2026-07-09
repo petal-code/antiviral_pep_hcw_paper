@@ -122,16 +122,39 @@ load_fit <- function(key) {
 # (6) posterior-predictive checks --------------------------------------------
 # =============================================================================
 
-# (A) simulated / observed fit-ratio -- horizontal pointrange, one row per stat.
-gg_fit_ratio <- function(fit, stats, col) {
+# (A) simulated / observed fit-ratio -- one row per stat: a SMOOTHED ridgeline
+# density of the posterior-predictive ratio, with the median + 95% pointrange
+# drawn on top. `smooth` = density bandwidth multiplier (higher = smoother);
+# `ridge_height` = how tall each density is in row units (<1 avoids overlap).
+gg_fit_ratio <- function(fit, stats, col, smooth = 1.5, ridge_height = 0.85) {
+  n     <- length(stats)
+  ypos  <- setNames(rev(seq_len(n)), stats)     # first stat on top (highest y)
+  labs  <- pretty_of(stats)
+
+  # median + 95% CI of the ratio, per stat (the point + line)
   rdf <- do.call(rbind, lapply(stats, function(s) {
     q <- quantile(fit$post[[s]] / fit$observed[[s]], c(0.025, 0.5, 0.975), names = FALSE)
-    data.frame(stat = pretty_of(s), lo = q[1], med = q[2], hi = q[3])
+    data.frame(stat = s, y = ypos[[s]], lo = q[1], med = q[2], hi = q[3])
   }))
-  rdf$stat <- factor(rdf$stat, levels = rev(pretty_of(stats)))   # first stat on top
-  ggplot(rdf, aes(med, stat)) +
+
+  # smoothed ridgeline density of the ratio, per stat (tails trimmed at 0.5/99.5%
+  # so extreme draws don't squash the display; each row normalised to same height)
+  dens <- do.call(rbind, lapply(stats, function(s) {
+    r   <- fit$post[[s]] / fit$observed[[s]]
+    rng <- quantile(r, c(0.005, 0.995), names = FALSE)
+    d   <- density(r, adjust = smooth, from = rng[1], to = rng[2])
+    data.frame(stat = s, y0 = ypos[[s]], x = d$x,
+               h = d$y / max(d$y) * ridge_height)
+  }))
+
+  ggplot() +
     geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
-    geom_pointrange(aes(xmin = lo, xmax = hi), colour = col, linewidth = 0.9, size = 0.5) +
+    geom_ribbon(data = dens, aes(x = x, ymin = y0, ymax = y0 + h, group = stat),
+                fill = col, colour = col, alpha = 0.25, linewidth = 0.3) +
+    geom_pointrange(data = rdf, aes(x = med, y = y, xmin = lo, xmax = hi),
+                    colour = col, linewidth = 0.9, size = 0.5) +
+    scale_y_continuous(breaks = unname(ypos[stats]), labels = labs,
+                       expand = expansion(add = c(0.3, ridge_height + 0.3))) +
     labs(x = "Simulated / Observed", y = NULL) +
     theme_bw(base_size = 10)
 }
