@@ -273,12 +273,12 @@ gg_pairs_lower <- function(fit) {
       cells[[idx]] <- ggplot(d, aes(x, y)) +
         geom_point(alpha = 0.15, size = 0.5, colour = fit$col) +
         annotate("text", x = Inf, y = Inf, label = sprintf("r = %.2f", cormat[i, j]),
-                 hjust = 1.1, vjust = 1.4, size = 2.6, colour = "grey20") +
+                 hjust = 1.1, vjust = 1.4, size = 3.4, colour = "grey20") +
         labs(x = if (i == np) labs[j] else NULL,           # x labels only on bottom row
              y = if (j == 1)  labs[i] else NULL) +          # y labels only on first column
-        theme_bw(base_size = 8) +
-        theme(axis.title = element_text(size = 7),
-              axis.text  = element_text(size = 5.5))
+        theme_bw(base_size = 10) +
+        theme(axis.title = element_text(size = 9),
+              axis.text  = element_text(size = 7))
     } else {
       cells[[idx]] <- NULL                                  # upper triangle: blank
     }
@@ -327,9 +327,18 @@ print(combined_pvp)
 # ---- (4) combined pairs: A (West Africa) / B (DRC) stacked --------------------
 prs_wa  <- gg_pairs_lower(wa)
 prs_drc <- gg_pairs_lower(drc)
-combined_pairs <- cowplot::plot_grid(prs_wa$plot, prs_drc$plot, ncol = 1,
-                                     labels = c("A", "B"))
+# add a thin blank strip above each grid so the A/B labels sit ABOVE the top-row
+# y-axis titles instead of overlapping them.
+pad_top <- function(g) cowplot::plot_grid(NULL, g, ncol = 1, rel_heights = c(0.04, 1))
+combined_pairs <- cowplot::plot_grid(
+  pad_top(prs_wa$plot), pad_top(prs_drc$plot), ncol = 1,
+  labels = c("A", "B"), label_size = 16, label_x = 0.005, label_y = 1,
+  hjust = 0, vjust = 1)
 print(combined_pairs)
+
+# supplementary pairs figure: 7 wide x 11 high
+dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
+ggsave(file.path(OUT_DIR, "Figure_S4_PairsPlot.pdf"), combined_pairs, width = 7, height = 11)
 
 # ---- tables over all active fits --------------------------------------------
 gof_all <- lapply(fits, gof_table)
@@ -339,7 +348,6 @@ cor_all <- list(WestAfrica = prs_wa$cor, DRC = prs_drc$cor)
 if (SAVE_PLOTS) {
   ggsave(file.path(OUT_DIR, "pp_checks_WA_DRC.pdf"),          combined_pp,    width = 10, height = 8)
   ggsave(file.path(OUT_DIR, "prior_vs_posterior_WA_DRC.pdf"), combined_pvp,   width = 12, height = 6)
-  ggsave(file.path(OUT_DIR, "param_pairs_WA_DRC.pdf"),        combined_pairs, width = 7,  height = 12)
 }
 
 # ---- combined tables (printed; optionally written) --------------------------
