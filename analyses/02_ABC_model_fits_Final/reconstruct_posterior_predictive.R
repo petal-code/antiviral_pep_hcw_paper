@@ -306,7 +306,7 @@ stopifnot(!is.null(wa), !is.null(drc))
 # ---- (6) combined posterior-predictive checks: A,B (West Africa) / C,D (DRC) --
 pp_row <- function(fit, labels) {
   stats <- setdiff(fit$stat_names, PP_DROP_STATS)
-  cowplot::plot_grid(gg_fit_ratio(fit, stats, fit$col),
+  cowplot::plot_grid(gg_fit_ratio(fit, stats, fit$col, smooth = 3.5),
                      gg_pp_hist(fit, stats, fit$col, ncol = 2L),
                      labels = labels, rel_widths = c(0.8, 1.2), nrow = 1)
 }
