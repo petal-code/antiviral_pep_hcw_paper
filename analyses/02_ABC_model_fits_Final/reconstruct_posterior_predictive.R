@@ -338,8 +338,7 @@ combined_pairs <- cowplot::plot_grid(
 print(combined_pairs)
 
 # supplementary pairs figure: 7 wide x 11 high
-dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
-ggsave(file.path(OUT_DIR, "Figure_S4_PairsPlot.pdf"), combined_pairs, width = 7, height = 11)
+ggsave(file.path("figures/Figure_S4_PairsPlot.pdf"), combined_pairs, width = 7, height = 11)
 
 # ---- tables over all active fits --------------------------------------------
 gof_all <- lapply(fits, gof_table)
