@@ -327,12 +327,13 @@ print(combined_pvp)
 # ---- (4) combined pairs: A (West Africa) / B (DRC) stacked --------------------
 prs_wa  <- gg_pairs_lower(wa)
 prs_drc <- gg_pairs_lower(drc)
-# add a thin blank strip above each grid so the A/B labels sit ABOVE the top-row
-# y-axis titles instead of overlapping them.
-pad_top <- function(g) cowplot::plot_grid(NULL, g, ncol = 1, rel_heights = c(0.04, 1))
+# add a thin blank strip to the LEFT of each grid so the A/B labels sit beside
+# (not above) the top-row y-axis titles -- avoids overlap without adding any
+# whitespace at the top of the figure.
+pad_left <- function(g) cowplot::plot_grid(NULL, g, ncol = 2, rel_widths = c(0.03, 1))
 combined_pairs <- cowplot::plot_grid(
-  pad_top(prs_wa$plot), pad_top(prs_drc$plot), ncol = 1,
-  labels = c("A", "B"), label_size = 16, label_x = 0.005, label_y = 1,
+  pad_left(prs_wa$plot), pad_left(prs_drc$plot), ncol = 1,
+  labels = c("A", "B"), label_size = 16, label_x = 0, label_y = 1,
   hjust = 0, vjust = 1)
 print(combined_pairs)
 
