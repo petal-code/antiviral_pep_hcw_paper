@@ -104,21 +104,24 @@ print(a1)
 # -----------------------------------------------------------------------------
 # 2x2 figure
 # -----------------------------------------------------------------------------
-BENEFIT <- "#2166AC"   # blue  (averted)
-COST    <- "#B2182B"   # red   (additional deaths)
+# Archetype colours (house palette, matching helper_functions_figure_1to4.R).
+SCEN_COLS <- c("DRC" = "#1b9e77", "West Africa" = "#d95f02")
 
-panel <- function(dat, ylab, col, pct = FALSE, show_x = FALSE, ref = NULL) {
-  g <- ggplot(dat, aes(r, median)) +
-    geom_ribbon(aes(ymin = lo95, ymax = hi95), fill = col, alpha = 0.15) +
-    geom_line(colour = col, linewidth = 0.85) +
+panel <- function(dat, ylab, pct = FALSE, show_x = FALSE, ref = NULL) {
+  g <- ggplot(dat, aes(r, median, colour = scenario_label, fill = scenario_label)) +
+    geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = 0.15, colour = NA) +
+    geom_line(linewidth = 0.85) +
     facet_wrap(~ scenario_label, scales = "free_y") +
+    scale_colour_manual(values = SCEN_COLS) +
+    scale_fill_manual(values = SCEN_COLS) +
     scale_x_continuous(breaks = seq(0, 1, 0.25), expand = expansion(mult = c(0.01, 0.02))) +
     labs(x = if (show_x) "Residual transmissibility of treated cases, r" else NULL, y = ylab) +
     theme_bw(base_size = 10) +
     theme(panel.grid.minor = element_blank(),
           strip.background  = element_rect(fill = "grey92", colour = "black"),
           strip.text        = element_text(face = "bold", size = 9),
-          axis.title        = element_text(size = 9))
+          axis.title        = element_text(size = 9),
+          legend.position   = "none")   # archetype is already the facet strip
   if (!is.null(ref))
     g <- g + geom_hline(data = ref, aes(yintercept = value),
                         linetype = "dashed", colour = "grey40", linewidth = 0.35)
@@ -128,12 +131,11 @@ panel <- function(dat, ylab, col, pct = FALSE, show_x = FALSE, ref = NULL) {
   g
 }
 
-pa <- panel(agg_averted,        "HCW deaths averted by OBV",                       BENEFIT,
-            ref = ref_reported)
-pb <- panel(agg_additional,     "Additional HCW deaths from residual transmission", COST)
-pc <- panel(agg_pct_averted,    "HCW deaths averted\n(% of HCW deaths without OBV)", BENEFIT,
+pa <- panel(agg_averted,        "HCW deaths averted by OBV", ref = ref_reported)
+pb <- panel(agg_additional,     "Additional HCW deaths from residual transmission")
+pc <- panel(agg_pct_averted,    "HCW deaths averted\n(% of HCW deaths without OBV)",
             pct = TRUE, show_x = TRUE)
-pd <- panel(agg_pct_additional, "Additional HCW deaths\n(% of HCW deaths without OBV)", COST,
+pd <- panel(agg_pct_additional, "Additional HCW deaths\n(% of HCW deaths without OBV)",
             pct = TRUE, show_x = TRUE)
 
 fig <- (pa | pb) / (pc | pd) +
