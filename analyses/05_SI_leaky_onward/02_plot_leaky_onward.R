@@ -1,20 +1,29 @@
 # =============================================================================
 # 02_plot_leaky_onward.R
 #
-# Reads the per-run metrics from 01_analysis_leaky_onward.R, aggregates them
-# (median over the 10 replicates within each posterior draw, then median + 95%
-# interval across the 200 draws), and produces the reviewer-response outputs.
-# DEATHS are the focus throughout, with HCW deaths as the headline.
+# Reads the per-run metrics from 01_analysis_leaky_onward.R and produces the
+# DEATHS-focused, HCW-headline reviewer figures. Aggregation order (as specified):
+# median over the 10 replicates within each posterior draw, then median + 95%
+# interval across the draws. No re-simulation here -- everything is derived from
+# _intermediate/leaky_onward_per_run.rds.
 #
-# Outputs (to output_figgen/ and figures/):
-#   - leaky_onward_summary.csv          : the full aggregated table.
-#   - leaky_onward_analysis1_table.csv  : Analysis 1 (conservatism of the current
-#                                          index-only reporting).
-#   - fig_leaky_onward_hcw_deaths.pdf/png : Analysis 2 headline -- HCW deaths
-#                                          averted vs how leaky the drug is.
-#   - fig_leaky_onward_accruing.pdf/png   : companion -- HCW deaths that leak
-#                                          through, and those still averted
-#                                          downstream by re-treatment.
+# Figures (HCW deaths throughout):
+#   1. fig_leaky_onward_hcw_averted        : HCW deaths averted by OBV vs r.
+#   2. fig_leaky_onward_hcw_leaked         : additional HCW deaths that leak
+#                                            through vs r (absolute).
+#   3. fig_leaky_onward_hcw_pct_averted    : % of all HCW deaths (no-OBV world)
+#                                            averted by OBV vs r.
+#   4. fig_leaky_onward_hcw_leaked_frac    : additional (leaked) HCW deaths as a
+#                                            % of all HCW deaths (no-OBV world).
+# Plus leaky_onward_summary.csv and leaky_onward_analysis1_table.csv.
+#
+# On the "two simulations" behind the averted line: for each base run we replay
+# the blocked HCWs (a) with no drug (A1 -> no_obv_deaths_hcw, the full benefit,
+# r-independent) and (b) with the leaky drug (A2 -> leaky_deaths_accruing_hcw,
+# per r). Averted(r) = A1 - A2(r). A1 is shared across r within a run, and the
+# leaked HCW amount is small, so the averted curve is dominated by A1 and is not
+# a noisy point-by-point difference (that was only an issue for TOTAL deaths,
+# which we no longer plot). Figures 2 and 4 use A2 alone -- no differencing.
 # =============================================================================
 
 library(here)
@@ -31,121 +40,172 @@ dir.create(FIG_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(CSV_DIR, recursive = TRUE, showWarnings = FALSE)
 
 per_run <- readRDS(file.path(INT_DIR, "leaky_onward_per_run.rds"))
-summ    <- summarise_leaky_onward(per_run)
-write.csv(summ, file.path(CSV_DIR, "leaky_onward_summary.csv"), row.names = FALSE)
 
 SC_LABELS <- c(DRC = "DRC (Middle)", WestAfrica = "West Africa (Worst)")
-lab_sc <- function(x) ifelse(x %in% names(SC_LABELS), SC_LABELS[x], x)
+per_run$scenario_label <- ifelse(per_run$scenario %in% names(SC_LABELS),
+                                 SC_LABELS[per_run$scenario], per_run$scenario)
 
-# Convenience: pull one r-independent metric's median per scenario.
-scalar_of <- function(metric) {
-  summ %>% filter(is.na(r), metric == !!metric) %>%
-    select(scenario, value = median)
+# Full aggregated table (kept for reference / other metrics).
+summ <- summarise_leaky_onward(per_run[, c("scenario", "particle", "rep", "r", "metric", "value")])
+write.csv(summ, file.path(CSV_DIR, "leaky_onward_summary.csv"), row.names = FALSE)
+
+# -----------------------------------------------------------------------------
+# Build a per-run wide table: r-independent scalars joined onto the per-r metrics,
+# so every derived quantity (percentages, fractions) is formed PER RUN before any
+# aggregation -- the statistically correct order.
+# -----------------------------------------------------------------------------
+scalars <- per_run %>%
+  filter(is.na(r)) %>%
+  select(scenario, scenario_label, particle, rep, metric, value) %>%
+  pivot_wider(names_from = metric, values_from = value)
+
+per_r <- per_run %>%
+  filter(!is.na(r),
+         metric %in% c("net_deaths_averted_hcw", "leaky_deaths_accruing_hcw")) %>%
+  select(scenario, particle, rep, r, metric, value) %>%
+  pivot_wider(names_from = metric, values_from = value)
+
+run_wide <- per_r %>%
+  left_join(scalars, by = c("scenario", "particle", "rep")) %>%
+  mutate(
+    total_hcw_deaths_no_obv = tdf_deaths_hcw + no_obv_deaths_hcw,  # whole no-OBV epidemic, HCW
+    hcw_averted             = net_deaths_averted_hcw,
+    hcw_leaked              = leaky_deaths_accruing_hcw,
+    pct_hcw_averted         = ifelse(total_hcw_deaths_no_obv > 0,
+                                     100 * net_deaths_averted_hcw / total_hcw_deaths_no_obv, NA_real_),
+    pct_hcw_leaked          = ifelse(total_hcw_deaths_no_obv > 0,
+                                     100 * leaky_deaths_accruing_hcw / total_hcw_deaths_no_obv, NA_real_)
+  )
+
+# Aggregate one column: median over reps within draw, then median + 95% across draws.
+agg_col <- function(df, col) {
+  by_draw <- df %>%
+    group_by(scenario, scenario_label, particle, r) %>%
+    summarise(v = median(.data[[col]], na.rm = TRUE), .groups = "drop")
+  by_draw %>%
+    group_by(scenario, scenario_label, r) %>%
+    summarise(median = median(v, na.rm = TRUE),
+              lo95   = quantile(v, 0.025, na.rm = TRUE, names = FALSE),
+              hi95   = quantile(v, 0.975, na.rm = TRUE, names = FALSE),
+              .groups = "drop")
 }
 
-# =============================================================================
-# Analysis 1 -- the current index-only reporting is conservative
-#
-# Reported (index-only) vs true averted (index + downstream, from the no-OBV
-# counterfactual), for total and HCW deaths. The ratio shows how much larger the
-# true averted burden is than what the paper currently credits OBV with.
-# =============================================================================
-a1 <- bind_rows(
-  scalar_of("reported_index_deaths_total") %>% mutate(who = "Total", quantity = "reported_index"),
-  scalar_of("reported_index_deaths_hcw")   %>% mutate(who = "HCW",   quantity = "reported_index"),
-  scalar_of("no_obv_deaths_total")         %>% mutate(who = "Total", quantity = "total_averted"),
-  scalar_of("no_obv_deaths_hcw")           %>% mutate(who = "HCW",   quantity = "total_averted")
-) %>%
-  pivot_wider(names_from = quantity, values_from = value) %>%
-  mutate(downstream_averted = total_averted - reported_index,
-         fold_vs_reported   = total_averted / reported_index,
-         scenario_label     = lab_sc(scenario)) %>%
-  arrange(scenario, who)
+agg_averted    <- agg_col(run_wide, "hcw_averted")
+agg_leaked     <- agg_col(run_wide, "hcw_leaked")
+agg_pct_avert  <- agg_col(run_wide, "pct_hcw_averted")
+agg_pct_leaked <- agg_col(run_wide, "pct_hcw_leaked")
 
+# Reference line for Fig 1: the current index-only reported number (per scenario).
+ref_reported <- scalars %>%
+  group_by(scenario, scenario_label) %>%
+  summarise(value = median(reported_index_deaths_hcw, na.rm = TRUE), .groups = "drop")
+
+# -----------------------------------------------------------------------------
+# Analysis 1 table (kept): current index-only vs true index+downstream averted.
+# -----------------------------------------------------------------------------
+a1 <- scalars %>%
+  group_by(scenario, scenario_label) %>%
+  summarise(reported_index_hcw = median(reported_index_deaths_hcw, na.rm = TRUE),
+            total_averted_hcw   = median(no_obv_deaths_hcw, na.rm = TRUE),
+            reported_index_total = median(reported_index_deaths_total, na.rm = TRUE),
+            total_averted_total  = median(no_obv_deaths_total, na.rm = TRUE),
+            .groups = "drop") %>%
+  mutate(downstream_hcw   = total_averted_hcw - reported_index_hcw,
+         fold_hcw         = total_averted_hcw / reported_index_hcw)
 write.csv(a1, file.path(CSV_DIR, "leaky_onward_analysis1_table.csv"), row.names = FALSE)
-message("Analysis 1 (deaths averted: reported index-only vs true index+downstream):")
 print(a1)
 
-# =============================================================================
-# Analysis 2 -- HCW deaths averted vs how leaky OBV is (the headline)
-#
-# net_deaths_averted_hcw(r) = no-OBV HCW deaths - HCW deaths that still occur
-# under a leaky drug (keeping OBV's death protection on everyone it treats).
-# Shown against two references: the current reported (index-only) number, and
-# the full sterilizing benefit (r = 0). The message: the HCW-death benefit holds
-# up across the whole leakiness range and never falls below what we report.
-# =============================================================================
-make_net_panel <- function(who = c("hcw", "total")) {
-  who <- match.arg(who)
-  net_metric <- paste0("net_deaths_averted_", who)
-  rep_metric <- paste0("reported_index_deaths_", who)
+# -----------------------------------------------------------------------------
+# Shared aesthetics
+# -----------------------------------------------------------------------------
+BLUE   <- "#2166AC"
+ORANGE <- "#D6604D"
+base_theme <- theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank(),
+        strip.text       = element_text(face = "bold"),
+        plot.title       = element_text(face = "bold"),
+        plot.subtitle    = element_text(colour = "grey30"),
+        plot.title.position = "plot")
+x_scale <- scale_x_continuous(breaks = seq(0, 1, 0.2), expand = expansion(mult = c(0.01, 0.02)))
+xlab_r  <- "Residual transmissibility of a treated person  (r:  0 = current model → 1 = no effect on transmission)"
 
-  net <- summ %>% filter(!is.na(r), metric == net_metric) %>%
-    mutate(scenario_label = lab_sc(scenario))
-  ref_reported <- scalar_of(rep_metric) %>% mutate(scenario_label = lab_sc(scenario))
-
-  ggplot(net, aes(r, median)) +
-    geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = 0.18, fill = "#2c7fb8") +
-    geom_line(colour = "#2c7fb8", linewidth = 0.9) +
-    geom_hline(data = ref_reported, aes(yintercept = value),
-               linetype = "dashed", colour = "grey35") +
-    geom_text(data = ref_reported, aes(x = 0.02, y = value,
-              label = "current reported (index-only)"),
-              hjust = 0, vjust = -0.5, size = 2.8, colour = "grey35") +
-    facet_wrap(~ scenario_label, scales = "free_y") +
-    scale_x_continuous(breaks = seq(0, 1, 0.2)) +
-    labs(
-      x = "Residual transmissibility of a treated person  (r:  0 = current model, 1 = no effect on transmission)",
-      y = if (who == "hcw") "HCW deaths averted by OBV" else "Total deaths averted by OBV",
-      title = if (who == "hcw")
-        "OBV's averted HCW deaths are robust to leaky onward transmission"
-      else "OBV's averted total deaths vs leaky onward transmission",
-      subtitle = "Median (95% interval) across posterior draws; treated people keep OBV's protection against death"
-    ) +
-    theme_bw(base_size = 11) +
-    theme(plot.title = element_text(face = "bold"))
+save_fig <- function(p, name, h = 4.2) {
+  ggsave(file.path(FIG_DIR, paste0(name, ".pdf")), p, width = 9, height = h)
+  ggsave(file.path(FIG_DIR, paste0(name, ".png")), p, width = 9, height = h, dpi = 220)
 }
 
-p_hcw <- make_net_panel("hcw")
-ggsave(file.path(FIG_DIR, "fig_leaky_onward_hcw_deaths.pdf"), p_hcw, width = 9, height = 4.2)
-ggsave(file.path(FIG_DIR, "fig_leaky_onward_hcw_deaths.png"), p_hcw, width = 9, height = 4.2, dpi = 200)
-
-p_tot <- make_net_panel("total")
-ggsave(file.path(FIG_DIR, "fig_leaky_onward_total_deaths.pdf"), p_tot, width = 9, height = 4.2)
-
-# =============================================================================
-# Companion -- where the leaked deaths go
-#
-# As OBV gets leakier, some HCW deaths leak through (the coverage/efficacy gaps),
-# but the drug keeps saving downstream HCWs it re-treats. Plotting both shows the
-# leaked deaths stay small precisely because of that continued downstream
-# protection.
-# =============================================================================
-acc <- summ %>%
-  filter(!is.na(r), metric %in% c("leaky_deaths_accruing_hcw",
-                                  "leaky_deaths_averted_downstream_hcw")) %>%
-  mutate(scenario_label = lab_sc(scenario),
-         series = recode(metric,
-                         leaky_deaths_accruing_hcw           = "HCW deaths that leak through",
-                         leaky_deaths_averted_downstream_hcw = "HCW deaths still averted downstream (re-treatment)"))
-
-p_acc <- ggplot(acc, aes(r, median, colour = series, fill = series)) +
-  geom_ribbon(aes(ymin = lo95, ymax = hi95), alpha = 0.15, colour = NA) +
-  geom_line(linewidth = 0.9) +
+# -----------------------------------------------------------------------------
+# Figure 1: HCW deaths averted by OBV vs r
+# -----------------------------------------------------------------------------
+p1 <- ggplot(agg_averted, aes(r, median)) +
+  geom_ribbon(aes(ymin = lo95, ymax = hi95), fill = BLUE, alpha = 0.15) +
+  geom_hline(data = ref_reported, aes(yintercept = value),
+             linetype = "dashed", colour = "grey45", linewidth = 0.4) +
+  geom_text(data = ref_reported, aes(x = 0.02, y = value, label = "currently reported (directly-treated only)"),
+            hjust = 0, vjust = -0.6, size = 2.9, colour = "grey45") +
+  geom_line(colour = BLUE, linewidth = 1) +
   facet_wrap(~ scenario_label, scales = "free_y") +
-  scale_x_continuous(breaks = seq(0, 1, 0.2)) +
-  scale_colour_manual(values = c("HCW deaths that leak through" = "#d95f0e",
-                                 "HCW deaths still averted downstream (re-treatment)" = "#31a354")) +
-  scale_fill_manual(values = c("HCW deaths that leak through" = "#d95f0e",
-                               "HCW deaths still averted downstream (re-treatment)" = "#31a354")) +
-  labs(x = "Residual transmissibility of a treated person (r)",
-       y = "HCW deaths", colour = NULL, fill = NULL,
-       title = "Where the leaked HCW deaths go",
-       subtitle = "The drug keeps treating downstream HCWs, so the deaths that leak through stay small") +
-  theme_bw(base_size = 11) +
-  theme(legend.position = "bottom")
+  x_scale +
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.08))) +
+  labs(x = xlab_r, y = "HCW deaths averted by OBV",
+       title = "OBV's averted HCW deaths hold up as onward transmission becomes leaky",
+       subtitle = "Median (95% interval) across posterior draws; treated HCWs keep OBV's protection against death") +
+  base_theme
+save_fig(p1, "fig_leaky_onward_hcw_averted")
 
-ggsave(file.path(FIG_DIR, "fig_leaky_onward_accruing.pdf"), p_acc, width = 9, height = 4.6)
-ggsave(file.path(FIG_DIR, "fig_leaky_onward_accruing.png"), p_acc, width = 9, height = 4.6, dpi = 200)
+# -----------------------------------------------------------------------------
+# Figure 2: additional HCW deaths that leak through vs r (absolute; A2 only)
+# -----------------------------------------------------------------------------
+p2 <- ggplot(agg_leaked, aes(r, median)) +
+  geom_ribbon(aes(ymin = lo95, ymax = hi95), fill = ORANGE, alpha = 0.15) +
+  geom_line(colour = ORANGE, linewidth = 1) +
+  facet_wrap(~ scenario_label, scales = "free_y") +
+  x_scale +
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.08))) +
+  labs(x = xlab_r, y = "Additional HCW deaths that leak through",
+       title = "Additional HCW deaths a leaky drug allows through",
+       subtitle = "Deaths among untreated onward HCWs only; the drug keeps protecting the downstream HCWs it reaches") +
+  base_theme
+save_fig(p2, "fig_leaky_onward_hcw_leaked")
 
-message("Wrote figures to ", FIG_DIR, " and CSVs to ", CSV_DIR)
+# -----------------------------------------------------------------------------
+# Figure 3: % of all HCW deaths (no-OBV world) averted by OBV vs r
+# -----------------------------------------------------------------------------
+p3 <- ggplot(agg_pct_avert, aes(r, median)) +
+  geom_ribbon(aes(ymin = lo95, ymax = hi95), fill = BLUE, alpha = 0.15) +
+  geom_line(colour = BLUE, linewidth = 1) +
+  facet_wrap(~ scenario_label) +
+  x_scale +
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.08)),
+                     labels = function(x) paste0(x, "%")) +
+  labs(x = xlab_r, y = "HCW deaths averted (% of all HCW deaths without OBV)",
+       title = "Share of HCW deaths OBV averts is stable across the leakiness range",
+       subtitle = "Averted HCW deaths as a percentage of all HCW deaths in the no-OBV world") +
+  base_theme
+save_fig(p3, "fig_leaky_onward_hcw_pct_averted")
+
+# -----------------------------------------------------------------------------
+# Figure 4: leaked HCW deaths as % of all HCW deaths (no-OBV world)
+# -----------------------------------------------------------------------------
+p4 <- ggplot(agg_pct_leaked, aes(r, median)) +
+  geom_ribbon(aes(ymin = lo95, ymax = hi95), fill = ORANGE, alpha = 0.15) +
+  geom_line(colour = ORANGE, linewidth = 1) +
+  facet_wrap(~ scenario_label) +
+  x_scale +
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.08)),
+                     labels = function(x) paste0(x, "%")) +
+  labs(x = xlab_r, y = "Leaked HCW deaths (% of all HCW deaths without OBV)",
+       title = "Even with no effect on transmission, the leaked HCW deaths are a small fraction",
+       subtitle = "Additional untreated HCW deaths as a percentage of all HCW deaths in the no-OBV world") +
+  base_theme
+save_fig(p4, "fig_leaky_onward_hcw_leaked_frac")
+
+# Tidy CSVs of exactly what is plotted.
+write.csv(bind_rows(
+  agg_averted    %>% mutate(quantity = "hcw_deaths_averted"),
+  agg_leaked     %>% mutate(quantity = "hcw_deaths_leaked"),
+  agg_pct_avert  %>% mutate(quantity = "pct_hcw_deaths_averted"),
+  agg_pct_leaked %>% mutate(quantity = "pct_hcw_deaths_leaked")
+), file.path(CSV_DIR, "leaky_onward_hcw_figures.csv"), row.names = FALSE)
+
+message("Wrote 4 HCW figures to ", FIG_DIR, " and CSVs to ", CSV_DIR)
