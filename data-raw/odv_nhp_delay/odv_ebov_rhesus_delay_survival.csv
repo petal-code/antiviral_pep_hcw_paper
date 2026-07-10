@@ -1,0 +1,6 @@
+arm,dpc,n_total,n_survivors_reported,death_times,censor_day
+vehicle,0,6,1,7;8;8;9;11,28
+odv_1dpc,1,6,5,9,28
+odv_2dpc,2,8,5,7;12;13,28
+odv_3dpc,3,8,4,10;10;11;15,28
+odv_4dpc,4,8,5,8;9;10,28
