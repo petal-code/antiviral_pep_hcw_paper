@@ -116,7 +116,7 @@ panel <- function(dat, ylab, col, pct = FALSE, show_x = FALSE, ref = NULL) {
     labs(x = if (show_x) "Residual transmissibility of treated cases, r" else NULL, y = ylab) +
     theme_bw(base_size = 10) +
     theme(panel.grid.minor = element_blank(),
-          strip.background  = element_rect(fill = "grey92", colour = NA),
+          strip.background  = element_rect(fill = "grey92", colour = "black"),
           strip.text        = element_text(face = "bold", size = 9),
           axis.title        = element_text(size = 9))
   if (!is.null(ref))
@@ -139,11 +139,11 @@ pd <- panel(agg_pct_additional, "Additional HCW deaths\n(% of HCW deaths without
 fig <- (pa | pb) / (pc | pd) +
   plot_annotation(
     tag_levels = "a",
-    caption = paste0(
-      "r = residual transmissibility of treated cases (0 = onward transmission fully blocked, the current model; ",
-      "1 = transmission unaffected). Line = median, band = 95% interval across posterior draws. ",
-      "Dashed line (a): currently reported effect (directly-treated HCWs only)."
-    )
+    # caption = paste0(
+    #   "r = residual transmissibility of treated cases (0 = onward transmission fully blocked, the current model; ",
+    #   "1 = transmission unaffected). Line = median, band = 95% interval across posterior draws. ",
+    #   "Dashed line (a): currently reported effect (directly-treated HCWs only)."
+    # )
   ) &
   theme(plot.tag     = element_text(face = "bold", size = 12),
         plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey30"))
