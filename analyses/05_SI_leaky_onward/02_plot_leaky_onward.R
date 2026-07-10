@@ -149,16 +149,3 @@ fig <- (pa | pb) / (pc | pd) +
   ) &
   theme(plot.tag     = element_text(face = "bold", size = 12),
         plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey30"))
-
-ggsave(file.path(FIG_DIR, "fig_leaky_onward_hcw_2x2.pdf"), fig, width = 9, height = 6.4)
-ggsave(file.path(FIG_DIR, "fig_leaky_onward_hcw_2x2.png"), fig, width = 9, height = 6.4, dpi = 300)
-
-# Tidy CSV of exactly what is plotted.
-write.csv(bind_rows(
-  agg_averted        %>% mutate(panel = "a_hcw_deaths_averted"),
-  agg_additional     %>% mutate(panel = "b_hcw_deaths_additional"),
-  agg_pct_averted    %>% mutate(panel = "c_pct_hcw_deaths_averted"),
-  agg_pct_additional %>% mutate(panel = "d_pct_hcw_deaths_additional")
-), file.path(CSV_DIR, "leaky_onward_hcw_figure.csv"), row.names = FALSE)
-
-message("Wrote fig_leaky_onward_hcw_2x2.{pdf,png} to ", FIG_DIR)
